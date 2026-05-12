@@ -1,0 +1,7 @@
+{
+  // Excluir directorios generados por herramientas externas (speckit)
+  "ignores": [
+    ".claude/**",
+    ".specify/**"
+  ]
+}
