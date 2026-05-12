@@ -1,0 +1,6 @@
+[submodule "loopi-web-v2"]
+	path = loopi-web-v2
+	url = https://github.com/manuelgomezsw/loopi-web-v2
+[submodule "loopi-api-v2"]
+	path = loopi-api-v2
+	url = https://github.com/manuelgomezsw/loopi-api-v2
