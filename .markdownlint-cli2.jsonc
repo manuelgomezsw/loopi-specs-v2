@@ -1,0 +1,13 @@
+{
+  // Excluir directorios generados por herramientas externas (speckit)
+  "ignores": [
+    ".claude/**",
+    ".specify/**"
+  ],
+  "config": {
+    // MD013: líneas largas — deshabilitado para permitir tablas y descripciones legibles
+    "MD013": false,
+    // MD041: primer heading en h1 — deshabilitado para CLAUDE.md que empieza con comment de speckit
+    "MD041": false
+  }
+}
