@@ -3,6 +3,10 @@ For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->
 
+# Idioma
+
+Todos los artefactos generados por speckit (`spec.md`, `plan.md`, `tasks.md`, `constitution.md`, listas de verificación, preguntas, resúmenes y cualquier otro output) deben estar **íntegramente en español**. Esto incluye encabezados, contenido, preguntas de aclaración y mensajes al usuario.
+
 # Git Workflow
 
 ## Gitflow — regla obligatoria
