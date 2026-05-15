@@ -168,7 +168,7 @@ Una receta define la composición de items necesarios para preparar una unidad d
 
 #### 3.3.6 Ejemplo
 
-```
+```text
 Producto: Sanduche Capresse
 Receta v1 (activa desde 2026-01-01):
   - Pan artesanal  | 2    | unidad
@@ -206,7 +206,7 @@ El inventario es el módulo central del sistema. Representa el conteo físico pe
 
 #### 3.4.3 Ciclo de Vida de un Inventario
 
-```
+```text
 CREADO (en_progreso)
     ↓ El líder registra ventas y compras del período
     ↓ El líder realiza el conteo físico item por item
@@ -304,7 +304,7 @@ Las ventas **no se registran manualmente** en Loopi v2. Provienen de la integrac
 
 #### 3.6.4 Flujo de Procesamiento de Ventas
 
-```
+```text
 1. El POS envía la venta (o se importa el archivo)
 2. El sistema busca el producto de menú por código_pos
 3. El sistema obtiene la receta activa del producto
@@ -377,7 +377,7 @@ Los pedidos son órdenes de compra generadas semanalmente a los proveedores. El 
 
 #### 3.8.2 Ciclo de Vida de un Pedido
 
-```
+```text
 BORRADOR → CONFIRMADO → ENVIADO AL PROVEEDOR → EN RECEPCIÓN → COMPLETADO
                                                              ↘ PARCIALMENTE_COMPLETADO
 ```
@@ -424,7 +424,7 @@ La Planeación de Demanda es el motor que calcula cuánto pedir de cada item bas
 
 Para cada item activo con proveedor asignado:
 
-```
+```text
 inventario_actual    = stock_real del último inventario completado
 promedio_venta_diaria = promedio de unidades consumidas por ventas en los últimos N días (configurable, por defecto 14)
 tiempo_entrega        = item.tiempo_entrega_dias
@@ -519,7 +519,7 @@ Todo movimiento que modifica el stock de un item debe:
 
 El `valor_sugerido` para cada item en un nuevo inventario se calcula como:
 
-```
+```text
 valor_sugerido = real del inventario anterior del mismo tipo y horario
 ```
 
@@ -527,7 +527,7 @@ La sugerencia no descuenta mermas previas; el conteo físico es el que "resetea"
 
 ### 5.3 Valor Esperado en Inventarios
 
-```
+```text
 valor_esperado = valor_sugerido + compras_periodo - ventas_periodo - mermas_periodo
 ```
 
@@ -557,7 +557,7 @@ La discrepancia es la diferencia entre el conteo real y este valor esperado.
 
 ## 7. Modelo de Datos — Entidades Principales
 
-```
+```text
 ┌─────────────┐    ┌──────────────┐    ┌───────────────────┐
 │  categorias  │    │ subcategorias │    │  unidades_medida  │
 │  id, nombre  │◄───│ id, nombre   │    │ id, codigo, nombre│
