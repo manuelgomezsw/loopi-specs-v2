@@ -28,7 +28,6 @@ Los puntos de venta gestionan decenas de insumos con diferentes unidades de medi
 - Gestión de recetas y menú de productos finales con soporte de variantes
 - Conteo físico de inventario por tienda (diario, semanal, mensual)
 - Registro de mermas por tienda
-- Ajustes de inventario post-cierre
 - Recepción de compras y pedidos por tienda
 - Planeación de la demanda y generación automática de pedidos
 - Integración con sistema POS para importar ventas por tienda
@@ -53,7 +52,7 @@ Los puntos de venta gestionan decenas de insumos con diferentes unidades de medi
 |-----|-------------|--------|
 | `admin` | Administrador del negocio o marca | Acceso total a todas las tiendas: catálogo, reportes, pedidos, configuración, vistas consolidadas |
 | `lider_tienda` | Líder de turno responsable del conteo | Operaciones de su tienda asignada: inventario, mermas, ajustes, recepción de compras |
-| `barista` | Empleado de tienda | Solo lectura del inventario en curso de su tienda asignada |
+| `barista` | Empleado de tienda | Lectura del inventario de su tienda; puede iniciar y registrar la recepción de pedidos enviados |
 
 ### 2.2 Autenticación
 
@@ -118,13 +117,13 @@ La selección de tienda se realiza desde un selector global visible en la interf
 | Anular merma | ✓ | — | — |
 | Ver mermas (propia tienda) | ✓ | ✓ | — |
 | Ver mermas (todas las tiendas) | ✓ | — | — |
-| Registrar ajuste de inventario (propia tienda) | ✓ | ✓ | — |
-| Aprobar ajuste > umbral configurado | ✓ | — | — |
 | Crear/confirmar pedidos | ✓ | — | — |
 | Cancelar pedido | ✓ | — | — |
-| Ver pedidos (propia tienda) | ✓ | ✓ | — |
-| Registrar recepción de compra (propia tienda) | ✓ | ✓ | — |
-| Confirmar recepción de compra | ✓ | ✓ | — |
+| Ver pedidos (propia tienda) | ✓ | ✓ | ✓ |
+| Iniciar recepción de pedido (propia tienda) | ✓ | ✓ | ✓ |
+| Registrar cantidades recibidas (propia tienda) | ✓ | ✓ | ✓ |
+| Confirmar recepción de pedido | ✓ | ✓ | — |
+| Registrar compra caja menor (propia tienda) | ✓ | ✓ | — |
 | Ver ventas POS (propia tienda) | ✓ | ✓ | — |
 | Importar/confirmar ventas archivo plano | ✓ | — | — |
 | Ver dashboard consolidado | ✓ | — | — |
@@ -137,7 +136,7 @@ La selección de tienda se realiza desde un selector global visible en la interf
 
 ## 3. Módulos del Sistema
 
-### 3.1 Módulo: Items (Catálogo de Insumos)
+### 3.1 Módulo: Catálogo — Submenú Items (Insumos)
 
 #### 3.1.1 Descripción
 
@@ -147,6 +146,7 @@ El catálogo de items es el maestro central del sistema. Es **compartido entre t
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
+| `codigo` | Texto | Código único del item ingresado manualmente (ej: CAF-001, LEC-002) |
 | `nombre` | Texto | Nombre único del item |
 | `tipo` | Enum | `insumo`, `material_consumo`, `activo` |
 | `categoria` | Referencia | Clasificación principal (ej: Lácteos, Carnes) |
@@ -172,7 +172,8 @@ Cada tienda mantiene un historial de costos independiente para cada item. El cos
 
 #### 3.1.5 Reglas de Negocio
 
-- RN-ITEM-01: El nombre del item es único en todo el sistema.
+- RN-ITEM-01: El `codigo` del item es único en todo el sistema. Es asignado manualmente por el admin al crear el item.
+- RN-ITEM-01b: El nombre del item es único en todo el sistema.
 - RN-ITEM-02: No se elimina un item; solo se inactiva. Un item inactivo no aparece en futuros inventarios pero conserva su historial.
 - RN-ITEM-03: El `costo_unitario_referencia` debe expresarse en la misma `unidad_medida` definida para el item.
 - RN-ITEM-04: El `tiempo_entrega_dias` es el insumo principal para el cálculo del pedido automático.
@@ -213,7 +214,7 @@ Define las unidades de medida del sistema y las equivalencias entre ellas. El si
 
 ---
 
-### 3.3 Módulo: Menú y Recetas
+### 3.3 Módulo: Catálogo — Submenú Productos (Menú y Recetas)
 
 #### 3.3.1 Descripción del Menú
 
@@ -308,7 +309,17 @@ El inventario es el módulo central del sistema. Representa el conteo físico pe
 | `mensual` | Mensual (día fijo) | — | Todos los items activos |
 | `inicial` | Una vez (carga inicial) | — | Todos los items activos |
 
-#### 3.4.3 Ciclo de Vida de un Inventario
+#### 3.4.3 Selección del Tipo de Inventario
+
+Al iniciar un inventario, el sistema **sugiere** el tipo y horario basándose en la hora actual y el estado de los inventarios del día:
+
+- Entre 06:00 y 10:59 → sugiere `diario / apertura`
+- Entre 11:00 y 14:59 → sugiere `diario / mediodía`
+- Entre 15:00 y 23:59 → sugiere `diario / cierre`
+
+El líder puede **confirmar la sugerencia o cambiarla manualmente** seleccionando otro tipo (`diario`, `semanal`, `mensual`, `inicial`) y horario. Esto permite realizar conteos no planificados (ej: inventario mensual fuera de la fecha habitual) sin restricción de horario.
+
+#### 3.4.4 Ciclo de Vida de un Inventario
 
 ```text
 CREADO (en_progreso)
@@ -318,7 +329,7 @@ CREADO (en_progreso)
 COMPLETADO
 ```
 
-#### 3.4.4 Atributos de un Inventario
+#### 3.4.5 Atributos de un Inventario
 
 | Campo | Descripción |
 |-------|-------------|
@@ -331,7 +342,7 @@ COMPLETADO
 | `iniciado_en` | Timestamp de inicio |
 | `completado_en` | Timestamp de finalización |
 
-#### 3.4.5 Detalle de Inventario por Item
+#### 3.4.6 Detalle de Inventario por Item
 
 | Campo | Descripción |
 |-------|-------------|
@@ -341,20 +352,20 @@ COMPLETADO
 | `ventas_periodo` | Unidades descontadas por ventas desde el inventario de referencia |
 | `compras_periodo` | Unidades recibidas por compras desde el inventario de referencia |
 | `mermas_periodo` | Unidades registradas como merma desde el inventario de referencia |
-| `ajustes_periodo` | Unidades netas de ajustes de inventario registrados desde el inventario de referencia |
 | `valor_esperado` | Calculado: `valor_sugerido` (ya incluye los movimientos del período) |
 | `valor_real` | Conteo físico registrado por el líder |
 | `diferencia` | `real - esperado` (positivo = sobrante, negativo = faltante) |
 
-#### 3.4.6 Reglas de Negocio
+#### 3.4.7 Reglas de Negocio
 
 - RN-INV-01: Solo puede existir un inventario `en_progreso` por tienda, tipo y horario en una misma fecha.
 - RN-INV-02: El `inventario_referencia` de cada item es el inventario completado más reciente para esa tienda, independientemente del tipo y horario.
 - RN-INV-03: Para completar un inventario, todos los items deben tener registrado el `valor_real`.
 - RN-INV-04: El inventario de tipo `inicial` no requiere inventario de referencia previo; establece el stock de referencia inaugural de la tienda.
-- RN-INV-05: Las discrepancias (diferencia ≠ 0) quedan registradas automáticamente y son visibles para el admin.
+- RN-INV-05: Al confirmar un inventario, las diferencias encontradas **ajustan el stock automáticamente** al valor real contado. No se requiere aprobación de un rol superior.
 - RN-INV-06: El inventario `en_progreso` puede ser retomado por el mismo responsable si se interrumpe.
-- RN-INV-07: Un inventario completado no puede modificarse; cualquier corrección debe registrarse como ajuste de inventario (ver módulo 3.10).
+- RN-INV-07: **Quien inicia y diligencia el conteo puede finalizarlo**, independientemente del rol (admin, lider_tienda o barista). No existe restricción de rol para completar.
+- RN-INV-08: Un inventario completado no puede modificarse directamente. Las correcciones posteriores se registran como mermas (si aplica) o mediante un nuevo inventario.
 
 ---
 
@@ -376,6 +387,7 @@ Las mermas representan la pérdida de inventario por causas distintas a las vent
 | `fecha` | Fecha del evento |
 | `registrado_por` | Empleado que registró la merma |
 | `inventario_asociado` | Inventario al que se asocia (opcional; si se registra durante un conteo) |
+| `costo_total` | Campo calculado para visualización: `cantidad × costo_unitario_referencia` del item. No se almacena; se calcula al mostrar el listado. |
 
 #### 3.5.3 Reglas de Negocio
 
@@ -443,52 +455,39 @@ Las ventas **no se registran manualmente** en Loopi v2. Provienen de la integrac
 
 ---
 
-### 3.7 Módulo: Compras (Recepción)
+### 3.7 Módulo: Caja Menor (Compras Excepcionales)
 
 #### 3.7.1 Descripción
 
-El módulo de Compras permite registrar la recepción física de items en una tienda. Cada recepción **impacta el inventario** de esa tienda sumando stock. Las compras pueden provenir de un pedido activo (recepción planificada) o ser imprevistos (compra no planificada).
+El módulo de Caja Menor permite registrar compras imprevistas de items **sin pedido previo**: insumos de baja rotación, urgencias o reposiciones de emergencia. Cada registro **impacta el inventario** de la tienda sumando stock inmediatamente.
 
-#### 3.7.2 Tipos de Compra
+> **Nota:** La recepción de pedidos planificados (con pedido activo) se gestiona dentro del módulo de Pedidos (§3.8), no en este módulo.
 
-| Tipo | Descripción |
-|------|-------------|
-| **Recepción de pedido** | El proveedor entregó items de un pedido activo. Se puede recibir exacto, menos o más de lo pedido. |
-| **Compra imprevista** | Items comprados sin pedido previo (ej: hielo, bananos de emergencia). |
+#### 3.7.2 Configuración de Items Habilitados para Caja Menor
 
-#### 3.7.3 Atributos de una Compra (Cabecera)
+El `admin` define qué items pueden comprarse excepcionalmente por caja menor. Esta lista se configura en el módulo de Administración y es visible para el líder al registrar una compra.
 
-| Campo | Descripción |
-|-------|-------------|
-| `tienda` | Tienda que recibe la compra |
-| `pedido_origen` | Referencia al pedido si es recepción planificada; nulo si es imprevisto |
-| `proveedor` | Proveedor del que se recibe |
-| `fecha_recepcion` | Fecha y hora de la recepción |
-| `recibido_por` | Empleado que recibe |
-| `estado` | `en_recepcion`, `completada` |
-| `notas` | Observaciones de la recepción |
-
-#### 3.7.4 Atributos de una Línea de Compra
+#### 3.7.3 Atributos de una Compra Caja Menor
 
 | Campo | Descripción |
 |-------|-------------|
-| `item` | Item recibido |
-| `cantidad_pedida` | Cantidad del pedido original en `unidad_medida_recepcion` (nulo si imprevisto) |
-| `unidad_medida_recepcion` | Unidad en que el proveedor entrega el item (puede diferir de la unidad canónica) |
-| `cantidad_recibida` | Cantidad efectivamente recibida en `unidad_medida_recepcion` |
-| `cantidad_recibida_canonico` | Cantidad convertida a la unidad canónica del item (calculada automáticamente por el sistema) |
-| `costo_unitario` | Costo al que se recibió en `unidad_medida_recepcion` (puede diferir del costo de referencia) |
-| `diferencia` | `recibida - pedida` en `unidad_medida_recepcion` (positivo = excedente, negativo = faltante) |
+| `tienda` | Tienda que realiza la compra |
+| `item` | Item habilitado para caja menor (seleccionado de la lista configurada) |
+| `unidad_medida` | Unidad canónica del item (cargada automáticamente al seleccionar el item) |
+| `cantidad` | Cantidad comprada en la unidad canónica |
+| `valor_unitario` | Valor pagado por unidad (COP) |
+| `valor_total` | Calculado: `cantidad × valor_unitario` |
+| `motivo` | Nota explicativa obligatoria (ej: "emergencia por quiebre de stock") |
+| `fecha` | Fecha de la compra |
+| `registrado_por` | Empleado que registró la compra |
 
-#### 3.7.5 Reglas de Negocio
+#### 3.7.4 Reglas de Negocio
 
-- RN-CMP-01: Al confirmar una recepción, el sistema suma `cantidad_recibida_canonico` al stock del item en la tienda correspondiente.
-- RN-CMP-02: Si la `cantidad_recibida` difiere de la `cantidad_pedida`, el sistema registra la discrepancia y notifica al admin.
-- RN-CMP-03: Una compra imprevista debe justificarse con una nota de motivo.
-- RN-CMP-04: Solo el `lider_tienda` o `admin` pueden confirmar recepciones.
-- RN-CMP-05: Una recepción confirmada no se puede eliminar; solo se puede registrar una devolución al proveedor como tipo de movimiento.
-- RN-CMP-06: El `costo_unitario` de la recepción genera un registro en el historial de costos del item para esa tienda.
-- RN-CMP-07: La `unidad_medida_recepcion` debe tener equivalencia configurada con la unidad canónica del item. El sistema convierte automáticamente y muestra ambos valores en pantalla.
+- RN-CM-01: Solo pueden registrarse compras de items que el admin haya habilitado para caja menor.
+- RN-CM-02: Al confirmar la compra, el sistema suma la cantidad al stock del item en la tienda.
+- RN-CM-03: Toda compra de caja menor requiere un motivo. Sin motivo, no se puede guardar.
+- RN-CM-04: Solo el `lider_tienda` o `admin` pueden registrar compras de caja menor.
+- RN-CM-05: Una compra de caja menor confirmada no se puede eliminar; si hubo error, se registra como merma o devolución.
 
 ---
 
@@ -500,30 +499,35 @@ Los pedidos son órdenes de compra generadas para los proveedores, asociadas a u
 
 #### 3.8.2 Ciclo de Vida de un Pedido
 
-```text
-BORRADOR ──────────────────────────────────────────────────────► CANCELADO
-    │                                                            (admin, desde BORRADOR o CONFIRMADO)
-    ▼
-CONFIRMADO ──────────────────────────────────────────────────► CANCELADO
-    │
-    ▼
-ENVIADO_AL_PROVEEDOR
-    │
-    ▼
-EN_RECEPCIÓN
-    │
-    ├──────────────────► COMPLETADO
-    │                    (diferencia ≤ 10% en todos los items)
-    │
-    └──────────────────► PARCIALMENTE_COMPLETADO
-                         (diferencia > 10% en al menos un item)
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "Borrador" as borrador
+    state "Confirmado" as confirmado
+    state "Enviado al proveedor" as enviado
+    state "En recepción" as en_recepcion
+    state "Completado" as completado
+    state "Parc. completado" as parcial
+    state "Cancelado" as cancelado
+
+    [*] --> borrador : Admin / LT · crea pedido
+    borrador --> confirmado : Admin · confirma
+    borrador --> cancelado : Admin · cancela
+    confirmado --> enviado : Admin / LT · marca enviado
+    confirmado --> cancelado : Admin · cancela
+    enviado --> en_recepcion : LT / Barista / Admin · inicia recepción
+    en_recepcion --> completado : LT / Admin · confirma\ndif. ≤ 10 % en todos los items
+    en_recepcion --> parcial : LT / Admin · confirma\ndif. > 10 % en algún item
+    completado --> [*]
+    parcial --> [*]
+    cancelado --> [*]
 ```
 
 | Transición | Trigger | Rol autorizado |
 |-----------|---------|----------------|
 | BORRADOR → CONFIRMADO | Revisión y confirmación del pedido | `admin` |
-| CONFIRMADO → ENVIADO_AL_PROVEEDOR | Notificación enviada al proveedor | `admin` |
-| ENVIADO → EN_RECEPCIÓN | Inicio del proceso de recepción en tienda | `lider_tienda`, `admin` |
+| CONFIRMADO → ENVIADO_AL_PROVEEDOR | Notificación enviada al proveedor | `admin`, `lider_tienda` |
+| ENVIADO → EN_RECEPCIÓN | Inicio del proceso de recepción en tienda | `lider_tienda`, `barista`, `admin` |
 | EN_RECEPCIÓN → COMPLETADO | Confirmación de recepción dentro de tolerancia | `lider_tienda`, `admin` |
 | EN_RECEPCIÓN → PARCIALMENTE_COMPLETADO | Confirmación con diferencia > tolerancia | `lider_tienda`, `admin` |
 | BORRADOR → CANCELADO | Cancelación manual | `admin` |
@@ -564,6 +568,77 @@ Un pedido en estado `borrador` que no haya sido confirmado en N días (configura
 - RN-PED-04: El admin puede combinar o dividir pedidos antes de confirmarlos.
 - RN-PED-05: Un pedido `completado` es aquel donde todos los items se recibieron dentro de tolerancia (≤10% de diferencia). Si hay diferencia mayor en al menos un item, pasa a `parcialmente_completado`.
 - RN-PED-06: Los pedidos se agrupan por proveedor (un pedido por proveedor por tienda por semana).
+
+#### 3.8.7 Subflujo: Recepción de Pedido
+
+La recepción es el proceso por el cual el líder o barista registra las cantidades reales recibidas cuando el proveedor llega a la tienda. Este subflujo vive dentro del módulo de Pedidos.
+
+**Flujo:**
+1. El `lider_tienda` o `barista` accede al submenú **Recepción** y ve la lista de pedidos en estado `enviado`.
+2. Selecciona el pedido a recibir y hace clic en **Iniciar recepción** → el pedido pasa a `en_recepcion`.
+3. El sistema despliega la lista de items del pedido con la cantidad pedida por cada uno.
+4. El líder o barista ingresa la cantidad realmente recibida por cada item.
+5. El sistema calcula en tiempo real la diferencia por item (recibida − pedida).
+6. Al confirmar la recepción:
+   - Si la diferencia en todos los items ≤ 10%: estado `completado`.
+   - Si la diferencia en al menos un item > 10%: estado `parcialmente_completado`.
+   - El sistema suma `cantidad_recibida_canonico` al stock de cada item en la tienda.
+7. Solo el `lider_tienda` o `admin` pueden confirmar la recepción (paso 6). El barista puede iniciar y registrar cantidades pero no confirmar.
+
+**Atributos de una Línea de Recepción:**
+
+| Campo | Descripción |
+|-------|-------------|
+| `item` | Item del pedido |
+| `unidad_medida_recepcion` | Unidad en que el proveedor entrega (puede diferir de la canónica) |
+| `cantidad_pedida` | Cantidad del pedido original |
+| `cantidad_recibida` | Cantidad efectivamente recibida |
+| `cantidad_recibida_canonico` | Convertida a unidad canónica del item |
+| `costo_unitario` | Costo real al que se recibió (actualiza el historial de costos del item) |
+| `diferencia` | `recibida − pedida` (positivo = excedente, negativo = faltante) |
+
+#### 3.8.8 Diagrama de Roles — Flujo Completo (Pedido + Recepción)
+
+```mermaid
+flowchart LR
+    subgraph ADMIN["⚙️ Admin"]
+        direction TB
+        A1["Crear pedido\nautomático o manual"]
+        A2["Confirmar pedido"]
+        A3["Marcar enviado\nal proveedor"]
+        A4["Confirmar recepción"]
+    end
+
+    subgraph LT["👤 Líder de Tienda"]
+        direction TB
+        L1["Crear pedido\nmanual"]
+        L2["Marcar enviado\nal proveedor"]
+        L3["Iniciar recepción"]
+        L4["Ingresar cantidades\nrecibidas"]
+        L5["Confirmar recepción"]
+    end
+
+    subgraph BARISTA["☕ Barista"]
+        direction TB
+        B1["Iniciar recepción"]
+        B2["Ingresar cantidades\nrecibidas"]
+    end
+
+    A1 --> A2
+    L1 --> A2
+    A2 --> A3
+    A2 --> L2
+    A3 --> L3
+    A3 --> B1
+    L2 --> L3
+    L2 --> B1
+    L3 --> L4
+    B1 --> B2
+    L4 --> L5
+    L4 --> A4
+    B2 --> L5
+    B2 --> A4
+```
 
 ---
 
@@ -624,37 +699,7 @@ El admin puede registrar semanas especiales con multiplicadores o cantidades adi
 
 ### 3.10 Módulo: Ajustes de Inventario
 
-#### 3.10.1 Descripción
-
-Los ajustes de inventario son correcciones al stock de un item en una tienda, realizadas **después** de que un inventario ha sido completado. Se distinguen de las mermas (pérdidas) y de las compras (ingresos): representan una corrección de discrepancia cuyo origen puede ser positivo (sobrante) o negativo (faltante) y que no encaja en los tipos de movimiento regulares.
-
-#### 3.10.2 Atributos de un Ajuste
-
-| Campo | Descripción |
-|-------|-------------|
-| `tienda` | Tienda donde se realiza el ajuste |
-| `item` | Item ajustado |
-| `cantidad` | Cantidad del ajuste en la unidad canónica del item. Positivo = suma stock (sobrante); negativo = descuenta stock (faltante) |
-| `motivo` | Nota descriptiva obligatoria que explica el origen del ajuste |
-| `inventario_origen` | Referencia al inventario que generó la necesidad de ajuste (obligatorio) |
-| `fecha` | Fecha y hora del registro |
-| `registrado_por` | Empleado que registró el ajuste |
-| `estado` | `pendiente_aprobacion`, `aprobado`, `rechazado` |
-| `aprobado_por` | Admin que aprobó (si aplica) |
-
-#### 3.10.3 Flujo de Aprobación
-
-- Ajustes dentro del **umbral de aprobación automática** (configurable por el admin, ej: ≤ 5 unidades en unidad canónica): se aprueban automáticamente al ser registrados por el líder.
-- Ajustes que superan el umbral: quedan en estado `pendiente_aprobacion` y requieren aprobación del `admin` antes de impactar el inventario.
-
-#### 3.10.4 Reglas de Negocio
-
-- RN-AJU-01: Un ajuste de inventario solo puede crearse vinculado a un inventario completado.
-- RN-AJU-02: El impacto en stock ocurre en el momento de aprobación (automática o manual), no al registrarlo.
-- RN-AJU-03: Los ajustes NO aparecen en los reportes de mermas. Son un tipo de movimiento diferenciado.
-- RN-AJU-04: Los ajustes quedan en el registro de movimientos con tipo `ajuste_inventario`, visible para el admin.
-- RN-AJU-05: Un ajuste rechazado no impacta el inventario y queda en el historial con el motivo de rechazo.
-- RN-AJU-06: El admin puede ver el reporte de ajustes por tienda, por item, por período y por responsable.
+> **⚠️ Deprecado en v2.** Este módulo fue eliminado tras revisión con el equipo (2026-05-18). Las diferencias detectadas en el conteo ajustan el stock directamente al confirmar el inventario (RN-INV-05), sin flujo de aprobación separado. Las correcciones posteriores a un inventario completado se registran como mermas (si son pérdidas) o mediante un nuevo inventario de tipo `inicial` o `semanal`.
 
 ---
 
@@ -754,16 +799,39 @@ Todo movimiento que modifica el stock de un item en una tienda debe:
 2. Actualizar el stock proyectado del item en la tienda.
 3. Ser trazable hacia el inventario más cercano.
 
-| Tipo de movimiento | Efecto en stock | Módulo origen |
-|---------------------|----------------|---------------|
-| Venta (POS) | Descuenta | Ventas |
-| Compra / Recepción | Suma | Compras |
-| Merma | Descuenta | Mermas |
-| Conteo físico (inventario) | Ajusta (establece el real como nueva base) | Inventario |
-| Ajuste de inventario (positivo) | Suma | Ajustes |
-| Ajuste de inventario (negativo) | Descuenta | Ajustes |
-| Anulación de merma | Suma (revierte el descuento) | Mermas |
-| Devolución a proveedor | Descuenta | Compras |
+```mermaid
+flowchart LR
+    RP("Recepción de pedido"):::entrada
+    CM("Caja Menor"):::entrada
+    II("Inventario inicial"):::entrada
+    VT("Ventas · POS"):::salida
+    MR("Mermas"):::salida
+    INV("Inventario físico"):::correccion
+
+    STOCK[("Stock\nitem · tienda")]:::stock
+
+    RP -->|"+ al confirmar"| STOCK
+    CM -->|"+ al registrar"| STOCK
+    II -->|"establece base inicial"| STOCK
+    STOCK -->|"− en tiempo real"| VT
+    STOCK -->|"− al registrar"| MR
+    INV -.->|"⟳ ajusta al valor real\nal completar el conteo"| STOCK
+
+    classDef entrada fill:#d1fae5,stroke:#059669,color:#065f46
+    classDef salida fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef correccion fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef stock fill:#dbeafe,stroke:#2563eb,color:#1e3a8a,font-weight:bold
+```
+
+| Tipo de movimiento | Efecto | Módulo | Momento de ejecución |
+|---------------------|--------|--------|----------------------|
+| Venta (POS) | − Descuenta | Ventas | En tiempo real al procesar venta |
+| Recepción de pedido | + Suma | Pedidos | Al confirmar cantidades recibidas |
+| Caja Menor | + Suma | Caja Menor | Al registrar la compra |
+| Inventario inicial | = Establece base | Inventario | Al completar el conteo inicial |
+| Inventario físico (diario / semanal / mensual) | ⟳ Reemplaza por valor real | Inventario | Al completar el conteo |
+| Merma | − Descuenta | Mermas | Inmediatamente al registrar |
+| Anulación de merma | + Revierte descuento | Mermas | Al anular el registro |
 
 ### 5.2 Valor Sugerido en Inventarios
 
@@ -777,12 +845,36 @@ valor_sugerido           = valor_real del inventario_referencia
                            + compras confirmadas desde inventario_referencia hasta ahora
                            - ventas procesadas desde inventario_referencia hasta ahora
                            - mermas registradas desde inventario_referencia hasta ahora
-                           ± ajustes aprobados desde inventario_referencia hasta ahora
+```
+
+```mermaid
+flowchart TD
+    REF["Último inventario completado\nvalor real contado"]:::ref
+
+    subgraph MOV["Movimientos desde la referencia"]
+        direction LR
+        C["＋ Compras\nrecepción · caja menor"]:::entrada
+        V["− Ventas\nintegración POS"]:::salida
+        M["− Mermas\nregistros en tienda"]:::salida
+    end
+
+    CALC["Stock proyectado"]:::calc
+    REF --> CALC
+    MOV --> CALC
+
+    CALC --> DEC{"¿Inventario\nfísico completado?"}
+    DEC -->|"Sí → al completar"| REAL["Stock = valor real contado\n← nueva referencia"]:::ref
+    DEC -->|"No"| PROY["Stock = proyectado\n(calculado)"]:::calc
+
+    classDef ref fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef entrada fill:#d1fae5,stroke:#059669,color:#065f46
+    classDef salida fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+    classDef calc fill:#f3f4f6,stroke:#6b7280,color:#111827
 ```
 
 Esta fórmula garantiza que el sugerido refleje el stock proyectado más reciente posible, sin importar el tiempo transcurrido desde el último conteo.
 
-Los campos `ventas_periodo`, `compras_periodo`, `mermas_periodo` y `ajustes_periodo` del detalle de inventario muestran el desglose de los movimientos incluidos en el cálculo para que el líder pueda auditar la proyección.
+Los campos `ventas_periodo`, `compras_periodo` y `mermas_periodo` del detalle de inventario muestran el desglose de los movimientos incluidos en el cálculo para que el líder pueda auditar la proyección.
 
 ### 5.3 Valor Esperado en Inventarios
 
@@ -910,7 +1002,6 @@ Positivo → sobrante. Negativo → faltante.
 │                                    │ ventas_periodo    │                │
 │                                    │ compras_periodo   │                │
 │                                    │ mermas_periodo    │                │
-│                                    │ ajustes_periodo   │                │
 │                                    │ val_esperado      │                │
 │                                    │ val_real          │                │
 │                                    └───────────────────┘                │
@@ -1172,6 +1263,22 @@ Las siguientes mejoras fueron identificadas pero **no se desarrollarán en v2**.
 - DP-01: Estacionalidad semanal en demand planning (FA-02).
 - DP-02: Devoluciones a proveedores (FA-03).
 - DP-03: Módulo de reportes operacionales (FA-04).
+
+---
+
+### v2.1 — 2026-05-18
+
+**Simplificaciones post-revisión con el equipo:**
+
+- **[DEP] Módulo Ajustes de Inventario (§3.10):** Eliminado. Las diferencias del conteo ajustan el stock directamente al confirmar el inventario (RN-INV-05). Las correcciones posteriores se registran como mermas o mediante un nuevo inventario.
+- **[MOD] RN-INV-05:** Reescrito — las diferencias ajustan el stock automáticamente al confirmar, sin flujo de aprobación.
+- **[NUEVO] RN-INV-07:** Quien inicia y diligencia el conteo puede finalizarlo, sin restricción de rol.
+- **[NUEVO] RN-INV-08:** Correcciones post-cierre vía mermas o nuevo inventario.
+- **[MOD] Sección 5.1:** Tabla de movimientos actualizada (eliminadas filas de ajuste); agregado diagrama Mermaid de entradas/salidas de stock.
+- **[MOD] Sección 5.2:** Fórmula de stock sugerido actualizada (eliminado `± ajustes`); agregado diagrama Mermaid del ciclo de proyección.
+- **[MOD] §1.2 Alcance:** Eliminada "Ajustes de inventario post-cierre" de la lista de funcionalidades.
+- **[MOD] §2.5 Matriz de permisos:** Eliminadas filas de "Registrar ajuste" y "Aprobar ajuste".
+- **[MOD] §3.4.6:** Eliminado campo `ajustes_periodo` del detalle de inventario.
 
 **Items diferidos al backlog:**
 
