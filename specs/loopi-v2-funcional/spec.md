@@ -574,6 +574,7 @@ Un pedido en estado `borrador` que no haya sido confirmado en N días (configura
 La recepción es el proceso por el cual el líder o barista registra las cantidades reales recibidas cuando el proveedor llega a la tienda. Este subflujo vive dentro del módulo de Pedidos.
 
 **Flujo:**
+
 1. El `lider_tienda` o `barista` accede al submenú **Recepción** y ve la lista de pedidos en estado `enviado`.
 2. Selecciona el pedido a recibir y hace clic en **Iniciar recepción** → el pedido pasa a `en_recepcion`.
 3. El sistema despliega la lista de items del pedido con la cantidad pedida por cada uno.
