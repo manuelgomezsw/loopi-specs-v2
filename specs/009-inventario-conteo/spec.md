@@ -29,15 +29,16 @@ que el sistema sugiere `diario / apertura` y presenta solo los items con frecuen
    **Entonces** el sistema sugiere `diario / apertura` y presenta los items con frecuencia
    `diario` con su valor sugerido calculado desde el inventario de referencia más reciente.
 
-2. **Dado** que el líder quiere realizar un conteo semanal fuera del día habitual,
+2. **Dado** que el líder quiere realizar un conteo semanal,
    **Cuando** selecciona manualmente el tipo `semanal`,
-   **Entonces** el sistema presenta los items con frecuencia `diario` y `semanal` sin
-   bloquear el cambio de tipo.
+   **Entonces** el sistema presenta los items con frecuencia `semanal` sin bloquear el
+   cambio de tipo.
 
 3. **Dado** que ya existe un conteo `diario / apertura` en progreso en esa tienda,
-   **Cuando** otro usuario intenta iniciar otro conteo del mismo tipo y horario en la misma
-   fecha,
-   **Entonces** el sistema bloquea la operación indicando que ya existe un conteo en curso.
+   **Cuando** otro usuario de la misma tienda intenta iniciar otro conteo del mismo tipo y
+   horario en la misma fecha,
+   **Entonces** el sistema bloquea la operación indicando que ya existe un conteo en curso
+   en dicha tienda.
 
 4. **Dado** que es el primer conteo de la tienda (sin historial previo),
    **Cuando** el líder inicia el inventario de tipo `inicial`,
@@ -97,14 +98,11 @@ comprobando que el stock de los items ajustados refleja el valor real contado.
    **Entonces** el stock de cada item en la tienda se ajusta al valor real contado, las
    diferencias quedan registradas en el historial y el inventario pasa a estado `completado`.
 
-2. **Dado** que el conteo completado muestra faltantes superiores al 10% en algún item,
-   **Cuando** el admin consulta el dashboard,
-   **Entonces** puede ver las discrepancias marcadas como alertas para ese inventario.
-
-3. **Dado** que un inventario ya fue confirmado (estado `completado`),
-   **Cuando** alguien intenta modificar sus valores,
-   **Entonces** el sistema no permite la modificación directa; indica que las correcciones
-   deben registrarse como mermas o mediante un nuevo inventario.
+2. **Dado** que un inventario ya fue confirmado (estado `completado`),
+   **Cuando** el admin intenta modificar sus valores,
+   **Entonces** el sistema permite la modificación directa únicamente al admin; cualquier
+   otro rol recibe acceso denegado e indicación de que las correcciones deben registrarse
+   como mermas o mediante un nuevo inventario.
 
 ---
 
@@ -153,7 +151,7 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   de la tienda. No requiere inventario de referencia previo.
 - RF-INV-01.6: Los items presentados en el conteo dependen del tipo:
   - `diario`: items con frecuencia `diario`.
-  - `semanal`: items con frecuencia `diario` y `semanal`.
+  - `semanal`: items con frecuencia `semanal`.
   - `mensual` e `inicial`: todos los items activos.
 
 ### RF-INV-02: Registro del conteo
@@ -176,13 +174,11 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   registrado. El sistema bloquea la confirmación si falta alguno.
 - RF-INV-03.2: Al confirmar, el stock de cada item en la tienda se ajusta automáticamente
   al valor real contado. No se requiere aprobación de un rol superior.
-- RF-INV-03.3: El inventario confirmado pasa a estado `completado` y no puede modificarse
-  directamente. Las correcciones posteriores se registran como mermas o mediante un nuevo
-  inventario.
+- RF-INV-03.3: El inventario confirmado pasa a estado `completado`. Solo el admin puede
+  modificar directamente los valores de un inventario completado. Para lider_tienda y
+  barista, las correcciones deben registrarse como mermas o mediante un nuevo inventario.
 - RF-INV-03.4: Las diferencias de cada item (positivas y negativas) quedan registradas en
   el historial del inventario para trazabilidad.
-- RF-INV-03.5: Las discrepancias superiores al 10% en algún item generan una alerta
-  visible en el dashboard del admin.
 
 ### RF-INV-04: Historial y consulta
 
@@ -206,7 +202,7 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 - **Trazabilidad**: El 100% de las diferencias de inventario quedan registradas con
   fecha, responsable y detalle por item.
 - **Prevención de duplicados**: El sistema bloquea el 100% de los intentos de iniciar
-  dos conteos del mismo tipo, horario y fecha en la misma tienda.
+  dos conteos del mismo tipo, horario y fecha dentro de la misma tienda.
 
 ---
 

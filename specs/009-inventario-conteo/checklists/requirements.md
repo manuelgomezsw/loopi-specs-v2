@@ -18,9 +18,9 @@
 - [x] Criterios de éxito son medibles
 - [x] Criterios de éxito son agnósticos a tecnología (sin detalles de implementación)
 - [x] Todos los escenarios de aceptación están definidos
-- [x] Casos borde identificados (conteo duplicado, conteo interrumpido, confirmación con
-  items faltantes, inventario inicial sin referencia, ajuste automático sin aprobación,
-  discrepancia > 10%)
+- [x] Casos borde identificados (conteo duplicado por tienda, conteo interrumpido,
+  confirmación con items faltantes, inventario inicial sin referencia, ajuste automático
+  sin aprobación, modificación de completado solo por admin)
 - [x] Alcance claramente delimitado (sin aprobación para ajustes, un conteo por tipo/horario
   por fecha, correcciones solo vía mermas o nuevo inventario)
 - [x] Dependencias y suposiciones identificadas
