@@ -12,9 +12,8 @@
 ### Historia de Usuario 1 — Crear un item (Prioridad: P1)
 
 El administrador registra un nuevo insumo, material de consumo o activo en el catálogo
-asignándole un código único, nombre, tipo, subcategoría, proveedor habitual, unidad canónica
-de medida, costo de referencia, frecuencia de inventario, stock de seguridad y tiempo de
-entrega del proveedor. Una vez creado, el item queda disponible para inventarios, recetas y
+asignándole un código único, nombre, tipo, subcategoría, proveedor habitual, unidad de medida,
+costo unitario, frecuencia de inventario, stock de seguridad y tiempo de entrega del proveedor. Una vez creado, el item queda disponible para inventarios, recetas y
 pedidos en todas las tiendas.
 
 **Por qué esta prioridad**: Los items son la entidad central del sistema. Sin items no puede
@@ -28,7 +27,7 @@ disponible al iniciar un conteo de inventario en cualquier tienda.
 
 1. **Dado** que existen unidades de medida, subcategorías y proveedores activos,
    **Cuando** el admin crea el item "Leche Entera" con código `LEC-001`, tipo `insumo`,
-   subcategoría "Lácteos > Líquidos", unidad canónica `ml`, proveedor, costo de referencia,
+   subcategoría "Lácteos > Líquidos", unidad de medida `ml`, proveedor, costo unitario,
    frecuencia `diario` y stock de seguridad,
    **Entonces** el item queda registrado como activo y aparece en el catálogo compartido de
    todas las tiendas.
@@ -50,7 +49,7 @@ disponible al iniciar un conteo de inventario en cualquier tienda.
 ### Historia de Usuario 2 — Editar un item (Prioridad: P2)
 
 El administrador actualiza los datos de un item existente cuando cambia el proveedor,
-el costo de referencia, el stock de seguridad u otros parámetros operativos. Los cambios
+el costo unitario, el stock de seguridad u otros parámetros operativos. Los cambios
 aplican de inmediato a todas las tiendas, pero no afectan el historial operativo previo.
 
 **Por qué esta prioridad**: Los parámetros operativos (costo, stock de seguridad, tiempo
@@ -72,10 +71,10 @@ comprobando que los cálculos de pedido automático reflejan el nuevo valor.
    **Entonces** el sistema no permite modificar el código una vez que el item está en uso
    en al menos un inventario, pedido o receta, e informa la razón.
 
-3. **Dado** que el admin cambia la unidad canónica de un item que ya tiene historial de
+3. **Dado** que el admin cambia la unidad de medida de un item que ya tiene historial de
    stock,
    **Cuando** intenta guardar el cambio,
-   **Entonces** el sistema advierte que el cambio de unidad canónica invalida el historial
+   **Entonces** el sistema advierte que el cambio de unidad de medida invalida el historial
    de stock y requiere confirmación explícita antes de proceder.
 
 ---
@@ -125,12 +124,12 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 1. **Dado** que existen items activos e inactivos de distintos tipos,
    **Cuando** el admin consulta el catálogo de items,
-   **Entonces** ve todos los items con código, nombre, tipo, subcategoría, unidad canónica
-   y estado (activo/inactivo), con opción de filtrar por tipo, subcategoría o estado.
+   **Entonces** ve todos los items con código, nombre, tipo, frecuencia y estado
+   (activo/inactivo), con opción de filtrar por tipo, frecuencia o estado.
 
 2. **Dado** que el admin selecciona un item del listado,
    **Cuando** accede a su detalle,
-   **Entonces** puede ver todos sus atributos incluyendo costo de referencia, stock de
+   **Entonces** puede ver todos sus atributos incluyendo costo unitario, stock de
    seguridad, tiempo de entrega y frecuencia de inventario.
 
 ---
@@ -142,26 +141,26 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - RF-ITEM-01.1: Solo el administrador puede crear items. Cualquier otro rol recibe
   acceso denegado.
 - RF-ITEM-01.2: Un item requiere obligatoriamente: código, nombre, tipo, subcategoría,
-  unidad canónica de medida, frecuencia de inventario y stock de seguridad.
-- RF-ITEM-01.3: Los campos opcionales al crear son: proveedor, costo de referencia y
+  unidad de medida, frecuencia de inventario y stock de seguridad.
+- RF-ITEM-01.3: Los campos opcionales al crear son: proveedor, costo unitario y
   tiempo de entrega en días.
 - RF-ITEM-01.4: El código del item es único en todo el sistema y es asignado manualmente
   por el admin (ej: `CAF-001`, `LEC-002`).
 - RF-ITEM-01.5: El nombre del item es único en todo el sistema.
 - RF-ITEM-01.6: Los tipos de item válidos son: `insumo`, `material_consumo`, `activo`.
-- RF-ITEM-01.7: El costo de referencia se expresa en pesos colombianos (COP) sin decimales
-  y corresponde a la unidad canónica del item.
+- RF-ITEM-01.7: El costo unitario se expresa en pesos colombianos (COP) sin decimales
+  y corresponde a la unidad de medida del item.
 - RF-ITEM-01.8: Un item recién creado queda en estado activo por defecto.
 - RF-ITEM-01.9: El catálogo de items es compartido entre todas las tiendas de la marca.
 
 ### RF-ITEM-02: Edición de items
 
 - RF-ITEM-02.1: Solo el administrador puede editar un item.
-- RF-ITEM-02.2: Se pueden editar en cualquier momento: nombre, proveedor, costo de
-  referencia, stock de seguridad, tiempo de entrega y frecuencia de inventario.
+- RF-ITEM-02.2: Se pueden editar en cualquier momento: nombre, proveedor, costo unitario,
+  stock de seguridad, tiempo de entrega y frecuencia de inventario.
 - RF-ITEM-02.3: El código del item no puede modificarse una vez que el item está en uso
   en al menos un inventario, pedido o receta.
-- RF-ITEM-02.4: Cambiar la unidad canónica de un item con historial de stock requiere
+- RF-ITEM-02.4: Cambiar la unidad de medida de un item con historial de stock requiere
   confirmación explícita del admin, quien asume la responsabilidad por la inconsistencia
   histórica resultante.
 - RF-ITEM-02.5: La subcategoría puede cambiarse libremente; el item hereda la nueva
@@ -194,8 +193,8 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 ### RF-ITEM-05: Listado y consulta
 
 - RF-ITEM-05.1: El administrador puede consultar el catálogo completo de items con
-  código, nombre, tipo, subcategoría, unidad canónica y estado.
-- RF-ITEM-05.2: El listado permite filtrar por tipo, subcategoría y estado (activo/inactivo).
+  código, nombre, tipo, frecuencia y estado.
+- RF-ITEM-05.2: El listado permite filtrar por tipo, frecuencia y estado (activo/inactivo).
 - RF-ITEM-05.3: Desde el detalle de un item, el admin accede a todos sus atributos
   incluyendo los parámetros de stock y el historial de costos por tienda.
 
@@ -212,7 +211,7 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - **Trazabilidad**: Al inactivar un item, el 100% de su historial operativo previo
   (inventarios, pedidos, costos) permanece accesible para el admin.
 - **Consistencia referencial**: El 100% de los items activos tienen siempre una
-  subcategoría y una unidad canónica asignadas; no puede existir un item activo sin
+  subcategoría y una unidad de medida asignadas; no puede existir un item activo sin
   estas referencias.
 
 ---
@@ -221,7 +220,7 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Item` | codigo (único), nombre (único), tipo, subcategoria_id, proveedor_id, unidad_medida_id, costo_unitario_referencia, frecuencia_inventario, stock_seguridad, tiempo_entrega_dias, activo |
+| `Item` | codigo (único), nombre (único), tipo, subcategoria_id, proveedor_id, unidad_medida_id, costo_unitario, frecuencia_inventario, stock_seguridad, tiempo_entrega_dias, activo |
 
 ---
 
@@ -230,7 +229,7 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 ### Dependencias
 
 - **001-autenticacion**: El admin debe estar autenticado para gestionar el catálogo.
-- **004-unidades-medida**: Cada item requiere una unidad canónica de medida activa.
+- **004-unidades-medida**: Cada item requiere una unidad de medida activa.
 - **005-categorias-catalogo**: Cada item requiere una subcategoría activa (que a su vez
   pertenece a una categoría).
 - **006-proveedores-catalogo**: El proveedor habitual es opcional al crear el item, pero
@@ -246,9 +245,7 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 - El código del item es asignado manualmente por el admin siguiendo la convención de
   nomenclatura del negocio (ej: `CAF-001`). El sistema no genera códigos automáticamente.
-- El costo de referencia es un valor orientativo; el costo real por tienda se actualiza
-  automáticamente con cada recepción de compra confirmada (historial de costos por tienda).
-- El stock de seguridad se expresa en la misma unidad canónica del item.
+- El stock de seguridad se expresa en la misma unidad de medida del item.
 - Un item puede no tener proveedor asignado (ej: activos no consumibles), pero en ese
   caso no participará en la generación de pedidos automáticos.
 - No existe un cuarto nivel de tipo de item en esta versión; los tipos son fijos:
