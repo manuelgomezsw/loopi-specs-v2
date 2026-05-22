@@ -150,9 +150,10 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 - RF-INV-01.5: El tipo `inicial` se usa exclusivamente para la carga inaugural de stock
   de la tienda. No requiere inventario de referencia previo.
 - RF-INV-01.6: Los items presentados en el conteo dependen del tipo:
-  - `diario`: items con frecuencia `diario`.
-  - `semanal`: items con frecuencia `semanal`.
-  - `mensual` e `inicial`: todos los items activos.
+  - `diario`: todos los items con frecuencia de inventario `diario`.
+  - `semanal`: todos los items con frecuencia de inventario `semanal`.
+  - `mensual`: todos los items con frecuencia de inventario `mensual`.
+  - `inicial`: todos los items activos.
 
 ### RF-INV-02: Registro del conteo
 
