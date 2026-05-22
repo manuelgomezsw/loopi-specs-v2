@@ -159,9 +159,23 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 
 - RF-INV-02.1: Para cada item del conteo, el sistema muestra: valor sugerido (stock
   proyectado), valor esperado y un campo para ingresar el valor real.
-- RF-INV-02.2: El valor sugerido de cada item se calcula desde el inventario completado
-  más reciente de la tienda (de cualquier tipo y horario), incorporando ventas, compras
-  y mermas registradas desde entonces.
+- RF-INV-02.2: El valor sugerido de cada item se calcula con la siguiente fórmula:
+
+  `valor_sugerido = stock_inventario_referencia + compras_periodo − ventas_periodo − mermas_periodo`
+
+  Donde:
+
+  - `stock_inventario_referencia`: valor real contado en el inventario completado más
+    reciente de la tienda (de cualquier tipo y horario).
+  - `compras_periodo`: unidades recibidas por recepciones de pedido y compras de caja
+    menor confirmadas desde ese inventario hasta el inicio del conteo actual.
+  - `ventas_periodo`: unidades descontadas por ventas procesadas desde ese inventario
+    hasta el inicio del conteo actual.
+  - `mermas_periodo`: unidades registradas como merma desde ese inventario hasta el
+    inicio del conteo actual.
+
+  Para el inventario de tipo `inicial`, el valor sugerido de todos los items es cero,
+  ya que no existe inventario de referencia previo.
 - RF-INV-02.3: La diferencia (real − esperado) se recalcula y muestra en pantalla en
   tiempo real al ingresar cada valor.
 - RF-INV-02.4: Un conteo en progreso puede ser retomado por el mismo responsable si fue
