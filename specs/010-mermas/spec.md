@@ -59,7 +59,7 @@ comprobando que cada registro muestra item, cantidad, motivo, fecha y responsabl
 1. **Dado** que existen varias mermas registradas en la tienda,
    **Cuando** el líder consulta el listado de mermas,
    **Entonces** ve las mermas ordenadas por fecha descendente con item, cantidad,
-   motivo, fecha y responsable; las mermas anuladas aparecen marcadas como tal.
+   motivo, fecha y responsable.
 
 2. **Dado** que el listado tiene mermas de distintos motivos e items,
    **Cuando** el líder filtra por motivo `vencimiento`,
@@ -68,33 +68,29 @@ comprobando que cada registro muestra item, cantidad, motivo, fecha y responsabl
 
 ---
 
-### Historia de Usuario 3 — Anular una merma registrada (Prioridad: P1)
+### Historia de Usuario 3 — Eliminar una merma registrada (Prioridad: P1)
 
 El administrador detecta que una merma fue registrada por error (cantidad equivocada,
-item incorrecto) y la anula indicando el motivo. El stock del item se revierte
-automáticamente al estado previo a la merma.
+item incorrecto) y la elimina. El stock del item se revierte automáticamente al valor
+que tenía antes de registrarse la merma.
 
-**Por qué esta prioridad**: Los errores de registro ocurren y deben poder corregirse
-sin eliminar el registro histórico. La anulación con motivo garantiza la trazabilidad
-completa del stock.
+**Por qué esta prioridad**: Los errores de registro ocurren y deben poder corregirse.
+La eliminación directa mantiene el cálculo del stock simple: solo las mermas existentes
+en el sistema descuentan stock.
 
-**Prueba Independiente**: Puede verificarse anulando una merma y comprobando que el
+**Prueba Independiente**: Puede verificarse eliminando una merma y comprobando que el
 stock del item vuelve al valor que tenía antes de registrarse la merma.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que existe una merma de 500 ml de "Leche Entera" en estado activo,
-   **Cuando** el admin la anula con motivo "Error de cantidad",
-   **Entonces** el stock proyectado del item se incrementa en 500 ml, la merma pasa
-   a estado `anulada` y queda registrado quién anuló y cuándo.
+1. **Dado** que existe una merma de 500 ml de "Leche Entera",
+   **Cuando** el admin la elimina,
+   **Entonces** el stock proyectado del item se incrementa en 500 ml y la merma
+   desaparece del sistema.
 
-2. **Dado** que un líder de tienda intenta anular una merma,
+2. **Dado** que un líder de tienda intenta eliminar una merma,
    **Cuando** ejecuta la acción,
-   **Entonces** el sistema deniega la operación; solo el admin puede anular mermas.
-
-3. **Dado** que una merma ya está en estado `anulada`,
-   **Cuando** el admin intenta anularla nuevamente,
-   **Entonces** el sistema bloquea la operación indicando que la merma ya fue anulada.
+   **Entonces** el sistema deniega la operación; solo el admin puede eliminar mermas.
 
 ---
 
@@ -148,26 +144,20 @@ la suma de (cantidad × costo_unitario) por cada merma.
 - RF-MERM-02.1: El lider_tienda y el barista pueden consultar las mermas de su propia
   tienda. El admin puede consultar mermas de cualquier tienda.
 - RF-MERM-02.2: El listado de mermas muestra: item, cantidad, unidad de medida, motivo,
-  descripción, fecha, responsable y estado (activa/anulada).
-- RF-MERM-02.3: El listado permite filtrar por motivo, item, fecha y estado.
-- RF-MERM-02.4: Las mermas anuladas permanecen visibles en el listado con su estado
-  indicado; no desaparecen del historial.
+  descripción, fecha y responsable.
+- RF-MERM-02.3: El listado permite filtrar por motivo, item y fecha.
 
-### RF-MERM-03: Anulación de mermas
+### RF-MERM-03: Eliminación de mermas
 
-- RF-MERM-03.1: Solo el admin puede anular mermas.
-- RF-MERM-03.2: Para anular una merma, el admin debe proveer un motivo de anulación
-  (texto libre, obligatorio).
-- RF-MERM-03.3: Al anular una merma, el sistema revierte el descuento de stock: la
+- RF-MERM-03.1: Solo el admin puede eliminar mermas.
+- RF-MERM-03.2: Al eliminar una merma, el sistema revierte el descuento de stock: la
   cantidad de la merma se suma de nuevo al stock proyectado del item en la tienda.
-- RF-MERM-03.4: La anulación registra quién anuló la merma y cuándo.
-- RF-MERM-03.5: Una merma ya anulada no puede anularse nuevamente.
+- RF-MERM-03.3: La merma eliminada desaparece completamente del sistema.
 
 ### RF-MERM-04: Reporte consolidado (admin)
 
 - RF-MERM-04.1: El admin puede consultar el reporte consolidado de mermas de todas las
-  tiendas, con filtros por tienda, item, motivo, período (fecha inicio y fecha fin) y
-  estado (activa/anulada).
+  tiendas, con filtros por tienda, item, motivo y período (fecha inicio y fecha fin).
 - RF-MERM-04.2: El reporte muestra el costo total estimado de cada merma, calculado
   como `cantidad × costo_unitario` del item. Este valor no se almacena; se calcula al
   mostrar el listado.
@@ -178,7 +168,7 @@ la suma de (cantidad × costo_unitario) por cada merma.
 
 - RF-MERM-05.1: Las mermas registradas entre dos inventarios se acumulan en el campo
   `mermas_periodo` del cálculo del valor sugerido del siguiente inventario.
-- RF-MERM-05.2: Si una merma es anulada, el sistema revierte su contribución a
+- RF-MERM-05.2: Si una merma es eliminada, el sistema revierte su contribución a
   `mermas_periodo`, actualizando el valor sugerido del próximo inventario.
 
 ---
@@ -187,13 +177,13 @@ la suma de (cantidad × costo_unitario) por cada merma.
 
 - **Impacto inmediato en stock**: El 100% de las mermas registradas descuentan el stock
   proyectado en el momento exacto del registro, sin retraso.
-- **Trazabilidad completa**: El 100% de las mermas quedan registradas con item,
-  cantidad, motivo, fecha, tienda y responsable; ninguna puede eliminarse del historial.
-- **Reversibilidad controlada**: El 100% de las anulaciones de mermas revierten el stock
-  correctamente y quedan registradas con responsable y motivo de anulación.
-- **Control de acceso**: El 100% de los intentos de anulación por roles distintos al
-  admin son bloqueados; el 100% de los registros de merma en tiendas ajenas por
-  lider_tienda o barista son rechazados.
+- **Trazabilidad completa**: El 100% de las mermas activas quedan registradas con item,
+  cantidad, motivo, fecha, tienda y responsable.
+- **Reversibilidad correcta**: El 100% de las eliminaciones de mermas revierten el stock
+  exactamente en la cantidad que la merma había descontado.
+- **Control de acceso**: El 100% de los intentos de eliminación de mermas por roles
+  distintos al admin son bloqueados; el 100% de los registros de merma en tiendas ajenas
+  por lider_tienda o barista son rechazados.
 - **Visibilidad del admin**: El admin puede consultar el reporte consolidado de mermas
   filtrado por cualquier combinación de tienda, item, motivo y período sin restricción.
 
@@ -203,7 +193,7 @@ la suma de (cantidad × costo_unitario) por cada merma.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Merma` | tienda_id, item_id, cantidad, unidad_medida_id, motivo, descripcion, fecha, registrado_por_id, inventario_asociado_id, estado, anulado_por_id, anulado_en, motivo_anulacion |
+| `Merma` | tienda_id, item_id, cantidad, unidad_medida_id, motivo, descripcion, fecha, registrado_por_id, inventario_asociado_id |
 
 ---
 
@@ -231,8 +221,6 @@ la suma de (cantidad × costo_unitario) por cada merma.
 - La cantidad de la merma se registra en la unidad de medida del item. Si el usuario
   opera en unidades diferentes, debe conocer la equivalencia o el sistema le ofrece
   conversión automática según las equivalencias de 004-unidades-medida.
-- Una merma anulada no se elimina ni se oculta del historial; permanece visible con
-  estado `anulada` para auditoría.
 - No existe un flujo de aprobación para registrar mermas; cualquier lider_tienda o
   barista puede registrar mermas en su tienda sin autorización previa.
 - El campo `inventario_asociado` es puramente informativo y no afecta el cálculo del

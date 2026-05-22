@@ -18,18 +18,18 @@
 - [x] Criterios de éxito son medibles
 - [x] Criterios de éxito son agnósticos a tecnología (sin detalles de implementación)
 - [x] Todos los escenarios de aceptación están definidos
-- [x] Casos borde identificados (merma en tienda ajena bloqueada, anulación solo por
-  admin, merma ya anulada no se puede anular dos veces, descripción opcional incluso
-  para motivo "otro", costo_total calculado no almacenado)
-- [x] Alcance claramente delimitado (sin flujo de aprobación, anulación con motivo
-  obligatorio, costo orientativo basado en costo vigente no histórico)
+- [x] Casos borde identificados (merma en tienda ajena bloqueada, eliminación solo por
+  admin, descripción opcional incluso para motivo "otro", costo_total calculado no
+  almacenado)
+- [x] Alcance claramente delimitado (sin flujo de aprobación, eliminación directa sin
+  registro de auditoría, costo orientativo basado en costo vigente no histórico)
 - [x] Dependencias y suposiciones identificadas
 
 ## Preparación del Feature
 
 - [x] Todos los requisitos funcionales tienen criterios de aceptación claros
 - [x] Los escenarios de usuario cubren los flujos principales (registrar, consultar,
-  anular, reporte consolidado)
+  eliminar, reporte consolidado)
 - [x] El feature cumple los resultados medibles definidos en los Criterios de Éxito
 - [x] Sin detalles de implementación en la especificación
 
@@ -42,6 +42,5 @@
 - El costo_total estimado usa el `costo_unitario` vigente al momento de consultar (no
   el histórico al momento del registro). Verificar si esta decisión es aceptable para
   reportes financieros o si se requiere guardar el costo al momento de la merma.
-- RF-MERM-05 describe el impacto en `mermas_periodo` del inventario. Confirmar que la
-  reversión de una merma anulada actualiza correctamente este acumulado en los conteos
-  futuros (no en conteos ya completados).
+- RF-MERM-05.2 indica que eliminar una merma revierte su contribución a `mermas_periodo`.
+  Confirmar que esta reversión aplica solo a conteos futuros (no a conteos ya completados).
