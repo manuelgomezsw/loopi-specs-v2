@@ -1,20 +1,31 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
+        1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
+        1.3.0 — OTel+Datadog, Ristretto, zona horaria Colombia, CI gates, estructura multi-repo (MINOR).
+        1.3.1 — golangci-lint (lean) agregado al gate de backend (PATCH).
+        1.3.2 — gosec, govulncheck, npm audit, gitleaks agregados a los gates de seguridad (PATCH).
+        1.3.3 — Trivy CI agregado como gate obligatorio en GitHub Actions (PATCH).
 
-Changes in 1.1.1:
-  - Dev: reemplaza Docker Compose local por GCP Cloud SQL db-f1-micro compartido + Go local + Firebase Emulators
-  - Motivo: máquina de desarrollo con 4.5 GB RAM y sin swap no soporta Docker Compose con MySQL de forma estable
+Changes in 1.3.2:
+  - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
+  - loopi-api: govulncheck y gitleaks como gates obligatorios
+  - loopi-web: npm audit --audit-level=high y gitleaks como gates obligatorios
+  - loopi-specs-v2: gitleaks como gate obligatorio
+
+Changes in 1.3.3:
+  - Flujo de Trabajo: Trivy fs scan obligatorio en CI de GitHub (PRs y push a develop/master)
+  - Principio: la política va en la constitución; el workflow YAML va en cada repo
 
 Templates reviewed:
-  - .specify/templates/plan-template.md ✅ — "Verificación de Constitución" alineada con las 6 puertas
-  - .specify/templates/spec-template.md ✅ — estructura compatible; historias de usuario con criterios de aceptación
-  - .specify/templates/tasks-template.md ✅ — fases reflejan principios de trazabilidad y observabilidad
+  - .specify/templates/plan-template.md — pendiente de revisión
+  - .specify/templates/spec-template.md ✅ — estructura compatible
+  - .specify/templates/tasks-template.md — pendiente de revisión
 
-Deferred items: ninguno
+Deferred items: actualizar checklist "Verificación de Constitución" en plan-template.md para reflejar 7 puertas
 -->
 
 # Loopi v2 — Constitución del Proyecto
@@ -25,7 +36,7 @@ Deferred items: ninguno
 
 Toda funcionalidad nueva o cambio a una funcionalidad existente DEBE comenzar con una especificación
 aprobada antes de cualquier línea de código. La especificación funcional en
-`specs/loopi-v2-funcional/spec.md` es la fuente de verdad del producto.
+`specs/` es la fuente de verdad del producto.
 
 - DEBE existir una spec aprobada (PR mergeado a `develop`) antes de comenzar el plan de implementación.
 - El plan de implementación DEBE referenciar la sección de spec correspondiente.
@@ -45,9 +56,13 @@ Loopi v2 opera bajo el modelo: **catálogo compartido por marca, datos operacion
 
 ### III. Control de Acceso por Rol (RBAC)
 
-Los tres roles del sistema (`admin`, `lider_tienda`, `barista`) son la única fuente de verdad de permisos.
-La matriz de permisos en §2.5 de la spec es normativa.
+Los cuatro roles del sistema (`admin`, `lider_compras`, `lider_tienda`, `barista`) son la única fuente
+de verdad de permisos. La matriz de permisos en §2.5 de la spec es normativa.
 
+- **`admin`**: acceso total. Su JWT no lleva `tienda_id` fijo; opera en modo consolidado o por tienda.
+- **`lider_compras`**: opera a nivel de marca. Ve pedidos y planeación de todas las tiendas.
+  Su JWT no lleva `tienda_id` fijo.
+- **`lider_tienda`** y **`barista`**: acceso restringido a su tienda asignada. Su JWT incluye `tienda_id`.
 - El backend DEBE validar el rol en cada endpoint. El frontend oculta opciones según el rol,
   pero la validación del backend es la que tiene carácter vinculante.
 - Agregar o modificar permisos REQUIERE actualizar §2.5 de la spec y hacer la implementación pasar
@@ -71,21 +86,22 @@ y por qué motivo. No existe modificación de inventario sin rastro auditable.
 El diseño funcional y técnico DEBE cerrar activamente posibilidades de hurto, maquillaje de información
 y brechas operacionales. Un flujo que crea oportunidad de fraude DEBE rediseñarse antes de implementarse.
 
-- Los ajustes post-inventario se registran como mermas (no como edición directa de stock).
-- No existe flujo de "corrección silenciosa": toda desviación genera un registro visible para el `admin`.
-- El `admin` SIEMPRE tiene acceso a reportes de mermas, diferencias de recepción e historial de conteos.
-- Las diferencias en recepción de pedidos (> 10 % en algún ítem) generan estado `parcialmente_completado`
-  y DEBEN ser visibles en el dashboard del admin.
-
-### VI. Observabilidad Preventiva
+### VI. Monitoreo Preventivo
 
 Cada feature DEBE ser monitoreable desde el primer deploy en producción. El sistema DEBE permitir
 diagnosticar degradaciones en menos de 5 segundos.
 
-- Todo endpoint crítico (autenticación, movimientos de stock, recepción de pedidos) DEBE tener
-  métricas de latencia y tasa de errores.
-- Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp, operación.
-- Las alertas DEBEN ser preventivas: detectar anomalías antes de que impacten al usuario final.
+**Stack de observabilidad**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
+**Datadog** como plataforma de observabilidad (trazas, métricas, dashboards y alertas).
+Los logs estructurados van a stdout → GCP Cloud Logging → Datadog vía integración GCP nativa.
+
+- Todo endpoint crítico (autenticación, conteo de inventario, movimientos de stock, generación
+  y recepción de pedidos, integración con ventas) DEBE tener trazas OTel y métricas de latencia
+  y tasa de errores visibles en Datadog.
+- Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp,
+  operación.
+- Las alertas DEBEN configurarse en Datadog y ser preventivas: detectar anomalías antes de que
+  impacten al usuario final.
 - El monitoreo es responsabilidad del equipo de desarrollo, no solo de operaciones.
 
 ---
@@ -95,7 +111,7 @@ diagnosticar degradaciones en menos de 5 segundos.
 **Frontend**: Angular (última versión estable), componentes standalone y signals, Tailwind CSS v4.
 Despliegue en **Firebase Hosting** (GCP).
 
-**Backend**: **Golang**, desplegado en **GCP** (Cloud Run o GKE, a definir en plan de implementación).
+**Backend**: **Golang**, desplegado en **GCP App Engine**.
 
 **Base de datos**: **MySQL** en **GCP Cloud SQL**. Toda migración DEBE ser versionada, reversible
 y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-migrate).
@@ -106,13 +122,109 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
 
 - Paginación: SIEMPRE del lado del servidor (base de datos). Prohibida la paginación en memoria
   para colecciones que puedan crecer ilimitadamente.
-- Caché: Definir estrategia explícita por recurso. Sin caché implícito.
+- Caché: Se usa **Ristretto** (librería Go, caché en proceso por instancia). Solo para datos de
+  catálogo de lectura intensiva y baja volatilidad: items, unidades de medida, parámetros globales
+  del algoritmo. Los datos operacionales (stock, pedidos, inventarios) NUNCA se cachean; siempre
+  se leen desde la base de datos para garantizar consistencia entre instancias de App Engine.
+  Sin caché implícito; toda entrada de caché DEBE tener TTL explícito definido en el plan.
 - Pruebas frontend: unitarias por componente + funcionales automatizadas para flujos críticos (P1).
 - Pruebas backend: las integraciones con base de datos y servicios externos (POS, GCP services) DEBEN
   testearse mediante **mocks**. Prohibida la integración directa en tests — los entornos de CI no
   tienen acceso a infraestructura real y la paridad mock/real se valida en stage (ver sección Ambientes).
 - Markdown: sub-listas con indentación de 2 espacios; línea en blanco antes/después de headings
   y listas; archivo termina con newline (markdownlint MD007, MD022, MD032, MD047).
+
+---
+
+## Convenciones de API REST
+
+Todos los endpoints del backend siguen estas reglas sin excepción.
+
+**Estructura de URLs:**
+
+- Prefijo obligatorio: `/api/v1/`
+- Recursos en snake_case, plural: `/api/v1/pedidos`, `/api/v1/lineas_pedido`
+- Identificadores de recurso en la URL: `/api/v1/pedidos/{id}`
+- Acciones no-CRUD como sub-recursos: `/api/v1/pedidos/{id}/confirmar`
+
+**Formato de respuesta de error** (mismo esquema para todos los errores):
+
+```json
+{
+  "error": "codigo_snake_case",
+  "mensaje": "Texto legible para el usuario",
+  "campo": "nombre_campo_opcional",
+  "detalles": []
+}
+```
+
+**Códigos HTTP:**
+
+| Situación | Código |
+|-----------|--------|
+| Operación exitosa (GET, PUT) | 200 |
+| Recurso creado (POST) | 201 |
+| Sin contenido (DELETE lógico) | 204 |
+| Datos de entrada inválidos | 400 |
+| No autenticado (sin JWT o expirado) | 401 |
+| Sin permiso para el recurso | 403 |
+| Recurso no encontrado | 404 |
+| Conflicto de estado (ej. duplicado) | 409 |
+| Regla de negocio violada | 422 |
+| Error interno del servidor | 500 |
+
+---
+
+## Convenciones de Datos
+
+**Identificadores:**
+
+- Clave primaria: entero auto-incremental (`BIGINT UNSIGNED`). No se usan UUIDs.
+- Las PKs se exponen como entero en la API.
+
+**Timestamps:**
+
+- Toda tabla DEBE tener `creado_en DATETIME NOT NULL` y `actualizado_en DATETIME NOT NULL`.
+- Todos los valores se almacenan en **hora Colombia** (`America/Bogota`, UTC-5, sin DST).
+  El backend Go configura la conexión MySQL con `loc=America%2FBogota` en el DSN.
+  Los clientes Angular no necesitan convertir; reciben y muestran la hora tal como viene.
+- El resto de campos de fecha/hora del dominio sigue el mismo patrón en español:
+  `iniciado_en`, `completado_en`, `enviado_en`, `expira_en`, etc.
+
+**Soft delete:**
+
+- **Nunca se ejecuta `DELETE` físico** sobre datos operacionales.
+- Entidades del catálogo usan flag `activo TINYINT(1)` para inactivar.
+- Entidades con ciclo de vida usan campo `estado ENUM(...)` con valores terminales
+  (`cancelado`, `completado`, `parcialmente_completado`).
+
+**Moneda y cantidades:**
+
+- Moneda: entero `INT` en pesos colombianos (COP), sin decimales.
+- Cantidades de items: `DECIMAL(12,4)` en la unidad de medida del item.
+- Semanas de pedido: formato ISO 8601 `YYYY-WNN` (ej. `2026-W22`).
+
+**Nomenclatura en base de datos:**
+
+- Tablas y columnas en **snake_case**, en español, plural para tablas
+  (ej. `pedidos`, `lineas_pedido`, `despachos`).
+- Claves foráneas: `{tabla_referenciada_singular}_id` (ej. `tienda_id`, `item_id`).
+- Índices únicos nombrados: `uq_{tabla}_{campos}` (ej. `uq_pedidos_tienda_semana`).
+
+---
+
+## Jobs Programados
+
+Las tareas de ejecución automática (generación de pedidos, motor de demanda) usan el patrón:
+**Cloud Scheduler → endpoint HTTP interno**.
+
+- El endpoint DEBE estar protegido con el header `X-CloudScheduler: true`.
+  Cualquier request sin ese header recibe `403`.
+- Los endpoints de jobs NO son parte de la API pública (`/api/v1/`). Usan el prefijo `/internal/jobs/`.
+- Toda ejecución de job DEBE registrar en log: tipo de job, `iniciado_en`, `completado_en`,
+  resultado (`ok` | `error`), cantidad de registros procesados y, si falla, el mensaje de error.
+- Un job que falla no reintenta automáticamente en la misma ejecución; Cloud Scheduler gestiona
+  el reintento según su política configurada.
 
 ---
 
@@ -167,11 +279,93 @@ todo cambio requiere PR aprobado con CI verde.
 | `hotfix/*` | `master` | `master` + `develop` | Bug crítico en producción |
 | `release/*` | `develop` | `master` + `develop` | Estabilización de versión |
 
-**CI obligatorio (markdownlint):** Todo archivo `.md` DEBE pasar el linter antes del merge.
+**Gates obligatorios antes de commit, push o apertura de PR:**
+
+`loopi-api` (en orden):
+
+1. `go build ./...` — compila sin errores.
+2. `golangci-lint run` — pasa con los 5 linters configurados (govet, errcheck, staticcheck, unused, gosec).
+3. `govulncheck ./...` — cero CVEs conocidas en dependencias Go que el código realmente invoca.
+4. `gitleaks detect --no-git` — cero secrets detectados en los archivos del commit.
+5. `go test ./...` — todos los tests unitarios pasan.
+
+`loopi-web` (en orden):
+
+1. `ng build` — compila sin errores (incluye chequeo TypeScript estricto).
+2. `npm audit --audit-level=high` — cero vulnerabilidades de severidad alta o crítica en dependencias de producción.
+3. `gitleaks detect --no-git` — cero secrets detectados en los archivos del commit.
+4. `ng test --watch=false` — todos los tests unitarios pasan.
+
+`loopi-specs-v2`:
+
+1. `gitleaks detect --no-git` — cero secrets detectados (DSNs, API keys, tokens en ejemplos).
+2. `markdownlint-cli2` — todos los archivos `.md` pasan el linter.
+
+Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
+
+**Gate adicional en GitHub Actions CI** (corre automáticamente en cada PR y push a `develop`/`master`):
+
+- **Trivy** (`trivy fs`, severidad `HIGH,CRITICAL`, `ignore-unfixed: true`) en `loopi-api` y `loopi-web`.
+  Resultados publicados en el Security tab de GitHub vía SARIF. El PR no puede mergearse si Trivy
+  reporta vulnerabilidades de severidad alta o crítica con fix disponible.
+- La implementación (workflow YAML) vive en `.github/workflows/security.yml` de cada repo.
+  La constitución define la política; cada repo define la ejecución.
+
+**Configuración de golangci-lint** (archivo `.golangci.yml` en la raíz de `loopi-api`):
+
+```yaml
+linters:
+  disable-all: true
+  enable:
+    - govet       # go vet estándar: errores de construcción comunes
+    - errcheck    # errores de retorno no chequeados
+    - staticcheck # reglas SA*: bugs reales detectados estáticamente
+    - unused      # código declarado pero nunca usado
+    - gosec       # OWASP: SQL injection, credenciales hardcodeadas, crypto débil
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  gosec:
+    excludes:
+      - G104  # errores no chequeados en defer — ya cubiertos por errcheck
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+```
+
+Las reglas gosec activas relevantes para este stack: G101 (credenciales hardcodeadas),
+G201/G202 (SQL injection), G402 (TLS inseguro), G404 (random débil), G501-G505 (crypto débil).
+G104 se excluye porque errcheck lo cubre con mayor precisión.
 
 **Resolución de conflictos entre ramas protegidas:** Los PRs de resolución DEBEN mergearse como
 "Create a merge commit" (no squash), para preservar historia compartida y evitar conflictos
 persistentes en GitHub al intentar PR inversos.
+
+---
+
+## Estructura de Repositorios
+
+Loopi v2 vive en tres repositorios independientes bajo la misma organización GitHub:
+
+| Repo | Tecnología | Propósito |
+|------|------------|-----------|
+| `loopi-specs-v2` | Markdown | Specs, planes, tareas — fuente de verdad del producto |
+| `loopi-api` | Go | Backend: API REST, jobs programados, lógica de negocio |
+| `loopi-web` | Angular | Frontend: SPA, componentes, flujos de usuario |
+
+**Reglas de alcance por tipo de tarea** — seguirlas reduce el contexto cargado innecesariamente:
+
+- **Spec / plan / análisis funcional**: solo `loopi-specs-v2`. Nunca se lee código de `loopi-api`
+  o `loopi-web` para generar una spec o un plan de implementación.
+- **Tarea backend-only** (endpoint, job, migración, lógica de negocio): solo `loopi-api`.
+- **Tarea frontend-only** (componente, vista, flujo UI, servicio Angular): solo `loopi-web`.
+- **Tarea full-stack** (feature que requiere endpoint + UI): el plan DEBE declarar explícitamente
+  qué partes van a `loopi-api` y cuáles a `loopi-web`. Se implementan de forma secuencial:
+  primero el contrato de API (request/response), luego backend, luego frontend.
+- Dentro de cada repo, cargar únicamente los archivos relevantes al módulo en cuestión,
+  no el árbol completo.
 
 ---
 
@@ -194,4 +388,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.1.1 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-18
+**Version**: 1.3.3 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
