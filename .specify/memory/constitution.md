@@ -1,20 +1,22 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
+        1.3.0 — OTel+Datadog, Ristretto, zona horaria Colombia, CI gates, estructura multi-repo (MINOR).
 
-Changes in 1.2.0:
-  - Principio III: agrega rol lider_compras (4º rol introducido en spec 013-pedidos-recepcion-oc)
-  - Stack Técnico: nueva subsección "Convenciones de API REST"
-  - Stack Técnico: nueva subsección "Convenciones de datos"
-  - Stack Técnico: nueva subsección "Jobs programados"
+Changes in 1.3.0:
+  - Principio VI: OTel como SDK de instrumentación, Datadog como backend de observabilidad
+  - Stack Técnico: caché en proceso con Ristretto (Go); regla de alcance por tipo de dato
+  - Convenciones de Datos: timestamps en America/Bogota (UTC-5), no UTC
+  - Flujo de Trabajo: gate pre-commit/push obligatorio (compilar + tests unitarios)
+  - Nueva sección: Estructura de Repositorios (tres repos, reglas de alcance por tarea)
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
-  - .specify/templates/spec-template.md ✅ — estructura compatible; historias de usuario con criterios de aceptación
+  - .specify/templates/spec-template.md ✅ — estructura compatible
   - .specify/templates/tasks-template.md — pendiente de revisión
 
 Deferred items: actualizar checklist "Verificación de Constitución" en plan-template.md para reflejar 7 puertas
@@ -78,21 +80,22 @@ y por qué motivo. No existe modificación de inventario sin rastro auditable.
 El diseño funcional y técnico DEBE cerrar activamente posibilidades de hurto, maquillaje de información
 y brechas operacionales. Un flujo que crea oportunidad de fraude DEBE rediseñarse antes de implementarse.
 
-- Los ajustes post-inventario se registran como mermas (no como edición directa de stock).
-- No existe flujo de "corrección silenciosa": toda desviación genera un registro visible para el `admin`.
-- El `admin` SIEMPRE tiene acceso a reportes de mermas, diferencias de recepción e historial de conteos.
-- Las diferencias en recepción de pedidos (> 10 % en algún ítem) generan estado `parcialmente_completado`
-  y DEBEN ser visibles en el dashboard del admin.
-
-### VI. Observabilidad Preventiva
+### VI. Monitoreo Preventivo
 
 Cada feature DEBE ser monitoreable desde el primer deploy en producción. El sistema DEBE permitir
 diagnosticar degradaciones en menos de 5 segundos.
 
-- Todo endpoint crítico (autenticación, movimientos de stock, recepción de pedidos) DEBE tener
-  métricas de latencia y tasa de errores.
-- Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp, operación.
-- Las alertas DEBEN ser preventivas: detectar anomalías antes de que impacten al usuario final.
+**Stack de observabilidad**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
+**Datadog** como plataforma de observabilidad (trazas, métricas, dashboards y alertas).
+Los logs estructurados van a stdout → GCP Cloud Logging → Datadog vía integración GCP nativa.
+
+- Todo endpoint crítico (autenticación, conteo de inventario, movimientos de stock, generación
+  y recepción de pedidos, integración con ventas) DEBE tener trazas OTel y métricas de latencia
+  y tasa de errores visibles en Datadog.
+- Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp,
+  operación.
+- Las alertas DEBEN configurarse en Datadog y ser preventivas: detectar anomalías antes de que
+  impacten al usuario final.
 - El monitoreo es responsabilidad del equipo de desarrollo, no solo de operaciones.
 
 ---
@@ -102,7 +105,7 @@ diagnosticar degradaciones en menos de 5 segundos.
 **Frontend**: Angular (última versión estable), componentes standalone y signals, Tailwind CSS v4.
 Despliegue en **Firebase Hosting** (GCP).
 
-**Backend**: **Golang**, desplegado en **GCP** (Cloud Run o GKE, a definir en plan de implementación).
+**Backend**: **Golang**, desplegado en **GCP App Engine**.
 
 **Base de datos**: **MySQL** en **GCP Cloud SQL**. Toda migración DEBE ser versionada, reversible
 y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-migrate).
@@ -113,7 +116,11 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
 
 - Paginación: SIEMPRE del lado del servidor (base de datos). Prohibida la paginación en memoria
   para colecciones que puedan crecer ilimitadamente.
-- Caché: Definir estrategia explícita por recurso. Sin caché implícito.
+- Caché: Se usa **Ristretto** (librería Go, caché en proceso por instancia). Solo para datos de
+  catálogo de lectura intensiva y baja volatilidad: items, unidades de medida, parámetros globales
+  del algoritmo. Los datos operacionales (stock, pedidos, inventarios) NUNCA se cachean; siempre
+  se leen desde la base de datos para garantizar consistencia entre instancias de App Engine.
+  Sin caché implícito; toda entrada de caché DEBE tener TTL explícito definido en el plan.
 - Pruebas frontend: unitarias por componente + funcionales automatizadas para flujos críticos (P1).
 - Pruebas backend: las integraciones con base de datos y servicios externos (POS, GCP services) DEBEN
   testearse mediante **mocks**. Prohibida la integración directa en tests — los entornos de CI no
@@ -172,7 +179,9 @@ Todos los endpoints del backend siguen estas reglas sin excepción.
 **Timestamps:**
 
 - Toda tabla DEBE tener `creado_en DATETIME NOT NULL` y `actualizado_en DATETIME NOT NULL`.
-- Todos los valores se almacenan en **UTC**. La conversión a zona local es responsabilidad del cliente.
+- Todos los valores se almacenan en **hora Colombia** (`America/Bogota`, UTC-5, sin DST).
+  El backend Go configura la conexión MySQL con `loc=America%2FBogota` en el DSN.
+  Los clientes Angular no necesitan convertir; reciben y muestran la hora tal como viene.
 - El resto de campos de fecha/hora del dominio sigue el mismo patrón en español:
   `iniciado_en`, `completado_en`, `enviado_en`, `expira_en`, etc.
 
@@ -264,11 +273,41 @@ todo cambio requiere PR aprobado con CI verde.
 | `hotfix/*` | `master` | `master` + `develop` | Bug crítico en producción |
 | `release/*` | `develop` | `master` + `develop` | Estabilización de versión |
 
-**CI obligatorio (markdownlint):** Todo archivo `.md` DEBE pasar el linter antes del merge.
+**Gates obligatorios antes de commit, push o apertura de PR** (aplicables en `loopi-api` y `loopi-web`):
+
+1. El código DEBE compilar sin errores (`go build ./...` en backend; `ng build` en frontend).
+2. Todos los tests unitarios DEBEN pasar (`go test ./...` en backend; `ng test --watch=false` en frontend).
+3. Todo archivo `.md` DEBE pasar markdownlint.
+
+Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
 
 **Resolución de conflictos entre ramas protegidas:** Los PRs de resolución DEBEN mergearse como
 "Create a merge commit" (no squash), para preservar historia compartida y evitar conflictos
 persistentes en GitHub al intentar PR inversos.
+
+---
+
+## Estructura de Repositorios
+
+Loopi v2 vive en tres repositorios independientes bajo la misma organización GitHub:
+
+| Repo | Tecnología | Propósito |
+|------|------------|-----------|
+| `loopi-specs-v2` | Markdown | Specs, planes, tareas — fuente de verdad del producto |
+| `loopi-api` | Go | Backend: API REST, jobs programados, lógica de negocio |
+| `loopi-web` | Angular | Frontend: SPA, componentes, flujos de usuario |
+
+**Reglas de alcance por tipo de tarea** — seguirlas reduce el contexto cargado innecesariamente:
+
+- **Spec / plan / análisis funcional**: solo `loopi-specs-v2`. Nunca se lee código de `loopi-api`
+  o `loopi-web` para generar una spec o un plan de implementación.
+- **Tarea backend-only** (endpoint, job, migración, lógica de negocio): solo `loopi-api`.
+- **Tarea frontend-only** (componente, vista, flujo UI, servicio Angular): solo `loopi-web`.
+- **Tarea full-stack** (feature que requiere endpoint + UI): el plan DEBE declarar explícitamente
+  qué partes van a `loopi-api` y cuáles a `loopi-web`. Se implementan de forma secuencial:
+  primero el contrato de API (request/response), luego backend, luego frontend.
+- Dentro de cada repo, cargar únicamente los archivos relevantes al módulo en cuestión,
+  no el árbol completo.
 
 ---
 
@@ -291,4 +330,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.2.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.3.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
