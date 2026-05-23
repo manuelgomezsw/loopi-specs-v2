@@ -6,13 +6,11 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
         1.3.0 — OTel+Datadog, Ristretto, zona horaria Colombia, CI gates, estructura multi-repo (MINOR).
+        1.3.1 — golangci-lint (lean) agregado al gate de backend (PATCH).
 
-Changes in 1.3.0:
-  - Principio VI: OTel como SDK de instrumentación, Datadog como backend de observabilidad
-  - Stack Técnico: caché en proceso con Ristretto (Go); regla de alcance por tipo de dato
-  - Convenciones de Datos: timestamps en America/Bogota (UTC-5), no UTC
-  - Flujo de Trabajo: gate pre-commit/push obligatorio (compilar + tests unitarios)
-  - Nueva sección: Estructura de Repositorios (tres repos, reglas de alcance por tarea)
+Changes in 1.3.1:
+  - Flujo de Trabajo: golangci-lint con 4 linters (govet, errcheck, staticcheck, unused) como gate
+    obligatorio en loopi-api antes de commit/push/PR.
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -273,13 +271,44 @@ todo cambio requiere PR aprobado con CI verde.
 | `hotfix/*` | `master` | `master` + `develop` | Bug crítico en producción |
 | `release/*` | `develop` | `master` + `develop` | Estabilización de versión |
 
-**Gates obligatorios antes de commit, push o apertura de PR** (aplicables en `loopi-api` y `loopi-web`):
+**Gates obligatorios antes de commit, push o apertura de PR:**
 
-1. El código DEBE compilar sin errores (`go build ./...` en backend; `ng build` en frontend).
-2. Todos los tests unitarios DEBEN pasar (`go test ./...` en backend; `ng test --watch=false` en frontend).
-3. Todo archivo `.md` DEBE pasar markdownlint.
+`loopi-api` (en orden):
+
+1. `go build ./...` — compila sin errores.
+2. `golangci-lint run` — pasa con los 4 linters configurados (ver abajo).
+3. `go test ./...` — todos los tests unitarios pasan.
+
+`loopi-web` (en orden):
+
+1. `ng build` — compila sin errores (incluye chequeo TypeScript estricto).
+2. `ng test --watch=false` — todos los tests unitarios pasan.
+
+`loopi-specs-v2`:
+
+1. `markdownlint-cli2` — todos los archivos `.md` pasan el linter.
 
 Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
+
+**Configuración de golangci-lint** (archivo `.golangci.yml` en la raíz de `loopi-api`):
+
+```yaml
+linters:
+  disable-all: true
+  enable:
+    - govet      # go vet estándar: detecta errores de construcción comunes
+    - errcheck   # errores de retorno no chequeados (la causa más frecuente de bugs silenciosos en Go)
+    - staticcheck # reglas SA*: bugs reales detectados estáticamente
+    - unused     # código declarado pero nunca usado
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true  # también chequea type assertions sin ok
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+```
 
 **Resolución de conflictos entre ramas protegidas:** Los PRs de resolución DEBEN mergearse como
 "Create a merge commit" (no squash), para preservar historia compartida y evitar conflictos
@@ -330,4 +359,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.3.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.3.1 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
