@@ -8,12 +8,17 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.3.0 — OTel+Datadog, Ristretto, zona horaria Colombia, CI gates, estructura multi-repo (MINOR).
         1.3.1 — golangci-lint (lean) agregado al gate de backend (PATCH).
         1.3.2 — gosec, govulncheck, npm audit, gitleaks agregados a los gates de seguridad (PATCH).
+        1.3.3 — Trivy CI agregado como gate obligatorio en GitHub Actions (PATCH).
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
   - loopi-api: govulncheck y gitleaks como gates obligatorios
   - loopi-web: npm audit --audit-level=high y gitleaks como gates obligatorios
   - loopi-specs-v2: gitleaks como gate obligatorio
+
+Changes in 1.3.3:
+  - Flujo de Trabajo: Trivy fs scan obligatorio en CI de GitHub (PRs y push a develop/master)
+  - Principio: la política va en la constitución; el workflow YAML va en cada repo
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -298,6 +303,14 @@ todo cambio requiere PR aprobado con CI verde.
 
 Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
 
+**Gate adicional en GitHub Actions CI** (corre automáticamente en cada PR y push a `develop`/`master`):
+
+- **Trivy** (`trivy fs`, severidad `HIGH,CRITICAL`, `ignore-unfixed: true`) en `loopi-api` y `loopi-web`.
+  Resultados publicados en el Security tab de GitHub vía SARIF. El PR no puede mergearse si Trivy
+  reporta vulnerabilidades de severidad alta o crítica con fix disponible.
+- La implementación (workflow YAML) vive en `.github/workflows/security.yml` de cada repo.
+  La constitución define la política; cada repo define la ejecución.
+
 **Configuración de golangci-lint** (archivo `.golangci.yml` en la raíz de `loopi-api`):
 
 ```yaml
@@ -375,4 +388,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.3.2 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.3.3 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
