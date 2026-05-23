@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-05-23
-**Última revisión**: 2026-05-23 (v3 — generación automática, LT sale de creación, pedidos manuales excepcionales)
+**Última revisión**: 2026-05-23 (v4 — costo fijo, barista confirma, sin tolerancia 10%, sin alerta borrador, unidad de medida)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -33,4 +33,4 @@
 ## Notes
 
 - Todos los ítems pasan la validación. La spec está lista para `/speckit-plan`.
-- **Cambios v3**: El Líder de Tienda ya no crea pedidos. El sistema los genera automáticamente el día anterior al "día de toma de pedidos" configurado globalmente, usando stock actual + planeación de demanda. El LC o Admin pueden crear pedidos manuales excepcionales o solicitar regeneración tras una cancelación. El LT conserva su rol en visualización y recepción.
+- **Cambios v4**: Eliminada la alerta de pedido en Borrador vencido (HU2, RF, CE). Eliminada la tolerancia del 10%: la distinción Completado/Parcialmente Completado es binaria (exacto vs. cualquier diferencia). El Barista queda habilitado para confirmar recepciones en igualdad con LT, LC y Admin. Eliminados los campos de costo unitario real y el historial de costos (el costo es fijo en el catálogo). Reemplazada "unidad canónica" por "unidad de medida" en toda la spec.

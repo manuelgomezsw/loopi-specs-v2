@@ -27,7 +27,7 @@ El sistema genera automáticamente los pedidos de todas las tiendas el día ante
 **Escenarios de Aceptación**:
 
 1. **Dado** que es el día anterior al "día de toma de pedidos" configurado, **Cuando** el sistema ejecuta la generación automática, **Entonces** crea un pedido en estado Borrador por cada tienda activa de la marca.
-2. **Dado** la generación automática, **Cuando** se crea el pedido de una tienda, **Entonces** cada línea incluye el item, el proveedor asociado, la cantidad sugerida por planeación de demanda y el costo estimado.
+2. **Dado** la generación automática, **Cuando** se crea el pedido de una tienda, **Entonces** cada línea incluye el item, el proveedor asociado y la cantidad sugerida por planeación de demanda.
 3. **Dado** que ya existe un pedido activo para una tienda en esa semana, **Cuando** el sistema intenta generar uno nuevo, **Entonces** omite esa tienda y registra el evento en el log del sistema.
 4. **Dado** un pedido generado automáticamente, **Cuando** el Líder de Tienda o el Líder de Compras lo visualiza, **Entonces** puede distinguir que el origen es "automático" y ver las cantidades sugeridas por planeación.
 
@@ -44,11 +44,10 @@ El Líder de Compras visualiza todos los pedidos en Borrador de todas las tienda
 **Escenarios de Aceptación**:
 
 1. **Dado** que soy Líder de Compras, **Cuando** accedo al módulo de pedidos, **Entonces** veo todos los pedidos en Borrador de todas las tiendas de la marca en una vista consolidada.
-2. **Dado** un pedido en Borrador, **Cuando** el Líder de Compras modifica la cantidad de una línea, **Entonces** la cantidad final se actualiza y el sistema recalcula el costo estimado de esa línea.
+2. **Dado** un pedido en Borrador, **Cuando** el Líder de Compras modifica la cantidad de una línea, **Entonces** la cantidad final se actualiza.
 3. **Dado** un pedido en Borrador, **Cuando** el Líder de Compras lo confirma, **Entonces** el pedido pasa a estado Confirmado y queda bloqueado para edición.
 4. **Dado** un pedido en Borrador, **Cuando** el Líder de Compras lo cancela con un motivo obligatorio, **Entonces** el pedido pasa a Cancelado de forma definitiva y no puede reactivarse.
 5. **Dado** un pedido en Borrador cancelado, **Cuando** el Líder de Compras o Admin necesita un nuevo pedido para esa tienda y semana, **Entonces** puede solicitar que el sistema regenere el pedido o crear uno manual excepcional.
-6. **Dado** un pedido en Borrador sin confirmación después del plazo configurable (por defecto: 3 días hábiles), **Cuando** se vence el plazo, **Entonces** el sistema genera una alerta al Líder de Compras y al Admin sin cancelar el pedido.
 
 ---
 
@@ -87,21 +86,20 @@ El Líder de Compras, con el pedido confirmado, genera los despachos individuale
 
 ### Historia de Usuario 5 - Recepcionar despacho en tienda (Prioridad: P1)
 
-El Líder de Tienda o Barista recibe físicamente la mercancía cuando llega el proveedor, registra las cantidades reales recibidas por item, y el Líder de Tienda (o LC / Admin) confirma la recepción. El stock de la tienda se actualiza automáticamente al confirmar.
+El Líder de Tienda o Barista recibe físicamente la mercancía cuando llega el proveedor, registra las cantidades reales recibidas por item y confirma la recepción. El Líder de Tienda, Barista, Líder de Compras o Admin pueden confirmar. El stock de la tienda se actualiza automáticamente al confirmar.
 
 **Por qué esta prioridad**: Es el subflujo de mayor impacto operativo: actualiza el inventario en tiempo real y cierra el ciclo de cada proveedor de forma independiente.
 
-**Prueba Independiente**: Puede testearse partiendo de un Despacho en estado Enviado, iniciando su recepción, ingresando cantidades (dentro y fuera de tolerancia), confirmando, y verificando que el stock se actualiza y el Despacho queda en su estado final.
+**Prueba Independiente**: Puede testearse partiendo de un Despacho en estado Enviado, iniciando su recepción, ingresando cantidades (exactas y con faltantes), confirmando, y verificando que el stock se actualiza y el Despacho queda en su estado final correcto.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** que soy Líder de Tienda o Barista, **Cuando** accedo al submenú Recepción de mi tienda, **Entonces** veo la lista de Despachos en estado Enviado pendientes de recibir para mi tienda.
 2. **Dado** un Despacho en Enviado, **Cuando** inicio la recepción, **Entonces** el Despacho pasa a En Recepción y se despliegan los items con sus cantidades pedidas.
 3. **Dado** un Despacho en Recepción, **Cuando** ingreso cantidades recibidas por item, **Entonces** el sistema calcula en tiempo real la diferencia por item (recibida − pedida).
-4. **Dado** que todas las diferencias son ≤ 10%, **Cuando** el Líder de Tienda, LC o Admin confirma la recepción, **Entonces** el Despacho pasa a Completado y el stock de cada item en la tienda se incrementa con la cantidad recibida en unidad canónica.
-5. **Dado** que al menos un item tiene diferencia > 10%, **Cuando** se confirma la recepción, **Entonces** el Despacho pasa a Parcialmente Completado y el stock se actualiza con las cantidades reales recibidas.
-6. **Dado** que soy Barista, **Cuando** intento confirmar la recepción de un Despacho, **Entonces** el sistema bloquea la acción e indica que se requiere Líder de Tienda, Líder de Compras o Admin.
-7. **Dado** una recepción confirmada, **Entonces** el sistema registra el costo unitario real de cada item en el historial de costos de la tienda.
+4. **Dado** que todos los items fueron recibidos en la cantidad exacta pedida, **Cuando** se confirma la recepción, **Entonces** el Despacho pasa a Completado y el stock de cada item en la tienda se incrementa con la cantidad recibida.
+5. **Dado** que al menos un item fue recibido en una cantidad distinta a la pedida, **Cuando** se confirma la recepción, **Entonces** el Despacho pasa a Parcialmente Completado y el stock se actualiza igualmente con las cantidades reales recibidas.
+6. **Dado** un Despacho en Recepción, **Cuando** el Líder de Tienda, Barista, Líder de Compras o Admin confirma la recepción, **Entonces** el sistema registra la confirmación, actualiza el stock y cierra el Despacho en su estado final.
 
 ---
 
@@ -125,10 +123,8 @@ Un pedido se cierra automáticamente cuando todos sus Despachos han sido recibid
 ### Casos Borde
 
 - ¿Qué ocurre si el sistema intenta generar un pedido automático para una tienda que ya tiene uno activo esa semana? → Omite esa tienda y lo registra en el log.
-- ¿Qué ocurre si el Barista intenta confirmar la recepción de un Despacho? → El sistema bloquea la acción; solo LT, LC o Admin pueden confirmar.
-- ¿Qué ocurre si un item se recibe en una unidad diferente a la canónica? → El sistema convierte usando la tabla de equivalencias.
-- ¿Qué ocurre si se registra cantidad 0 para un item? → Diferencia del 100%; el Despacho queda Parcialmente Completado.
-- ¿Qué ocurre si un pedido en Borrador vence sin confirmación? → El sistema alerta al LC y Admin; el pedido permanece activo hasta acción manual.
+- ¿Qué ocurre si un item se recibe en una unidad de medida diferente a la del item? → El sistema convierte usando la tabla de equivalencias antes de actualizar el stock.
+- ¿Qué ocurre si se registra cantidad 0 para un item en recepción? → El item queda con diferencia total; el Despacho pasa a Parcialmente Completado.
 - ¿Qué ocurre si un pedido cancelado necesita recuperarse? → El LC o Admin pueden solicitar regeneración automática o crear un pedido manual.
 - ¿Qué ocurre si el Líder de Compras modifica un pedido Confirmado antes de generar despachos? → Solo LC y Admin pueden modificarlo en ese estado.
 
@@ -140,7 +136,7 @@ Un pedido se cierra automáticamente cuando todos sus Despachos han sido recibid
 
 - **RF-001**: El sistema DEBE generar automáticamente un pedido en estado Borrador por cada tienda activa, el día anterior al "día de toma de pedidos" configurado globalmente.
 - **RF-002**: El sistema DEBE calcular las cantidades sugeridas por item usando el stock actual de la tienda y el algoritmo de planeación de demanda.
-- **RF-003**: El sistema DEBE incluir en cada línea del pedido: item, proveedor del item, cantidad sugerida y costo estimado.
+- **RF-003**: El sistema DEBE incluir en cada línea del pedido: item, proveedor del item y cantidad sugerida.
 - **RF-004**: El sistema DEBE omitir la generación automática para una tienda si ya existe un pedido activo para esa tienda en la misma semana, registrando el evento en el log del sistema.
 - **RF-005**: El sistema DEBE marcar el origen del pedido como "automático" o "manual" para trazabilidad.
 
@@ -151,44 +147,41 @@ Un pedido se cierra automáticamente cuando todos sus Despachos han sido recibid
 - **RF-008**: El sistema DEBE permitir al `lider_compras` confirmar un pedido, transitando de Borrador a Confirmado.
 - **RF-009**: El sistema DEBE bloquear la edición de un pedido Confirmado para todos los roles excepto `lider_compras` y `admin`.
 - **RF-010**: El sistema DEBE permitir al `lider_compras` cancelar un pedido en Borrador, requiriendo un motivo obligatorio y transitando a Cancelado de forma definitiva.
-- **RF-011**: El sistema DEBE generar una alerta al `lider_compras` y al `admin` cuando un pedido en Borrador supere el plazo configurable sin ser confirmado (por defecto: 3 días hábiles).
 
 #### Pedidos Manuales Excepcionales
 
-- **RF-012**: El sistema DEBE permitir al `lider_compras` y al `admin` crear pedidos manuales para cualquier tienda activa.
-- **RF-013**: El sistema DEBE permitir al `lider_compras` y al `admin` solicitar la regeneración automática del pedido de una tienda para la semana actual, siempre que no exista uno activo.
-- **RF-014**: El sistema DEBE validar unicidad al crear un pedido manual: un único pedido activo por tienda por semana ISO.
+- **RF-011**: El sistema DEBE permitir al `lider_compras` y al `admin` crear pedidos manuales para cualquier tienda activa.
+- **RF-012**: El sistema DEBE permitir al `lider_compras` y al `admin` solicitar la regeneración automática del pedido de una tienda para la semana actual, siempre que no exista uno activo.
+- **RF-013**: El sistema DEBE validar unicidad al crear un pedido manual: un único pedido activo por tienda por semana ISO.
 
 #### Generación de Despachos y Envío a Proveedores
 
-- **RF-015**: El sistema DEBE generar automáticamente un Despacho por cada proveedor presente en las líneas de un pedido Confirmado al iniciar el proceso de envío.
-- **RF-016**: El sistema DEBE permitir al `lider_compras` confirmar el envío de cada Despacho de forma independiente.
-- **RF-017**: El sistema DEBE registrar en cada Despacho: proveedor, tienda destino, fecha de envío y las líneas de items correspondientes.
-- **RF-018**: El sistema DEBE transicionar el pedido a estado En Recepción cuando todos sus Despachos hayan sido marcados como Enviados.
+- **RF-014**: El sistema DEBE generar automáticamente un Despacho por cada proveedor presente en las líneas de un pedido Confirmado al iniciar el proceso de envío.
+- **RF-015**: El sistema DEBE permitir al `lider_compras` confirmar el envío de cada Despacho de forma independiente.
+- **RF-016**: El sistema DEBE registrar en cada Despacho: proveedor, tienda destino, fecha de envío y las líneas de items correspondientes.
+- **RF-017**: El sistema DEBE transicionar el pedido a estado En Recepción cuando todos sus Despachos hayan sido marcados como Enviados.
 
 #### Recepción de Despachos en Tienda
 
-- **RF-019**: El sistema DEBE mostrar al `lider_tienda`, `barista` y `admin` la lista de Despachos en estado Enviado para su tienda.
-- **RF-020**: El sistema DEBE permitir al `lider_tienda`, `barista`, `lider_compras` y `admin` iniciar la recepción de un Despacho, cambiando su estado a En Recepción.
-- **RF-021**: El sistema DEBE mostrar, por cada item del Despacho, la cantidad pedida como referencia al ingresar cantidades recibidas.
-- **RF-022**: El sistema DEBE calcular en tiempo real la diferencia por item (cantidad recibida − cantidad pedida) durante el registro de recepción.
-- **RF-023**: El sistema DEBE permitir registrar una unidad de medida de recepción diferente a la canónica, convirtiendo automáticamente usando la tabla de equivalencias.
-- **RF-024**: El sistema DEBE requerir el registro del costo unitario real de recepción por cada línea de item.
-- **RF-025**: El sistema DEBE permitir solo al `lider_tienda`, `lider_compras` y `admin` confirmar la recepción de un Despacho.
-- **RF-026**: El sistema DEBE determinar el estado del Despacho al confirmar: Completado si todas las diferencias son ≤ 10%; Parcialmente Completado si al menos una diferencia supera el 10%.
-- **RF-027**: El sistema DEBE actualizar el stock de la tienda sumando la cantidad recibida en unidad canónica por cada item al confirmar cada Despacho.
-- **RF-028**: El sistema DEBE registrar el costo unitario real de cada item en el historial de costos de la tienda al confirmar cada Despacho.
+- **RF-018**: El sistema DEBE mostrar al `lider_tienda`, `barista`, `lider_compras` y `admin` la lista de Despachos en estado Enviado para la tienda correspondiente.
+- **RF-019**: El sistema DEBE permitir al `lider_tienda`, `barista`, `lider_compras` y `admin` iniciar la recepción de un Despacho, cambiando su estado a En Recepción.
+- **RF-020**: El sistema DEBE mostrar, por cada item del Despacho, la cantidad pedida como referencia al ingresar cantidades recibidas.
+- **RF-021**: El sistema DEBE calcular en tiempo real la diferencia por item (cantidad recibida − cantidad pedida) durante el registro de recepción.
+- **RF-022**: El sistema DEBE permitir registrar una unidad de medida de recepción diferente a la del item, convirtiendo automáticamente usando la tabla de equivalencias antes de actualizar el stock.
+- **RF-023**: El sistema DEBE permitir al `lider_tienda`, `barista`, `lider_compras` y `admin` confirmar la recepción de un Despacho.
+- **RF-024**: El sistema DEBE determinar el estado del Despacho al confirmar: Completado si todos los items se recibieron en la cantidad exacta pedida; Parcialmente Completado si al menos un item se recibió en cantidad diferente.
+- **RF-025**: El sistema DEBE actualizar el stock de la tienda sumando la cantidad recibida (en la unidad de medida del item) por cada item al confirmar cada Despacho.
 
 #### Cierre Automático del Pedido
 
-- **RF-029**: El sistema DEBE cerrar automáticamente un pedido cuando todos sus Despachos hayan sido confirmados: Completado si todos son Completados; Parcialmente Completado si al menos uno es Parcialmente Completado.
+- **RF-026**: El sistema DEBE cerrar automáticamente un pedido cuando todos sus Despachos hayan sido confirmados: Completado si todos son Completados; Parcialmente Completado si al menos uno es Parcialmente Completado.
 
 ### Entidades Clave
 
 - **Pedido (cabecera)**: Solicitud de compra semanal de una tienda. Atributos clave: tienda, semana ISO, fecha de generación, estado, origen (automático / manual), notas, motivo de cancelación.
-- **Línea de Pedido**: Cada item solicitado. Atributos clave: item, proveedor del item, cantidad sugerida (por planeación), cantidad final, costo estimado.
+- **Línea de Pedido**: Cada item solicitado. Atributos clave: item, proveedor del item, cantidad sugerida (por planeación), cantidad final.
 - **Despacho**: Subconjunto del pedido agrupado por un proveedor específico. Atributos clave: pedido, proveedor, tienda, fecha de envío, estado del despacho.
-- **Línea de Recepción**: Registro de lo efectivamente recibido por item dentro de un Despacho. Atributos clave: despacho, item, unidad de medida de recepción, cantidad pedida, cantidad recibida, cantidad en unidad canónica, costo unitario real, diferencia calculada.
+- **Línea de Recepción**: Registro de lo efectivamente recibido por item dentro de un Despacho. Atributos clave: despacho, item, unidad de medida de recepción, cantidad pedida, cantidad recibida, cantidad convertida a la unidad de medida del item, diferencia calculada.
 
 ## Criterios de Éxito
 
@@ -197,10 +190,8 @@ Un pedido se cierra automáticamente cuando todos sus Despachos han sido recibid
 - **CE-001**: El sistema genera los pedidos automáticos de todas las tiendas activas dentro de los primeros 30 minutos del día de generación, sin intervención manual.
 - **CE-002**: El Líder de Compras puede revisar, ajustar y confirmar todos los pedidos de la semana desde una vista consolidada en menos de 20 minutos en total.
 - **CE-003**: El stock de todos los items de un Despacho se actualiza de forma inmediata al confirmar su recepción, sin intervención adicional del usuario.
-- **CE-004**: El 100% de las recepciones confirmadas genera un registro en el historial de costos por item en la tienda correspondiente.
-- **CE-005**: Cero pedidos activos duplicados (misma tienda + misma semana) en el sistema.
-- **CE-006**: Los pedidos en Borrador vencidos son notificados al Líder de Compras y Admin dentro de las primeras 24 horas posteriores al vencimiento del plazo.
-- **CE-007**: El Líder de Tienda puede registrar la recepción de un Despacho de hasta 20 items en menos de 10 minutos.
+- **CE-004**: Cero pedidos activos duplicados (misma tienda + misma semana) en el sistema.
+- **CE-005**: El Líder de Tienda o Barista puede registrar la recepción de un Despacho de hasta 20 items en menos de 10 minutos.
 
 ## Supuestos
 
@@ -209,8 +200,6 @@ Un pedido se cierra automáticamente cuando todos sus Despachos han sido recibid
 - La tabla de equivalencias de unidades de medida está configurada para realizar conversiones durante la recepción (§3.2).
 - El rol `lider_compras` es nuevo y se agrega al modelo de roles del sistema con sus permisos propios; el rol `admin` conserva acceso total a todas las operaciones del módulo.
 - El Líder de Compras opera a nivel de marca (ve pedidos de todas las tiendas); el Líder de Tienda y el Barista operan solo sobre su tienda asignada.
-- La tolerancia de diferencia para Completado vs. Parcialmente Completado es del 10%, configurable a nivel de sistema.
-- El plazo de alerta para pedidos en Borrador es configurable a nivel de sistema (por defecto: 3 días hábiles).
 - Un pedido o Despacho cancelado no puede reactivarse directamente; se regenera o se crea manualmente.
-- El historial de costos es independiente por tienda.
 - El "día de toma de pedidos" es un único día semanal configurado a nivel de marca (no por tienda).
+- El costo de los items es fijo y se define al crear el item en el catálogo; no se actualiza en ningún estadío del sistema.
