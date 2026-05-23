@@ -7,10 +7,13 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
         1.3.0 — OTel+Datadog, Ristretto, zona horaria Colombia, CI gates, estructura multi-repo (MINOR).
         1.3.1 — golangci-lint (lean) agregado al gate de backend (PATCH).
+        1.3.2 — gosec, govulncheck, npm audit, gitleaks agregados a los gates de seguridad (PATCH).
 
-Changes in 1.3.1:
-  - Flujo de Trabajo: golangci-lint con 4 linters (govet, errcheck, staticcheck, unused) como gate
-    obligatorio en loopi-api antes de commit/push/PR.
+Changes in 1.3.2:
+  - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
+  - loopi-api: govulncheck y gitleaks como gates obligatorios
+  - loopi-web: npm audit --audit-level=high y gitleaks como gates obligatorios
+  - loopi-specs-v2: gitleaks como gate obligatorio
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -276,17 +279,22 @@ todo cambio requiere PR aprobado con CI verde.
 `loopi-api` (en orden):
 
 1. `go build ./...` — compila sin errores.
-2. `golangci-lint run` — pasa con los 4 linters configurados (ver abajo).
-3. `go test ./...` — todos los tests unitarios pasan.
+2. `golangci-lint run` — pasa con los 5 linters configurados (govet, errcheck, staticcheck, unused, gosec).
+3. `govulncheck ./...` — cero CVEs conocidas en dependencias Go que el código realmente invoca.
+4. `gitleaks detect --no-git` — cero secrets detectados en los archivos del commit.
+5. `go test ./...` — todos los tests unitarios pasan.
 
 `loopi-web` (en orden):
 
 1. `ng build` — compila sin errores (incluye chequeo TypeScript estricto).
-2. `ng test --watch=false` — todos los tests unitarios pasan.
+2. `npm audit --audit-level=high` — cero vulnerabilidades de severidad alta o crítica en dependencias de producción.
+3. `gitleaks detect --no-git` — cero secrets detectados en los archivos del commit.
+4. `ng test --watch=false` — todos los tests unitarios pasan.
 
 `loopi-specs-v2`:
 
-1. `markdownlint-cli2` — todos los archivos `.md` pasan el linter.
+1. `gitleaks detect --no-git` — cero secrets detectados (DSNs, API keys, tokens en ejemplos).
+2. `markdownlint-cli2` — todos los archivos `.md` pasan el linter.
 
 Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
 
@@ -296,19 +304,27 @@ Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
 linters:
   disable-all: true
   enable:
-    - govet      # go vet estándar: detecta errores de construcción comunes
-    - errcheck   # errores de retorno no chequeados (la causa más frecuente de bugs silenciosos en Go)
+    - govet       # go vet estándar: errores de construcción comunes
+    - errcheck    # errores de retorno no chequeados
     - staticcheck # reglas SA*: bugs reales detectados estáticamente
-    - unused     # código declarado pero nunca usado
+    - unused      # código declarado pero nunca usado
+    - gosec       # OWASP: SQL injection, credenciales hardcodeadas, crypto débil
 
 linters-settings:
   errcheck:
-    check-type-assertions: true  # también chequea type assertions sin ok
+    check-type-assertions: true
+  gosec:
+    excludes:
+      - G104  # errores no chequeados en defer — ya cubiertos por errcheck
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 ```
+
+Las reglas gosec activas relevantes para este stack: G101 (credenciales hardcodeadas),
+G201/G202 (SQL injection), G402 (TLS inseguro), G404 (random débil), G501-G505 (crypto débil).
+G104 se excluye porque errcheck lo cubre con mayor precisión.
 
 **Resolución de conflictos entre ramas protegidas:** Los PRs de resolución DEBEN mergearse como
 "Create a merge commit" (no squash), para preservar historia compartida y evitar conflictos
@@ -359,4 +375,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.3.1 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.3.2 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
