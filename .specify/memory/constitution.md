@@ -1,20 +1,23 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
+        1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
 
-Changes in 1.1.1:
-  - Dev: reemplaza Docker Compose local por GCP Cloud SQL db-f1-micro compartido + Go local + Firebase Emulators
-  - Motivo: máquina de desarrollo con 4.5 GB RAM y sin swap no soporta Docker Compose con MySQL de forma estable
+Changes in 1.2.0:
+  - Principio III: agrega rol lider_compras (4º rol introducido en spec 013-pedidos-recepcion-oc)
+  - Stack Técnico: nueva subsección "Convenciones de API REST"
+  - Stack Técnico: nueva subsección "Convenciones de datos"
+  - Stack Técnico: nueva subsección "Jobs programados"
 
 Templates reviewed:
-  - .specify/templates/plan-template.md ✅ — "Verificación de Constitución" alineada con las 6 puertas
+  - .specify/templates/plan-template.md — pendiente de revisión
   - .specify/templates/spec-template.md ✅ — estructura compatible; historias de usuario con criterios de aceptación
-  - .specify/templates/tasks-template.md ✅ — fases reflejan principios de trazabilidad y observabilidad
+  - .specify/templates/tasks-template.md — pendiente de revisión
 
-Deferred items: ninguno
+Deferred items: actualizar checklist "Verificación de Constitución" en plan-template.md para reflejar 7 puertas
 -->
 
 # Loopi v2 — Constitución del Proyecto
@@ -25,7 +28,7 @@ Deferred items: ninguno
 
 Toda funcionalidad nueva o cambio a una funcionalidad existente DEBE comenzar con una especificación
 aprobada antes de cualquier línea de código. La especificación funcional en
-`specs/loopi-v2-funcional/spec.md` es la fuente de verdad del producto.
+`specs/` es la fuente de verdad del producto.
 
 - DEBE existir una spec aprobada (PR mergeado a `develop`) antes de comenzar el plan de implementación.
 - El plan de implementación DEBE referenciar la sección de spec correspondiente.
@@ -45,9 +48,13 @@ Loopi v2 opera bajo el modelo: **catálogo compartido por marca, datos operacion
 
 ### III. Control de Acceso por Rol (RBAC)
 
-Los tres roles del sistema (`admin`, `lider_tienda`, `barista`) son la única fuente de verdad de permisos.
-La matriz de permisos en §2.5 de la spec es normativa.
+Los cuatro roles del sistema (`admin`, `lider_compras`, `lider_tienda`, `barista`) son la única fuente
+de verdad de permisos. La matriz de permisos en §2.5 de la spec es normativa.
 
+- **`admin`**: acceso total. Su JWT no lleva `tienda_id` fijo; opera en modo consolidado o por tienda.
+- **`lider_compras`**: opera a nivel de marca. Ve pedidos y planeación de todas las tiendas.
+  Su JWT no lleva `tienda_id` fijo.
+- **`lider_tienda`** y **`barista`**: acceso restringido a su tienda asignada. Su JWT incluye `tienda_id`.
 - El backend DEBE validar el rol en cada endpoint. El frontend oculta opciones según el rol,
   pero la validación del backend es la que tiene carácter vinculante.
 - Agregar o modificar permisos REQUIERE actualizar §2.5 de la spec y hacer la implementación pasar
@@ -113,6 +120,96 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
   tienen acceso a infraestructura real y la paridad mock/real se valida en stage (ver sección Ambientes).
 - Markdown: sub-listas con indentación de 2 espacios; línea en blanco antes/después de headings
   y listas; archivo termina con newline (markdownlint MD007, MD022, MD032, MD047).
+
+---
+
+## Convenciones de API REST
+
+Todos los endpoints del backend siguen estas reglas sin excepción.
+
+**Estructura de URLs:**
+
+- Prefijo obligatorio: `/api/v1/`
+- Recursos en snake_case, plural: `/api/v1/pedidos`, `/api/v1/lineas_pedido`
+- Identificadores de recurso en la URL: `/api/v1/pedidos/{id}`
+- Acciones no-CRUD como sub-recursos: `/api/v1/pedidos/{id}/confirmar`
+
+**Formato de respuesta de error** (mismo esquema para todos los errores):
+
+```json
+{
+  "error": "codigo_snake_case",
+  "mensaje": "Texto legible para el usuario",
+  "campo": "nombre_campo_opcional",
+  "detalles": []
+}
+```
+
+**Códigos HTTP:**
+
+| Situación | Código |
+|-----------|--------|
+| Operación exitosa (GET, PUT) | 200 |
+| Recurso creado (POST) | 201 |
+| Sin contenido (DELETE lógico) | 204 |
+| Datos de entrada inválidos | 400 |
+| No autenticado (sin JWT o expirado) | 401 |
+| Sin permiso para el recurso | 403 |
+| Recurso no encontrado | 404 |
+| Conflicto de estado (ej. duplicado) | 409 |
+| Regla de negocio violada | 422 |
+| Error interno del servidor | 500 |
+
+---
+
+## Convenciones de Datos
+
+**Identificadores:**
+
+- Clave primaria: entero auto-incremental (`BIGINT UNSIGNED`). No se usan UUIDs.
+- Las PKs se exponen como entero en la API.
+
+**Timestamps:**
+
+- Toda tabla DEBE tener `creado_en DATETIME NOT NULL` y `actualizado_en DATETIME NOT NULL`.
+- Todos los valores se almacenan en **UTC**. La conversión a zona local es responsabilidad del cliente.
+- El resto de campos de fecha/hora del dominio sigue el mismo patrón en español:
+  `iniciado_en`, `completado_en`, `enviado_en`, `expira_en`, etc.
+
+**Soft delete:**
+
+- **Nunca se ejecuta `DELETE` físico** sobre datos operacionales.
+- Entidades del catálogo usan flag `activo TINYINT(1)` para inactivar.
+- Entidades con ciclo de vida usan campo `estado ENUM(...)` con valores terminales
+  (`cancelado`, `completado`, `parcialmente_completado`).
+
+**Moneda y cantidades:**
+
+- Moneda: entero `INT` en pesos colombianos (COP), sin decimales.
+- Cantidades de items: `DECIMAL(12,4)` en la unidad de medida del item.
+- Semanas de pedido: formato ISO 8601 `YYYY-WNN` (ej. `2026-W22`).
+
+**Nomenclatura en base de datos:**
+
+- Tablas y columnas en **snake_case**, en español, plural para tablas
+  (ej. `pedidos`, `lineas_pedido`, `despachos`).
+- Claves foráneas: `{tabla_referenciada_singular}_id` (ej. `tienda_id`, `item_id`).
+- Índices únicos nombrados: `uq_{tabla}_{campos}` (ej. `uq_pedidos_tienda_semana`).
+
+---
+
+## Jobs Programados
+
+Las tareas de ejecución automática (generación de pedidos, motor de demanda) usan el patrón:
+**Cloud Scheduler → endpoint HTTP interno**.
+
+- El endpoint DEBE estar protegido con el header `X-CloudScheduler: true`.
+  Cualquier request sin ese header recibe `403`.
+- Los endpoints de jobs NO son parte de la API pública (`/api/v1/`). Usan el prefijo `/internal/jobs/`.
+- Toda ejecución de job DEBE registrar en log: tipo de job, `iniciado_en`, `completado_en`,
+  resultado (`ok` | `error`), cantidad de registros procesados y, si falla, el mensaje de error.
+- Un job que falla no reintenta automáticamente en la misma ejecución; Cloud Scheduler gestiona
+  el reintento según su política configurada.
 
 ---
 
@@ -194,4 +291,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.1.1 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-18
+**Version**: 1.2.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
