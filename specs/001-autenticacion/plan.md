@@ -20,7 +20,7 @@ Sin infraestructura nueva: todo corre sobre Go + Cloud SQL + Angular existentes.
 - `github.com/golang-jwt/jwt/v5` — emisión y validación de JWT
 - `golang.org/x/crypto/bcrypt` — hash de contraseñas (cost 12)
 - `github.com/google/uuid` — generación de `jti` (UUID v4)
-- Angular `HttpClientXsrfModule` — doble-submit CSRF automático en frontend
+- Angular `provideHttpClient(withXsrfConfiguration(...))` — doble-submit CSRF en standalone (Angular 18+)
 
 **Almacenamiento**: MySQL en GCP Cloud SQL; tabla `tokens_revocados` nueva;
 columnas `intentos_fallidos` y `bloqueado_hasta` en `usuarios`
@@ -98,18 +98,51 @@ loopi-api/
 loopi-web/
 └── src/
     └── app/
+        ├── app.config.ts            # provideHttpClient(withXsrfConfiguration, withInterceptors)
+        ├── app.routes.ts            # Rutas con canActivate: [authGuard]
         └── auth/
             ├── login/
             │   ├── login.component.ts
             │   └── login.component.html
-            ├── auth.service.ts          # login(), logout(), getMe()
-            ├── auth.guard.ts            # CanActivate para rutas protegidas
-            └── auth.interceptor.ts      # Redirige 401 al login
+            ├── auth.service.ts      # login(), logout(), getMe()
+            ├── auth.guard.ts        # CanActivate funcional para rutas protegidas
+            └── auth.interceptor.ts  # Interceptor funcional — redirige 401 al login
 ```
+
+**Patrón Angular**: componentes standalone (Angular 18+), sin NgModule. Providers en
+`app.config.ts`, rutas en `app.routes.ts`.
 
 **Decisión de Estructura**: Full-stack — backend en `loopi-api/internal/auth/`,
 frontend en `loopi-web/src/app/auth/`.
 
 ## Registro de Complejidad
 
-> No hay violaciones de constitución. Esta sección no aplica.
+### EC-001 — PK VARCHAR(36) en `tokens_revocados`
+
+**Principio**: Constitución §Datos — "Clave primaria: entero auto-incremental (`BIGINT UNSIGNED`).
+No se usan UUIDs."
+
+**Excepción**: La tabla `tokens_revocados` usa `jti VARCHAR(36)` como PK. El `jti` es un UUID v4
+proveniente del claim JWT — es la clave natural de la tabla de blacklist. Agregar un `BIGINT`
+surrogate sería redundante: el `jti` es el único identificador que el middleware consulta (`ExisteTokenRevocado(jti)`). La excepción está justificada porque `tokens_revocados` es una tabla
+técnica de blacklist, no una entidad de dominio; la regla de PK entero aplica a entidades con
+identidad de negocio propia.
+
+**Impacto**: Ninguno en consistencia ni rendimiento. La tabla tiene ~50 registros en estado
+estable y un índice adicional sobre `expira_en` para el job de limpieza.
+
+### EC-002 — `POST /api/v1/auth/login` retorna 200, no 201
+
+**Principio**: Constitución §API — "Recurso creado (POST): 201."
+
+**Excepción**: El endpoint de autenticación retorna 200. La sesión no es un recurso persistente
+en la BD; vive en la `httpOnly cookie` del cliente. No se crea ninguna fila en la BD en login.
+Este es el comportamiento estándar para endpoints de autenticación REST; 201 sería semánticamente
+incorrecto.
+
+### EC-003 — RF-AUTH-04.1 / RF-AUTH-05.1 overlap intencional
+
+RF-AUTH-04.1 (expiración automática, perspectiva de usuario) y RF-AUTH-05.1 (middleware de
+validación, paso 2) describen el mismo comportamiento desde perspectivas distintas. La validación
+del claim `exp` se implementa una sola vez en T006; RF-AUTH-04.1 es la perspectiva funcional del
+usuario sobre ese mismo mecanismo técnico.

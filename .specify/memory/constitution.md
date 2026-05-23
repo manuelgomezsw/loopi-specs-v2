@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -9,6 +9,7 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.3.1 — golangci-lint (lean) agregado al gate de backend (PATCH).
         1.3.2 — gosec, govulncheck, npm audit, gitleaks agregados a los gates de seguridad (PATCH).
         1.3.3 — Trivy CI agregado como gate obligatorio en GitHub Actions (PATCH).
+        1.3.4 — HTTP 423 (cuenta bloqueada) añadido a la tabla de códigos (PATCH).
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -171,6 +172,7 @@ Todos los endpoints del backend siguen estas reglas sin excepción.
 | Recurso no encontrado | 404 |
 | Conflicto de estado (ej. duplicado) | 409 |
 | Regla de negocio violada | 422 |
+| Cuenta bloqueada temporalmente (ej. intentos fallidos de login) | 423 |
 | Error interno del servidor | 500 |
 
 ---
@@ -388,4 +390,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.3.3 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.3.4 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23

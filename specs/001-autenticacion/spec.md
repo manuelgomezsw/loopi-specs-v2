@@ -211,6 +211,7 @@ verificando que las operaciones fallan tras ese tiempo.
 
 - RF-AUTH-04.1: Las sesiones expiran automáticamente según el claim `exp` del JWT;
   el backend rechaza cualquier token con `exp` vencido independientemente de su firma.
+  Este comportamiento se implementa como el paso (2) del middleware RF-AUTH-05.1.
 - RF-AUTH-04.2: Una sesión expirada es rechazada igual que una sesión inexistente: el sistema
   redirige al login sin mostrar el contenido protegido.
 
