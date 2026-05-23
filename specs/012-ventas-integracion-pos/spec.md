@@ -69,7 +69,7 @@ El admin y el líder de tienda consultan el listado de lotes importados y el det
 
 ### Requisitos Funcionales
 
-**Importación por archivo plano**
+#### Importación por archivo plano
 
 - **RF-001**: El sistema DEBE aceptar la carga de archivos en el formato de reporte de ventas del POS: separado por punto y coma, con encabezado en la primera fila, y columnas en el orden: `#`, `Fecha`, `Hora`, `Artículo`, `Nombre`, `Uds.V`, `% Popularidad`, `Venta`, `Venta %ST`. Cada fila representa una transacción individual con su fecha y hora exactas.
 - **RF-002**: El sistema DEBE ignorar automáticamente filas con artículo vacío, filas de totales y filas con cantidad vendida igual a cero o negativa.
@@ -77,17 +77,17 @@ El admin y el líder de tienda consultan el listado de lotes importados y el det
 - **RF-004**: El sistema DEBE requerir la confirmación explícita del admin antes de aplicar cualquier descuento de inventario proveniente de una importación por archivo plano (RN-VTA-04).
 - **RF-005**: El sistema DEBE asociar cada importación a una tienda específica y a un período (fecha del reporte).
 
-**Mapeo de artículos**
+#### Mapeo de artículos
 
 - **RF-006**: El sistema DEBE vincular cada transacción del archivo con un producto del catálogo usando el campo `Artículo` del archivo contra el campo `codigo_pos` del catálogo. El admin configura el `codigo_pos` de cada producto/variante en Loopi para que coincida exactamente con el valor del campo `Artículo` del POS (con normalización básica: recorte de espacios y comparación sin distinción de mayúsculas/minúsculas). El campo `Nombre` del archivo es informativo y no se usa para el mapeo.
 - **RF-007**: Los artículos del archivo que no tengan un producto mapeado en el catálogo DEBEN quedar registrados en el lote de importación con estado `error` y ser visibles para el admin en el resumen de validación.
 
-**Idempotencia**
+#### Idempotencia
 
 - **RF-008**: El sistema DEBE detectar transacciones duplicadas a nivel individual: la clave de idempotencia es la combinación de `tienda_id + Fecha + Hora + Artículo`. Si una transacción con esa combinación ya existe, se registra como `duplicada` sin impactar el inventario.
 - **RF-009**: La fecha y hora de cada transacción se obtienen directamente de los campos `Fecha` y `Hora` del archivo, no de la fecha de importación. El sistema usa estos valores para fechar los movimientos de inventario y detectar duplicados.
 
-**Procesamiento y descuento de inventario**
+#### Procesamiento y descuento de inventario
 
 - **RF-010**: Por cada venta con receta activa y mapeo válido, el sistema DEBE descontar del inventario de la tienda la cantidad resultante de multiplicar las unidades vendidas por la cantidad de cada insumo definida en la receta (RN-VTA-02).
 - **RF-011**: Si un producto no tiene receta activa, la venta DEBE quedar en estado `pendiente_receta` sin generar descuento de inventario (RN-VTA-03).
@@ -95,12 +95,12 @@ El admin y el líder de tienda consultan el listado de lotes importados y el det
 - **RF-013**: El sistema DEBE aplicar la receta vigente al momento de la venta, usando el timestamp (`Fecha` + `Hora`) incluido en cada fila del archivo.
 - **RF-014**: Los artículos del CSV con precio de venta = $0 y unidades vendidas > 0 (modificadores/adiciones como leche deslactosada, salsa arequipe) DEBEN procesarse de la misma forma que cualquier otra línea: si tienen receta activa, descuentan inventario.
 
-**Reprocesamiento de ventas pendiente_receta**
+#### Reprocesamiento de ventas pendiente_receta
 
 - **RF-015**: El admin DEBE poder reprocesar manualmente las ventas en estado `pendiente_receta` una vez que el producto tenga una receta activa asignada.
 - **RF-016**: Al reprocesar, el sistema DEBE aplicar el descuento de inventario con la receta activa en el momento del reprocesamiento y cambiar el estado de la venta a `procesada`.
 
-**Visualización y trazabilidad**
+#### Visualización y trazabilidad
 
 - **RF-019**: El sistema DEBE mantener un registro de todos los lotes de importación con: fecha, tienda, estado del lote, resumen de resultados (procesadas, duplicadas, pendiente_receta, error).
 - **RF-020**: El admin DEBE poder ver el detalle línea a línea de cada lote con el estado individual de cada venta.
