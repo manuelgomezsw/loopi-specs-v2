@@ -2,6 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-05-23
+**Última revisión**: 2026-05-23 (v3 — generación automática, LT sale de creación, pedidos manuales excepcionales)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -32,5 +33,4 @@
 ## Notes
 
 - Todos los ítems pasan la validación. La spec está lista para `/speckit-plan`.
-- La tolerancia del 10% y el plazo de 3 días hábiles provienen de §3.8 de la spec funcional y se documentan como supuestos configurables.
-- El subflujo de recepción cubre los tres roles (admin, lider_tienda, barista) con sus permisos diferenciados.
+- **Cambios v3**: El Líder de Tienda ya no crea pedidos. El sistema los genera automáticamente el día anterior al "día de toma de pedidos" configurado globalmente, usando stock actual + planeación de demanda. El LC o Admin pueden crear pedidos manuales excepcionales o solicitar regeneración tras una cancelación. El LT conserva su rol en visualización y recepción.
