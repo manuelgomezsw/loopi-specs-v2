@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `007-items-catalogo`
 **Creado**: 2026-05-21
-**Estado**: Borrador
+**Estado**: Listo para implementación
 **Referencia funcional**: [§3.1 Módulo: Catálogo — Submenú Items](../loopi-v2-funcional/spec.md)
 
 ---
@@ -211,8 +211,6 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 ## Criterios de Éxito
 
-- **Configuración rápida**: El admin puede registrar el conjunto inicial de items del
-  catálogo a un ritmo de al menos 20 items en 30 minutos.
 - **Control de acceso**: El 100% de los intentos de gestión del catálogo de items por
   parte de roles no admin son bloqueados.
 - **Integridad del catálogo**: El sistema previene el 100% de los casos de items con
@@ -230,7 +228,7 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 | Entidad | Atributos |
 |---------|-----------|
 | `Item` | codigo (único), nombre (único), tipo, subcategoria_id, proveedor_id, unidad_medida_id, costo_unitario (por defecto global, COP sin decimales), frecuencia_inventario, stock_seguridad, tiempo_entrega_dias, activo |
-| `ItemCostoTienda` | item_id (FK), tienda_id (FK), costo_unitario (COP sin decimales), fecha_vigencia; clave compuesta (item_id, tienda_id, fecha_vigencia) |
+| `ItemCostoTienda` | item_id (FK), tienda_id (FK), costo_unitario (COP sin decimales), vigente_desde; clave compuesta (item_id, tienda_id, vigente_desde) |
 
 ---
 

@@ -39,6 +39,7 @@ antes de iniciar cualquier historia de usuario.
 - [ ] T005 [P] Definir structs Go `Item`, `ItemCostoTienda` y DTOs `CrearItemRequest`, `ActualizarItemRequest`, `ItemResponse`, `ItemDetalleResponse`, `CostoTiendaRequest`, `CostoTiendaResponse`, `ListaItemsResponse` en `loopi-api-v2/internal/items/models.go`
 - [ ] T006 [P] Implementar caché Ristretto con TTL 5 min, claves `"item:id:{id}"`, `"item:codigo:{codigo}"`, `"items:freq:diario"`, `"items:freq:semanal"`, `"items:freq:mensual"` y función `invalidarItems(itemID, codigo)` en `loopi-api-v2/internal/items/cache.go`
 - [ ] T007 Implementar `Repository` con pool de BD, interfaz base y constructor `NewRepository(db, cache)` en `loopi-api-v2/internal/items/repository.go`
+- [ ] T007b Implementar `Service.estaEnUso(ctx, itemID) bool` que verifica mediante EXISTS queries en `information_schema` si el item tiene al menos un registro en `inventarios_conteos_items`, `recetas_ingredientes` o `pedidos_lineas`; retorna `false` de forma segura si alguna de esas tablas aún no existe — requerida por T019 (US4) y T027b (US2) en `loopi-api-v2/internal/items/service.go`
 - [ ] T008 Registrar prefijo `/api/v1/items` con middleware de autenticación JWT en el router principal de `loopi-api-v2`
 
 **Checkpoint**: Estructura lista — las historias de usuario pueden comenzar.
@@ -116,8 +117,8 @@ con nuevo valor. `PUT` intentando cambiar `codigo` con `esta_en_uso=true` retorn
 
 ### Backend — US2
 
-- [ ] T026 [P] [US2] Implementar `Service.estaEnUso(ctx, itemID)` que verifica con EXISTS queries vía `information_schema` si el item aparece en `inventarios_conteos_items`, `recetas_ingredientes` o `pedidos_lineas` (seguro ante tablas no creadas aún) en `loopi-api-v2/internal/items/service.go`
-- [ ] T027 [US2] Implementar `Repository.ActualizarItem(ctx, id, campos, actualizadoPor)` y `Service.ActualizarItem(ctx, id, req)` con validaciones: bloquear `codigo` si `estaEnUso()=true` (422 `codigo_en_uso`), exigir `confirmar_cambio_unidad=true` si cambia `unidad_medida_id` y el item tiene historial de stock, unicidad de nombre en `loopi-api-v2/internal/items/repository.go` y `service.go`
+- [ ] T027a [P] [US2] Implementar `Repository.ActualizarItem(ctx, id, campos, actualizadoPor)` con UPDATE dinámico solo de campos modificados, captura de error MySQL 1062 para nombre duplicado y retorno del item actualizado en `loopi-api-v2/internal/items/repository.go`
+- [ ] T027b [US2] Implementar `Service.ActualizarItem(ctx, id, req)` con validaciones: (1) bloquear `codigo` si `estaEnUso(ctx, id)=true` (implementada en T007b) → 422 `codigo_en_uso`; (2) verificar que la nueva `subcategoria_id` (si cambia) esté activa → 422 `subcategoria_inactiva`; (3) verificar que el nuevo `proveedor_id` (si enviado y cambia) esté activo → 422 `proveedor_inactivo`; (4) verificar que la nueva `unidad_medida_id` (si cambia) esté activa → 422 `unidad_medida_inactiva`; (5) si `unidad_medida_id` cambia, invocar stub `tieneHistorialStock(itemID)` (retorna `false` inicialmente — **TODO**: implementar con tablas de 009-inventario) y exigir `confirmar_cambio_unidad=true` si retorna `true` → 422 `cambio_unidad_requiere_confirmacion`; (6) unicidad de nombre → 409 `nombre_duplicado` en `loopi-api-v2/internal/items/service.go`
 - [ ] T028 [US2] Implementar handler `PUT /api/v1/items/{id}` con guard de rol `admin` y manejo de 400/401/403/404/409/422 en `loopi-api-v2/internal/items/handler.go`
 
 ### Frontend — US2
@@ -143,7 +144,7 @@ inactivo ingrediente de una receta activa genera advertencia en la receta (verif
 ### Backend — US3
 
 - [ ] T032 [P] [US3] Implementar `Repository.InactivarItem(ctx, id, actualizadoPor)` y `Repository.ReactivarItem(ctx, id, actualizadoPor)` con UPDATE `activo` y `actualizado_en=NOW()` en `loopi-api-v2/internal/items/repository.go`
-- [ ] T033 [US3] Implementar `Service.InactivarItem(ctx, id)` (verifica activo=1 antes; retorna 422 `item_ya_inactivo` si ya está inactivo) y `Service.ReactivarItem(ctx, id)` (verifica activo=0; retorna 422 `item_ya_activo` si ya está activo) con invalidación de caché en ambas operaciones en `loopi-api-v2/internal/items/service.go`
+- [ ] T033 [US3] Implementar `Service.InactivarItem(ctx, id)` (verifica activo=1 antes; retorna 422 `item_ya_inactivo` si ya está inactivo) y `Service.ReactivarItem(ctx, id)` (verifica activo=0; retorna 422 `item_ya_activo` si ya está activo) con invalidación de caché en ambas operaciones; **nota:** la advertencia de RF-ITEM-03.6 (item inactivo en receta activa) es responsabilidad de 008-menu-recetas — la invalidación de caché en `InactivarItem` garantiza que 008 detecte el cambio en su próxima consulta en `loopi-api-v2/internal/items/service.go`
 - [ ] T034 [US3] Implementar handlers `PATCH /api/v1/items/{id}/inactivar` y `PATCH /api/v1/items/{id}/reactivar` con guard de rol `admin` y manejo de 401/403/404/422 en `loopi-api-v2/internal/items/handler.go`
 
 ### Frontend — US3
@@ -191,7 +192,7 @@ desde el primer deploy en producción."
 
 - [ ] T042 [P] Instrumentar con trazas OTel: spans por endpoint con atributos `item.id`, `item.codigo`, `operacion`, `user.rol`, `user.id` en todos los handlers de `loopi-api-v2/internal/items/handler.go`
 - [ ] T043 [P] Agregar logs estructurados JSON con campos `user_id`, `rol`, `operacion`, `item_id`, `item_codigo` y `resultado` en cada operación de escritura (crear, actualizar, inactivar, reactivar, registrar costo) en `loopi-api-v2/internal/items/service.go`
-- [ ] T044 [P] Implementar tests unitarios del servicio con mock del repositorio cubriendo los 16 casos de `quickstart.md §5` (creación duplicados, RBAC, edición código bloqueado, inactivar/reactivar, caché, costos tienda) en `loopi-api-v2/internal/items/service_test.go`
+- [ ] T044 [P] Implementar tests unitarios del servicio con mock del repositorio cubriendo los 16 casos de `quickstart.md §5` más `TestCambiarFrecuenciaNoAfectaHistorialPrevio` (verificar que PUT con nueva `frecuencia_inventario` retorna 200 con el nuevo valor y no altera ningún registro de historial de conteos previos) en `loopi-api-v2/internal/items/service_test.go`
 - [ ] T045 [P] Implementar tests unitarios de `ItemsComponent` con mock de `ItemsService` (casos: listado vacío empty state, filtro por tipo, paginación, botón inactivar con modal) en `loopi-web-v2/src/app/items/items.component.spec.ts`
 - [ ] T046 [P] Implementar tests unitarios de `ItemsService` con mock de `HttpClient` (casos: crearItem exitoso, 409 código/nombre duplicado, editarItem código bloqueado, inactivar/reactivar, registrar costo) en `loopi-web-v2/src/app/items/items.service.spec.ts`
 - [ ] T047 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
@@ -208,7 +209,7 @@ desde el primer deploy en producción."
 - **Phase 2 (Fundacional)**: Depende de Phase 1 — **BLOQUEA todas las historias**
 - **Phase 3 (US1)**: Depende de Phase 2 — primer incremento entregable (MVP)
 - **Phase 4 (US4)**: Depende de Phase 2; T018-T019 (service) dependen de T016-T017 (repo)
-- **Phase 5 (US2)**: Depende de Phase 2; T027 depende de T026 (estaEnUso)
+- **Phase 5 (US2)**: Depende de Phase 2; T027b depende de T027a (repositorio) y de T007b (estaEnUso, Phase 2)
 - **Phase 6 (US3)**: Depende de Phase 2; T033 depende de T032
 - **Phase 7 (US5)**: Depende de Phase 2; T038 depende de T037
 - **Phase 8 (Polish)**: Depende de las historias deseadas completadas
@@ -234,7 +235,7 @@ desde el primer deploy en producción."
 - En US1: T009 (repo) y T012 (frontend service) paralelas; T010 depende de T009
 - En US4: T016, T017 (repos) paralelas entre sí; T018, T019 (services) paralelas entre sí una vez completos los repos
 - En US4: T021, T023 (componentes Angular) paralelos entre sí
-- En US2: T026 (estaEnUso) y T029 (frontend form) paralelos
+- En US2: T027a (repositorio) y T029 (frontend form) paralelos; T027b depende de T027a y T007b
 - En US3: T032 (repos) y T035 (frontend service) paralelos
 - En US5: T037 (repos) y T040 (frontend service) paralelos
 - T042, T043, T044, T045, T046, T048: todas paralelas entre sí en Phase 8
