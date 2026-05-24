@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -10,6 +10,9 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.3.2 — gosec, govulncheck, npm audit, gitleaks agregados a los gates de seguridad (PATCH).
         1.3.3 — Trivy CI agregado como gate obligatorio en GitHub Actions (PATCH).
         1.3.4 — HTTP 423 (cuenta bloqueada) añadido a la tabla de códigos (PATCH).
+        1.4.0 — nueva sección "Diseño de Interfaz (UX/UI)": responsive mobile-first,
+                accesibilidad WCAG 2.1 AA, estados de carga/error/vacío, convenciones
+                de formularios, feedback de acciones y estructura mínima de vistas (MINOR).
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -20,6 +23,18 @@ Changes in 1.3.2:
 Changes in 1.3.3:
   - Flujo de Trabajo: Trivy fs scan obligatorio en CI de GitHub (PRs y push a develop/master)
   - Principio: la política va en la constitución; el workflow YAML va en cada repo
+
+Changes in 1.4.0:
+  - Nueva sección §Diseño de Interfaz (UX/UI) después de §Stack Técnico
+  - Stack UI: Tailwind CSS v4 puro, componentes propios (loopi-web/src/app/shared/components/)
+  - Responsive mobile-first: breakpoints estándar de Tailwind, mínimo 320 px
+  - Accesibilidad WCAG 2.1 AA: contraste, labels, errores con texto, navegación por teclado
+  - Convenciones de estados de carga (< 300 ms sin indicador; 300 ms–3 s spinner inline)
+  - Manejo de errores en UI: errores de campo, errores de API, 401/403 con mensajes claros
+  - Empty states obligatorios para toda lista/tabla
+  - Convenciones de formularios: validación on blur + on submit; botón deshabilitado en loading
+  - Feedback de acciones: toasts 3 s en éxito; modal de confirmación en destructivas
+  - Estructura mínima de vistas: h1 único, breadcrumb contextual, acción primaria identificada
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -110,7 +125,7 @@ Los logs estructurados van a stdout → GCP Cloud Logging → Datadog vía integ
 ## Stack Técnico y Lineamientos de Implementación
 
 **Frontend**: Angular (última versión estable), componentes standalone y signals, Tailwind CSS v4.
-Despliegue en **Firebase Hosting** (GCP).
+Despliegue en **Firebase Hosting** (GCP). Ver §Diseño de Interfaz (UX/UI) para convenciones de UI.
 
 **Backend**: **Golang**, desplegado en **GCP App Engine**.
 
@@ -134,6 +149,120 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
   tienen acceso a infraestructura real y la paridad mock/real se valida en stage (ver sección Ambientes).
 - Markdown: sub-listas con indentación de 2 espacios; línea en blanco antes/después de headings
   y listas; archivo termina con newline (markdownlint MD007, MD022, MD032, MD047).
+
+---
+
+## Diseño de Interfaz (UX/UI)
+
+### Stack de UI
+
+- **Framework CSS**: Tailwind CSS v4 — utility-first, sin librerías de componentes externas.
+- **Componentes**: construidos a medida sobre Tailwind CSS. No se usan PrimeNG, Angular Material,
+  DaisyUI ni otras librerías de componentes. Los componentes propios viven en
+  `loopi-web/src/app/shared/components/`.
+- **Fuente y colores**: escala base de Tailwind CSS v4 hasta que el sistema de diseño de marca
+  quede definido. Cuando se defina, los tokens van en `tailwind.config.ts` como extensión del
+  tema. Ningún color de marca DEBE hardcodearse en clases arbitrarias; siempre como variable
+  de diseño.
+
+### Responsive (Mobile-First)
+
+La aplicación DEBE funcionar correctamente en todos los dispositivos: baristas usan celular en
+tienda, administradores y líderes trabajan en desktop. La estrategia es **mobile-first**: los
+estilos base aplican a pantallas pequeñas y se extienden con breakpoints de Tailwind.
+
+| Breakpoint | Prefijo Tailwind | Dispositivo objetivo |
+| --- | --- | --- |
+| < 640 px | (base) | Móvil — baristas en tienda |
+| ≥ 640 px | `sm:` | Móvil grande / tablet portrait |
+| ≥ 768 px | `md:` | Tablet landscape |
+| ≥ 1024 px | `lg:` | Desktop — admin y líderes |
+| ≥ 1280 px | `xl:` | Desktop ancho |
+
+Toda vista DEBE ser usable desde el breakpoint base. No se permiten layouts que rompan o
+queden inutilizables en pantallas menores a 320 px.
+
+### Accesibilidad
+
+- **Estándar mínimo**: WCAG 2.1 nivel AA.
+- Contraste de color: mínimo 4.5:1 para texto normal, 3:1 para texto grande (≥ 18 pt o 14 pt bold).
+- Todo campo de formulario DEBE tener un `<label>` asociado. No se usa `placeholder` como
+  reemplazo del label.
+- Los errores de validación DEBEN comunicarse con texto descriptivo, no solo con cambio de color.
+- Navegación por teclado (Tab / Shift+Tab / Enter / Esc / flechas) DEBE funcionar en todos los
+  flujos críticos: login, formularios, modales y menús.
+- Los componentes interactivos sin elemento HTML semántico equivalente DEBEN tener atributos
+  ARIA (`role`, `aria-label`, `aria-describedby`, `aria-expanded`) según corresponda.
+- Las imágenes decorativas llevan `alt=""`. Las imágenes informativas llevan `alt` descriptivo.
+
+### Estados de Carga
+
+| Duración estimada | Indicador |
+| --- | --- |
+| < 300 ms | Sin indicador (evitar parpadeo innecesario) |
+| 300 ms – 3 s | Spinner inline o skeleton loader en el área afectada |
+| > 3 s (poco común) | Barra de progreso o mensaje de estado con texto |
+
+Los spinners y skeletons DEBEN estar en el componente afectado, no superpuestos sobre toda la
+pantalla, salvo que la acción bloquee realmente toda la interfaz (ej. login inicial).
+
+### Manejo de Errores en UI
+
+- **Error de validación de campo**: texto de error debajo del campo, `text-red-600`, ícono
+  opcional. El campo recibe `border-red-500`.
+- **Error de API recuperable (4xx)**: toast no intrusivo, esquina superior derecha, auto-cierre
+  en 5 s. Nunca bloquear toda la pantalla.
+- **Error 401 (sesión expirada)**: `AuthInterceptor` captura y redirige a `/login` con mensaje:
+  "Tu sesión expiró. Inicia sesión nuevamente."
+- **Error 403 (sin permiso)**: pantalla "No tienes permiso para ver esto" con botón de regreso.
+  No revelar datos del recurso al que se intentó acceder.
+- **Error 500 / red caída**: mensaje genérico "Ocurrió un error. Intenta de nuevo." con opción
+  de reintentar. Registrar en consola para debugging.
+- Los mensajes de error al usuario DEBEN ser en español, concisos y accionables. Nunca exponer
+  stack traces, IDs internos ni mensajes técnicos al usuario final.
+
+### Estados Vacíos (Empty States)
+
+Toda lista, tabla o sección que pueda estar vacía DEBE mostrar un estado vacío con:
+
+- Texto explicativo en primera persona ("Aún no hay pedidos registrados.").
+- Acción sugerida cuando aplique ("Crea el primer pedido →").
+- Ícono opcional para contexto visual.
+
+Nunca mostrar una lista en blanco sin contexto. El empty state es parte del diseño, no un
+caso excepcional.
+
+### Convenciones de Formularios
+
+- **Validación**: on blur por campo + validación completa on submit.
+- **Envío**: el botón de submit DEBE deshabilitarse durante el envío (estado `loading`) para
+  prevenir doble-clic. Mostrar spinner inline en el botón o texto "Guardando...".
+- **Campos obligatorios**: marcados con `*` junto al label. Leyenda al pie: "* Campo obligatorio".
+- **Placeholders**: solo como ejemplo de formato (ej. "ej. usuario@loopi.com"), nunca como
+  reemplazo del label.
+- **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
+  solo cuando el llenado automático sea perjudicial para el flujo.
+
+### Feedback de Acciones
+
+- **Éxito (guardar, crear, actualizar)**: toast verde, esquina superior derecha, auto-cierre
+  3 s. Texto conciso: "Pedido guardado correctamente."
+- **Éxito (eliminar / inactivar)**: toast neutro con opción de deshacer si es reversible en
+  la sesión.
+- **Acciones destructivas irreversibles**: confirmar con modal antes de ejecutar. El botón de
+  confirmación es el más llamativo; el de cancelar es secundario.
+
+### Estructura Mínima de Vistas
+
+Cada vista de la aplicación DEBE tener:
+
+- **Título de página** (`<h1>`) único y descriptivo — visible en pantalla y en el `<title>`
+  del documento.
+- **Breadcrumb o navegación contextual** cuando la vista tiene jerarquía padre. En el nivel
+  raíz no aplica.
+- **Acción primaria** claramente identificada cuando la vista tiene una acción principal
+  (ej. "Nuevo pedido", "Confirmar inventario").
+- **Layout consistente** con el resto del módulo: mismo padding, misma estructura de header.
 
 ---
 
@@ -390,4 +519,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.3.4 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.4.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
