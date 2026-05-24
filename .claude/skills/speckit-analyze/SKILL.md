@@ -19,6 +19,29 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Verificación de Branch — OBLIGATORIO
+
+**Ejecutar como primer paso, antes de cualquier otra acción.**
+
+1. Corre `git branch --show-current` desde la raíz del repositorio.
+2. Determina el branch esperado:
+   - Si `$ARGUMENTS` no está vacío, el branch esperado es el valor de `$ARGUMENTS`
+     (p. ej., `003-gestion-empleados`).
+   - Si `$ARGUMENTS` está vacío, obtén el campo `BRANCH` ejecutando
+     `.specify/scripts/bash/check-prerequisites.sh --json --paths-only`.
+3. Compara branch actual con branch esperado:
+   - ✅ **Coinciden** → continúa con los siguientes pasos.
+   - ❌ **No coinciden** → **ABORTAR** con este mensaje y no ejecutar ningún paso más:
+
+     ```
+     ❌ Branch incorrecto
+     Branch actual:   <branch_actual>
+     Branch esperado: <branch_esperado>
+
+     Cambia al branch correcto antes de continuar:
+       git checkout <branch_esperado>
+     ```
+
 ## Pre-Execution Checks
 
 **Check for extension hooks (before analysis)**:
@@ -258,3 +281,46 @@ After reporting, check if `.specify/extensions.yml` exists in the project root.
 ## Context
 
 $ARGUMENTS
+
+## Gate Final — Commit Obligatorio
+
+**OBLIGATORIO: El comando NO está completo hasta que este gate sea superado.**
+
+Invoca `/speckit-git-commit` para commitear y pushear todos los cambios generados en este comando
+(principalmente los artefactos modificados durante la remediación, si el usuario aprobó alguna).
+
+- Si el auto-commit reporta "Sin cambios — nada que commitear", el gate se considera superado.
+- Si el commit o el push fallan, reporta el error al usuario y **no declares el comando completo**
+  ni sugieras ejecutar el siguiente comando del pipeline hasta que el error esté resuelto.
+
+## Gate Final — CI Verde (obligatorio antes de /speckit-implement)
+
+**OBLIGATORIO: No sugerir ni permitir avanzar a `/speckit-implement` hasta que el CI pase.**
+
+Una vez confirmado el commit, verifica que el CI del PR esté en verde:
+
+1. Identifica el número de PR del branch actual:
+
+   ```bash
+   gh pr list --head <branch_actual> --state open
+   ```
+
+2. Verifica los checks del CI. Reintenta hasta 3 veces con 30 s de espera entre intentos
+   si los checks aún están en ejecución:
+
+   ```bash
+   gh pr checks <pr_number>
+   ```
+
+3. Evalúa el resultado:
+   - ✅ **Todos los checks en `pass`** →
+     Reporta: "✅ CI verde — puedes ejecutar `/speckit-implement`."
+   - ❌ **Algún check en `fail`** →
+     Obtén los logs del step fallido:
+     ```bash
+     gh run view <run_id> --log-failed
+     ```
+     Muestra el error al usuario y **bloquea el avance**:
+     "❌ CI fallido — corrige los errores reportados y ejecuta `/speckit-git-commit` antes de continuar."
+   - ⏳ **Checks aún en ejecución tras 3 intentos** →
+     Reporta el estado actual y pregunta al usuario si desea esperar más antes de avanzar.
