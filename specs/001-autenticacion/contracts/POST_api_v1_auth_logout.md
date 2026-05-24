@@ -10,7 +10,7 @@
 
 **Headers**:
 
-```
+```http
 X-XSRF-TOKEN: <csrf_token_del_cookie_XSRF-TOKEN>
 ```
 
@@ -24,7 +24,7 @@ X-XSRF-TOKEN: <csrf_token_del_cookie_XSRF-TOKEN>
 
 **Headers de respuesta**:
 
-```
+```http
 Set-Cookie: jwt=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
 Set-Cookie: XSRF-TOKEN=; Secure; SameSite=Strict; Path=/; Max-Age=0
 ```

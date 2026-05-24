@@ -20,7 +20,7 @@ Este job es invocado por Cloud Scheduler. No es parte de la API pública.
 
 **Headers**:
 
-```
+```http
 X-CloudScheduler: true
 ```
 
@@ -77,7 +77,7 @@ X-CloudScheduler: true
 
 ## Configuración Cloud Scheduler recomendada
 
-```
+```text
 Frecuencia:  0 2 * * *          (diaria a las 2:00 AM hora Colombia)
 URL:         https://api.loopi.com/internal/jobs/limpiar_tokens_revocados
 Método:      POST

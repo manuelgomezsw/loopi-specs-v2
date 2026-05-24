@@ -214,6 +214,7 @@ curl -c cookies.txt -X POST localhost:8080/api/v1/auth/login \
 ### Con Dos Desarrolladores en Paralelo
 
 Una vez completa la Fase 2:
+
 - **Dev A**: Fases 3 + 4 (login + logout + OTel — backend y frontend)
 - **Dev B**: Fase 7 + T027 (job + tests — no comparte archivos)
 

@@ -59,9 +59,10 @@ ng serve
 ```
 
 > Asegurarse de que `loopi-web/src/proxy.conf.json` incluya:
-> ```json
-> { "/api": { "target": "http://localhost:8080", "secure": false } }
-> ```
+
+```json
+{ "/api": { "target": "http://localhost:8080", "secure": false } }
+```
 
 ---
 

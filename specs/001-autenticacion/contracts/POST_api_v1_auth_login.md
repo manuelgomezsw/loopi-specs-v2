@@ -10,7 +10,7 @@
 
 **Headers**:
 
-```
+```http
 Content-Type: application/json
 ```
 
@@ -36,7 +36,7 @@ Content-Type: application/json
 
 **Headers de respuesta**:
 
-```
+```http
 Set-Cookie: jwt=<token>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=86400
 Set-Cookie: XSRF-TOKEN=<csrf_token>; Secure; SameSite=Strict; Path=/
 ```
