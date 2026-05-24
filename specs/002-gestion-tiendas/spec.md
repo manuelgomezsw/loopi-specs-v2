@@ -197,7 +197,9 @@ comprobando que el listado las muestra todas con su estado correcto.
 - RF-TDA-04.5: Desde el listado, el administrador puede acceder al detalle y edición de
   cualquier tienda.
 - RF-TDA-04.6: Las tiendas activas aparecen en el selector global de tienda del panel del
-  administrador. Las inactivas no aparecen en dicho selector.
+  administrador. Las inactivas no aparecen en dicho selector. *(El selector global es un
+  componente compartido de layout/navegación; su implementación corresponde a otra feature.
+  `002-gestion-tiendas` provee el dato `activo` a través de los endpoints de listado.)*
 
 ### RF-TDA-05: Aislamiento de datos por tienda
 
