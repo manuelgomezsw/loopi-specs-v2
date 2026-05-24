@@ -1,20 +1,47 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
+        1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
+        1.3.0 — OTel+Datadog, Ristretto, zona horaria Colombia, CI gates, estructura multi-repo (MINOR).
+        1.3.1 — golangci-lint (lean) agregado al gate de backend (PATCH).
+        1.3.2 — gosec, govulncheck, npm audit, gitleaks agregados a los gates de seguridad (PATCH).
+        1.3.3 — Trivy CI agregado como gate obligatorio en GitHub Actions (PATCH).
+        1.3.4 — HTTP 423 (cuenta bloqueada) añadido a la tabla de códigos (PATCH).
+        1.4.0 — nueva sección "Diseño de Interfaz (UX/UI)": responsive mobile-first,
+                accesibilidad WCAG 2.1 AA, estados de carga/error/vacío, convenciones
+                de formularios, feedback de acciones y estructura mínima de vistas (MINOR).
 
-Changes in 1.1.1:
-  - Dev: reemplaza Docker Compose local por GCP Cloud SQL db-f1-micro compartido + Go local + Firebase Emulators
-  - Motivo: máquina de desarrollo con 4.5 GB RAM y sin swap no soporta Docker Compose con MySQL de forma estable
+Changes in 1.3.2:
+  - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
+  - loopi-api: govulncheck y gitleaks como gates obligatorios
+  - loopi-web: npm audit --audit-level=high y gitleaks como gates obligatorios
+  - loopi-specs-v2: gitleaks como gate obligatorio
+
+Changes in 1.3.3:
+  - Flujo de Trabajo: Trivy fs scan obligatorio en CI de GitHub (PRs y push a develop/master)
+  - Principio: la política va en la constitución; el workflow YAML va en cada repo
+
+Changes in 1.4.0:
+  - Nueva sección §Diseño de Interfaz (UX/UI) después de §Stack Técnico
+  - Stack UI: Tailwind CSS v4 puro, componentes propios (loopi-web/src/app/shared/components/)
+  - Responsive mobile-first: breakpoints estándar de Tailwind, mínimo 320 px
+  - Accesibilidad WCAG 2.1 AA: contraste, labels, errores con texto, navegación por teclado
+  - Convenciones de estados de carga (< 300 ms sin indicador; 300 ms–3 s spinner inline)
+  - Manejo de errores en UI: errores de campo, errores de API, 401/403 con mensajes claros
+  - Empty states obligatorios para toda lista/tabla
+  - Convenciones de formularios: validación on blur + on submit; botón deshabilitado en loading
+  - Feedback de acciones: toasts 3 s en éxito; modal de confirmación en destructivas
+  - Estructura mínima de vistas: h1 único, breadcrumb contextual, acción primaria identificada
 
 Templates reviewed:
-  - .specify/templates/plan-template.md ✅ — "Verificación de Constitución" alineada con las 6 puertas
-  - .specify/templates/spec-template.md ✅ — estructura compatible; historias de usuario con criterios de aceptación
-  - .specify/templates/tasks-template.md ✅ — fases reflejan principios de trazabilidad y observabilidad
+  - .specify/templates/plan-template.md — pendiente de revisión
+  - .specify/templates/spec-template.md ✅ — estructura compatible
+  - .specify/templates/tasks-template.md — pendiente de revisión
 
-Deferred items: ninguno
+Deferred items: actualizar checklist "Verificación de Constitución" en plan-template.md para reflejar 7 puertas
 -->
 
 # Loopi v2 — Constitución del Proyecto
@@ -25,7 +52,7 @@ Deferred items: ninguno
 
 Toda funcionalidad nueva o cambio a una funcionalidad existente DEBE comenzar con una especificación
 aprobada antes de cualquier línea de código. La especificación funcional en
-`specs/loopi-v2-funcional/spec.md` es la fuente de verdad del producto.
+`specs/` es la fuente de verdad del producto.
 
 - DEBE existir una spec aprobada (PR mergeado a `develop`) antes de comenzar el plan de implementación.
 - El plan de implementación DEBE referenciar la sección de spec correspondiente.
@@ -45,9 +72,13 @@ Loopi v2 opera bajo el modelo: **catálogo compartido por marca, datos operacion
 
 ### III. Control de Acceso por Rol (RBAC)
 
-Los tres roles del sistema (`admin`, `lider_tienda`, `barista`) son la única fuente de verdad de permisos.
-La matriz de permisos en §2.5 de la spec es normativa.
+Los cuatro roles del sistema (`admin`, `lider_compras`, `lider_tienda`, `barista`) son la única fuente
+de verdad de permisos. La matriz de permisos en §2.5 de la spec es normativa.
 
+- **`admin`**: acceso total. Su JWT no lleva `tienda_id` fijo; opera en modo consolidado o por tienda.
+- **`lider_compras`**: opera a nivel de marca. Ve pedidos y planeación de todas las tiendas.
+  Su JWT no lleva `tienda_id` fijo.
+- **`lider_tienda`** y **`barista`**: acceso restringido a su tienda asignada. Su JWT incluye `tienda_id`.
 - El backend DEBE validar el rol en cada endpoint. El frontend oculta opciones según el rol,
   pero la validación del backend es la que tiene carácter vinculante.
 - Agregar o modificar permisos REQUIERE actualizar §2.5 de la spec y hacer la implementación pasar
@@ -71,21 +102,22 @@ y por qué motivo. No existe modificación de inventario sin rastro auditable.
 El diseño funcional y técnico DEBE cerrar activamente posibilidades de hurto, maquillaje de información
 y brechas operacionales. Un flujo que crea oportunidad de fraude DEBE rediseñarse antes de implementarse.
 
-- Los ajustes post-inventario se registran como mermas (no como edición directa de stock).
-- No existe flujo de "corrección silenciosa": toda desviación genera un registro visible para el `admin`.
-- El `admin` SIEMPRE tiene acceso a reportes de mermas, diferencias de recepción e historial de conteos.
-- Las diferencias en recepción de pedidos (> 10 % en algún ítem) generan estado `parcialmente_completado`
-  y DEBEN ser visibles en el dashboard del admin.
-
-### VI. Observabilidad Preventiva
+### VI. Monitoreo Preventivo
 
 Cada feature DEBE ser monitoreable desde el primer deploy en producción. El sistema DEBE permitir
 diagnosticar degradaciones en menos de 5 segundos.
 
-- Todo endpoint crítico (autenticación, movimientos de stock, recepción de pedidos) DEBE tener
-  métricas de latencia y tasa de errores.
-- Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp, operación.
-- Las alertas DEBEN ser preventivas: detectar anomalías antes de que impacten al usuario final.
+**Stack de observabilidad**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
+**Datadog** como plataforma de observabilidad (trazas, métricas, dashboards y alertas).
+Los logs estructurados van a stdout → GCP Cloud Logging → Datadog vía integración GCP nativa.
+
+- Todo endpoint crítico (autenticación, conteo de inventario, movimientos de stock, generación
+  y recepción de pedidos, integración con ventas) DEBE tener trazas OTel y métricas de latencia
+  y tasa de errores visibles en Datadog.
+- Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp,
+  operación.
+- Las alertas DEBEN configurarse en Datadog y ser preventivas: detectar anomalías antes de que
+  impacten al usuario final.
 - El monitoreo es responsabilidad del equipo de desarrollo, no solo de operaciones.
 
 ---
@@ -93,9 +125,9 @@ diagnosticar degradaciones en menos de 5 segundos.
 ## Stack Técnico y Lineamientos de Implementación
 
 **Frontend**: Angular (última versión estable), componentes standalone y signals, Tailwind CSS v4.
-Despliegue en **Firebase Hosting** (GCP).
+Despliegue en **Firebase Hosting** (GCP). Ver §Diseño de Interfaz (UX/UI) para convenciones de UI.
 
-**Backend**: **Golang**, desplegado en **GCP** (Cloud Run o GKE, a definir en plan de implementación).
+**Backend**: **Golang**, desplegado en **GCP App Engine**.
 
 **Base de datos**: **MySQL** en **GCP Cloud SQL**. Toda migración DEBE ser versionada, reversible
 y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-migrate).
@@ -106,13 +138,224 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
 
 - Paginación: SIEMPRE del lado del servidor (base de datos). Prohibida la paginación en memoria
   para colecciones que puedan crecer ilimitadamente.
-- Caché: Definir estrategia explícita por recurso. Sin caché implícito.
+- Caché: Se usa **Ristretto** (librería Go, caché en proceso por instancia). Solo para datos de
+  catálogo de lectura intensiva y baja volatilidad: items, unidades de medida, parámetros globales
+  del algoritmo. Los datos operacionales (stock, pedidos, inventarios) NUNCA se cachean; siempre
+  se leen desde la base de datos para garantizar consistencia entre instancias de App Engine.
+  Sin caché implícito; toda entrada de caché DEBE tener TTL explícito definido en el plan.
 - Pruebas frontend: unitarias por componente + funcionales automatizadas para flujos críticos (P1).
 - Pruebas backend: las integraciones con base de datos y servicios externos (POS, GCP services) DEBEN
   testearse mediante **mocks**. Prohibida la integración directa en tests — los entornos de CI no
   tienen acceso a infraestructura real y la paridad mock/real se valida en stage (ver sección Ambientes).
 - Markdown: sub-listas con indentación de 2 espacios; línea en blanco antes/después de headings
   y listas; archivo termina con newline (markdownlint MD007, MD022, MD032, MD047).
+
+---
+
+## Diseño de Interfaz (UX/UI)
+
+### Stack de UI
+
+- **Framework CSS**: Tailwind CSS v4 — utility-first, sin librerías de componentes externas.
+- **Componentes**: construidos a medida sobre Tailwind CSS. No se usan PrimeNG, Angular Material,
+  DaisyUI ni otras librerías de componentes. Los componentes propios viven en
+  `loopi-web/src/app/shared/components/`.
+- **Fuente y colores**: escala base de Tailwind CSS v4 hasta que el sistema de diseño de marca
+  quede definido. Cuando se defina, los tokens van en `tailwind.config.ts` como extensión del
+  tema. Ningún color de marca DEBE hardcodearse en clases arbitrarias; siempre como variable
+  de diseño.
+
+### Responsive (Mobile-First)
+
+La aplicación DEBE funcionar correctamente en todos los dispositivos: baristas usan celular en
+tienda, administradores y líderes trabajan en desktop. La estrategia es **mobile-first**: los
+estilos base aplican a pantallas pequeñas y se extienden con breakpoints de Tailwind.
+
+| Breakpoint | Prefijo Tailwind | Dispositivo objetivo |
+| --- | --- | --- |
+| < 640 px | (base) | Móvil — baristas en tienda |
+| ≥ 640 px | `sm:` | Móvil grande / tablet portrait |
+| ≥ 768 px | `md:` | Tablet landscape |
+| ≥ 1024 px | `lg:` | Desktop — admin y líderes |
+| ≥ 1280 px | `xl:` | Desktop ancho |
+
+Toda vista DEBE ser usable desde el breakpoint base. No se permiten layouts que rompan o
+queden inutilizables en pantallas menores a 320 px.
+
+### Accesibilidad
+
+- **Estándar mínimo**: WCAG 2.1 nivel AA.
+- Contraste de color: mínimo 4.5:1 para texto normal, 3:1 para texto grande (≥ 18 pt o 14 pt bold).
+- Todo campo de formulario DEBE tener un `<label>` asociado. No se usa `placeholder` como
+  reemplazo del label.
+- Los errores de validación DEBEN comunicarse con texto descriptivo, no solo con cambio de color.
+- Navegación por teclado (Tab / Shift+Tab / Enter / Esc / flechas) DEBE funcionar en todos los
+  flujos críticos: login, formularios, modales y menús.
+- Los componentes interactivos sin elemento HTML semántico equivalente DEBEN tener atributos
+  ARIA (`role`, `aria-label`, `aria-describedby`, `aria-expanded`) según corresponda.
+- Las imágenes decorativas llevan `alt=""`. Las imágenes informativas llevan `alt` descriptivo.
+
+### Estados de Carga
+
+| Duración estimada | Indicador |
+| --- | --- |
+| < 300 ms | Sin indicador (evitar parpadeo innecesario) |
+| 300 ms – 3 s | Spinner inline o skeleton loader en el área afectada |
+| > 3 s (poco común) | Barra de progreso o mensaje de estado con texto |
+
+Los spinners y skeletons DEBEN estar en el componente afectado, no superpuestos sobre toda la
+pantalla, salvo que la acción bloquee realmente toda la interfaz (ej. login inicial).
+
+### Manejo de Errores en UI
+
+- **Error de validación de campo**: texto de error debajo del campo, `text-red-600`, ícono
+  opcional. El campo recibe `border-red-500`.
+- **Error de API recuperable (4xx)**: toast no intrusivo, esquina superior derecha, auto-cierre
+  en 5 s. Nunca bloquear toda la pantalla.
+- **Error 401 (sesión expirada)**: `AuthInterceptor` captura y redirige a `/login` con mensaje:
+  "Tu sesión expiró. Inicia sesión nuevamente."
+- **Error 403 (sin permiso)**: pantalla "No tienes permiso para ver esto" con botón de regreso.
+  No revelar datos del recurso al que se intentó acceder.
+- **Error 500 / red caída**: mensaje genérico "Ocurrió un error. Intenta de nuevo." con opción
+  de reintentar. Registrar en consola para debugging.
+- Los mensajes de error al usuario DEBEN ser en español, concisos y accionables. Nunca exponer
+  stack traces, IDs internos ni mensajes técnicos al usuario final.
+
+### Estados Vacíos (Empty States)
+
+Toda lista, tabla o sección que pueda estar vacía DEBE mostrar un estado vacío con:
+
+- Texto explicativo en primera persona ("Aún no hay pedidos registrados.").
+- Acción sugerida cuando aplique ("Crea el primer pedido →").
+- Ícono opcional para contexto visual.
+
+Nunca mostrar una lista en blanco sin contexto. El empty state es parte del diseño, no un
+caso excepcional.
+
+### Convenciones de Formularios
+
+- **Validación**: on blur por campo + validación completa on submit.
+- **Envío**: el botón de submit DEBE deshabilitarse durante el envío (estado `loading`) para
+  prevenir doble-clic. Mostrar spinner inline en el botón o texto "Guardando...".
+- **Campos obligatorios**: marcados con `*` junto al label. Leyenda al pie: "* Campo obligatorio".
+- **Placeholders**: solo como ejemplo de formato (ej. "ej. usuario@loopi.com"), nunca como
+  reemplazo del label.
+- **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
+  solo cuando el llenado automático sea perjudicial para el flujo.
+
+### Feedback de Acciones
+
+- **Éxito (guardar, crear, actualizar)**: toast verde, esquina superior derecha, auto-cierre
+  3 s. Texto conciso: "Pedido guardado correctamente."
+- **Éxito (eliminar / inactivar)**: toast neutro con opción de deshacer si es reversible en
+  la sesión.
+- **Acciones destructivas irreversibles**: confirmar con modal antes de ejecutar. El botón de
+  confirmación es el más llamativo; el de cancelar es secundario.
+
+### Estructura Mínima de Vistas
+
+Cada vista de la aplicación DEBE tener:
+
+- **Título de página** (`<h1>`) único y descriptivo — visible en pantalla y en el `<title>`
+  del documento.
+- **Breadcrumb o navegación contextual** cuando la vista tiene jerarquía padre. En el nivel
+  raíz no aplica.
+- **Acción primaria** claramente identificada cuando la vista tiene una acción principal
+  (ej. "Nuevo pedido", "Confirmar inventario").
+- **Layout consistente** con el resto del módulo: mismo padding, misma estructura de header.
+
+---
+
+## Convenciones de API REST
+
+Todos los endpoints del backend siguen estas reglas sin excepción.
+
+**Estructura de URLs:**
+
+- Prefijo obligatorio: `/api/v1/`
+- Recursos en snake_case, plural: `/api/v1/pedidos`, `/api/v1/lineas_pedido`
+- Identificadores de recurso en la URL: `/api/v1/pedidos/{id}`
+- Acciones no-CRUD como sub-recursos: `/api/v1/pedidos/{id}/confirmar`
+
+**Formato de respuesta de error** (mismo esquema para todos los errores):
+
+```json
+{
+  "error": "codigo_snake_case",
+  "mensaje": "Texto legible para el usuario",
+  "campo": "nombre_campo_opcional",
+  "detalles": []
+}
+```
+
+**Códigos HTTP:**
+
+| Situación | Código |
+|-----------|--------|
+| Operación exitosa (GET, PUT) | 200 |
+| Recurso creado (POST) | 201 |
+| Sin contenido (DELETE lógico) | 204 |
+| Datos de entrada inválidos | 400 |
+| No autenticado (sin JWT o expirado) | 401 |
+| Sin permiso para el recurso | 403 |
+| Recurso no encontrado | 404 |
+| Conflicto de estado (ej. duplicado) | 409 |
+| Regla de negocio violada | 422 |
+| Cuenta bloqueada temporalmente (ej. intentos fallidos de login) | 423 |
+| Error interno del servidor | 500 |
+
+---
+
+## Convenciones de Datos
+
+**Identificadores:**
+
+- Clave primaria: entero auto-incremental (`BIGINT UNSIGNED`). No se usan UUIDs.
+- Las PKs se exponen como entero en la API.
+
+**Timestamps:**
+
+- Toda tabla DEBE tener `creado_en DATETIME NOT NULL` y `actualizado_en DATETIME NOT NULL`.
+- Todos los valores se almacenan en **hora Colombia** (`America/Bogota`, UTC-5, sin DST).
+  El backend Go configura la conexión MySQL con `loc=America%2FBogota` en el DSN.
+  Los clientes Angular no necesitan convertir; reciben y muestran la hora tal como viene.
+- El resto de campos de fecha/hora del dominio sigue el mismo patrón en español:
+  `iniciado_en`, `completado_en`, `enviado_en`, `expira_en`, etc.
+
+**Soft delete:**
+
+- **Nunca se ejecuta `DELETE` físico** sobre datos operacionales.
+- Entidades del catálogo usan flag `activo TINYINT(1)` para inactivar.
+- Entidades con ciclo de vida usan campo `estado ENUM(...)` con valores terminales
+  (`cancelado`, `completado`, `parcialmente_completado`).
+
+**Moneda y cantidades:**
+
+- Moneda: entero `INT` en pesos colombianos (COP), sin decimales.
+- Cantidades de items: `DECIMAL(12,4)` en la unidad de medida del item.
+- Semanas de pedido: formato ISO 8601 `YYYY-WNN` (ej. `2026-W22`).
+
+**Nomenclatura en base de datos:**
+
+- Tablas y columnas en **snake_case**, en español, plural para tablas
+  (ej. `pedidos`, `lineas_pedido`, `despachos`).
+- Claves foráneas: `{tabla_referenciada_singular}_id` (ej. `tienda_id`, `item_id`).
+- Índices únicos nombrados: `uq_{tabla}_{campos}` (ej. `uq_pedidos_tienda_semana`).
+
+---
+
+## Jobs Programados
+
+Las tareas de ejecución automática (generación de pedidos, motor de demanda) usan el patrón:
+**Cloud Scheduler → endpoint HTTP interno**.
+
+- El endpoint DEBE estar protegido con el header `X-CloudScheduler: true`.
+  Cualquier request sin ese header recibe `403`.
+- Los endpoints de jobs NO son parte de la API pública (`/api/v1/`). Usan el prefijo `/internal/jobs/`.
+- Toda ejecución de job DEBE registrar en log: tipo de job, `iniciado_en`, `completado_en`,
+  resultado (`ok` | `error`), cantidad de registros procesados y, si falla, el mensaje de error.
+- Un job que falla no reintenta automáticamente en la misma ejecución; Cloud Scheduler gestiona
+  el reintento según su política configurada.
 
 ---
 
@@ -167,11 +410,93 @@ todo cambio requiere PR aprobado con CI verde.
 | `hotfix/*` | `master` | `master` + `develop` | Bug crítico en producción |
 | `release/*` | `develop` | `master` + `develop` | Estabilización de versión |
 
-**CI obligatorio (markdownlint):** Todo archivo `.md` DEBE pasar el linter antes del merge.
+**Gates obligatorios antes de commit, push o apertura de PR:**
+
+`loopi-api` (en orden):
+
+1. `go build ./...` — compila sin errores.
+2. `golangci-lint run` — pasa con los 5 linters configurados (govet, errcheck, staticcheck, unused, gosec).
+3. `govulncheck ./...` — cero CVEs conocidas en dependencias Go que el código realmente invoca.
+4. `gitleaks detect --no-git` — cero secrets detectados en los archivos del commit.
+5. `go test ./...` — todos los tests unitarios pasan.
+
+`loopi-web` (en orden):
+
+1. `ng build` — compila sin errores (incluye chequeo TypeScript estricto).
+2. `npm audit --audit-level=high` — cero vulnerabilidades de severidad alta o crítica en dependencias de producción.
+3. `gitleaks detect --no-git` — cero secrets detectados en los archivos del commit.
+4. `ng test --watch=false` — todos los tests unitarios pasan.
+
+`loopi-specs-v2`:
+
+1. `gitleaks detect --no-git` — cero secrets detectados (DSNs, API keys, tokens en ejemplos).
+2. `markdownlint-cli2` — todos los archivos `.md` pasan el linter.
+
+Ningún commit, push ni PR puede abrirse si alguno de estos gates falla.
+
+**Gate adicional en GitHub Actions CI** (corre automáticamente en cada PR y push a `develop`/`master`):
+
+- **Trivy** (`trivy fs`, severidad `HIGH,CRITICAL`, `ignore-unfixed: true`) en `loopi-api` y `loopi-web`.
+  Resultados publicados en el Security tab de GitHub vía SARIF. El PR no puede mergearse si Trivy
+  reporta vulnerabilidades de severidad alta o crítica con fix disponible.
+- La implementación (workflow YAML) vive en `.github/workflows/security.yml` de cada repo.
+  La constitución define la política; cada repo define la ejecución.
+
+**Configuración de golangci-lint** (archivo `.golangci.yml` en la raíz de `loopi-api`):
+
+```yaml
+linters:
+  disable-all: true
+  enable:
+    - govet       # go vet estándar: errores de construcción comunes
+    - errcheck    # errores de retorno no chequeados
+    - staticcheck # reglas SA*: bugs reales detectados estáticamente
+    - unused      # código declarado pero nunca usado
+    - gosec       # OWASP: SQL injection, credenciales hardcodeadas, crypto débil
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  gosec:
+    excludes:
+      - G104  # errores no chequeados en defer — ya cubiertos por errcheck
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+```
+
+Las reglas gosec activas relevantes para este stack: G101 (credenciales hardcodeadas),
+G201/G202 (SQL injection), G402 (TLS inseguro), G404 (random débil), G501-G505 (crypto débil).
+G104 se excluye porque errcheck lo cubre con mayor precisión.
 
 **Resolución de conflictos entre ramas protegidas:** Los PRs de resolución DEBEN mergearse como
 "Create a merge commit" (no squash), para preservar historia compartida y evitar conflictos
 persistentes en GitHub al intentar PR inversos.
+
+---
+
+## Estructura de Repositorios
+
+Loopi v2 vive en tres repositorios independientes bajo la misma organización GitHub:
+
+| Repo | Tecnología | Propósito |
+|------|------------|-----------|
+| `loopi-specs-v2` | Markdown | Specs, planes, tareas — fuente de verdad del producto |
+| `loopi-api` | Go | Backend: API REST, jobs programados, lógica de negocio |
+| `loopi-web` | Angular | Frontend: SPA, componentes, flujos de usuario |
+
+**Reglas de alcance por tipo de tarea** — seguirlas reduce el contexto cargado innecesariamente:
+
+- **Spec / plan / análisis funcional**: solo `loopi-specs-v2`. Nunca se lee código de `loopi-api`
+  o `loopi-web` para generar una spec o un plan de implementación.
+- **Tarea backend-only** (endpoint, job, migración, lógica de negocio): solo `loopi-api`.
+- **Tarea frontend-only** (componente, vista, flujo UI, servicio Angular): solo `loopi-web`.
+- **Tarea full-stack** (feature que requiere endpoint + UI): el plan DEBE declarar explícitamente
+  qué partes van a `loopi-api` y cuáles a `loopi-web`. Se implementan de forma secuencial:
+  primero el contrato de API (request/response), luego backend, luego frontend.
+- Dentro de cada repo, cargar únicamente los archivos relevantes al módulo en cuestión,
+  no el árbol completo.
 
 ---
 
@@ -194,4 +519,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.1.1 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-18
+**Version**: 1.4.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
