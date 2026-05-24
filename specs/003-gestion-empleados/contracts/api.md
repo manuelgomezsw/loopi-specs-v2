@@ -15,7 +15,7 @@
 
 ### 1. Crear empleado
 
-```
+```http
 POST /api/v1/empleados
 Authorization: Bearer {token_admin}
 Content-Type: application/json
@@ -74,7 +74,7 @@ Content-Type: application/json
 
 ### 2. Listar empleados
 
-```
+```http
 GET /api/v1/empleados
 Authorization: Bearer {token_admin}
 ```
@@ -120,7 +120,7 @@ Authorization: Bearer {token_admin}
 
 ### 3. Detalle de empleado
 
-```
+```http
 GET /api/v1/empleados/{id}
 Authorization: Bearer {token_admin}
 ```
@@ -160,7 +160,7 @@ Authorization: Bearer {token_admin}
 
 ### 4. Editar empleado
 
-```
+```http
 PUT /api/v1/empleados/{id}
 Authorization: Bearer {token_admin}
 Content-Type: application/json
@@ -206,7 +206,7 @@ Content-Type: application/json
 
 ### 5. Cambiar estado del empleado (activar / inactivar)
 
-```
+```http
 PATCH /api/v1/empleados/{id}/estado
 Authorization: Bearer {token_admin}
 Content-Type: application/json
@@ -236,7 +236,7 @@ Content-Type: application/json
 
 ### 6. Resetear contraseña
 
-```
+```http
 POST /api/v1/empleados/{id}/contrasena
 Authorization: Bearer {token_admin}
 ```
