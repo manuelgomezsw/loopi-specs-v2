@@ -127,4 +127,4 @@ en `src/app/features/`. Patrón ya establecido en 001 y 002.
 | Data Model | `specs/003-gestion-empleados/data-model.md` | ✅ Completo (2 tablas + DDL) |
 | Contratos API | `specs/003-gestion-empleados/contracts/api.md` | ✅ Completo (6 endpoints) |
 | Quickstart | `specs/003-gestion-empleados/quickstart.md` | ✅ Completo |
-| Tasks | `specs/003-gestion-empleados/tasks.md` | ⏳ Pendiente (`/speckit-tasks`) |
+| Tasks | `specs/003-gestion-empleados/tasks.md` | ✅ Completo (44 tareas, 7 fases) |
