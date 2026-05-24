@@ -141,15 +141,18 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - RF-ITEM-01.1: Solo el administrador puede crear items. Cualquier otro rol recibe
   acceso denegado.
 - RF-ITEM-01.2: Un item requiere obligatoriamente: código, nombre, tipo, subcategoría,
-  unidad de medida, frecuencia de inventario y stock de seguridad.
-- RF-ITEM-01.3: Los campos opcionales al crear son: proveedor, costo unitario y
-  tiempo de entrega en días.
+  unidad de medida, frecuencia de inventario y stock de seguridad. El `stock_seguridad`
+  es obligatorio para todos los tipos de item incluyendo `activo`; para activos donde
+  no aplique operativamente, el admin ingresa `0`.
+- RF-ITEM-01.3: Los campos opcionales al crear son: proveedor, costo unitario por defecto
+  (global) y tiempo de entrega en días.
 - RF-ITEM-01.4: El código del item es único en todo el sistema y es asignado manualmente
   por el admin (ej: `CAF-001`, `LEC-002`).
 - RF-ITEM-01.5: El nombre del item es único en todo el sistema.
 - RF-ITEM-01.6: Los tipos de item válidos son: `insumo`, `material_consumo`, `activo`.
-- RF-ITEM-01.7: El costo unitario se expresa en pesos colombianos (COP) sin decimales
-  y corresponde a la unidad de medida del item.
+- RF-ITEM-01.7: El `costo_unitario` del item es un valor por defecto global expresado en
+  pesos colombianos (COP) sin decimales. Cada tienda puede sobreescribir este valor con
+  su propio costo; dicha sobreescritura se gestiona en la entidad `ItemCostoTienda`.
 - RF-ITEM-01.8: Un item recién creado queda en estado activo por defecto.
 - RF-ITEM-01.9: El catálogo de items es compartido entre todas las tiendas de la marca.
 
@@ -158,13 +161,16 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - RF-ITEM-02.1: Solo el administrador puede editar un item.
 - RF-ITEM-02.2: Se pueden editar en cualquier momento: nombre, proveedor, costo unitario,
   stock de seguridad, tiempo de entrega y frecuencia de inventario.
-- RF-ITEM-02.3: El código del item no puede modificarse una vez que el item está en uso
-  en al menos un inventario, pedido o receta.
+- RF-ITEM-02.3: El código del item puede editarse libremente mientras el item no tenga
+  ningún registro en inventarios, pedidos ni recetas. Una vez que existe al menos un uso
+  en cualquiera de estos módulos, el código queda bloqueado y no puede modificarse.
 - RF-ITEM-02.4: Cambiar la unidad de medida de un item con historial de stock requiere
   confirmación explícita del admin, quien asume la responsabilidad por la inconsistencia
   histórica resultante.
 - RF-ITEM-02.5: La subcategoría puede cambiarse libremente; el item hereda la nueva
-  categoría implícitamente.
+  categoría implícitamente. Las subcategorías son independientes del tipo de item:
+  cualquier item (`insumo`, `material_consumo` o `activo`) puede asignarse a cualquier
+  subcategoría sin restricción de tipo.
 - RF-ITEM-02.6: La edición no afecta el historial de inventarios, pedidos ni recetas previos.
 
 ### RF-ITEM-03: Inactivación y reactivación
@@ -196,7 +202,10 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
   código, nombre, tipo, frecuencia y estado.
 - RF-ITEM-05.2: El listado permite filtrar por tipo, frecuencia y estado (activo/inactivo).
 - RF-ITEM-05.3: Desde el detalle de un item, el admin accede a todos sus atributos
-  incluyendo los parámetros de stock y el historial de costos por tienda.
+  incluyendo los parámetros de stock y el historial de costos por tienda. El historial
+  de costos muestra, para cada tienda, los valores de `costo_unitario` registrados en
+  `ItemCostoTienda` con su fecha de vigencia; si una tienda no ha sobreescrito el costo,
+  se muestra el valor por defecto global (`Item.costo_unitario`).
 
 ---
 
@@ -220,7 +229,15 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Item` | codigo (único), nombre (único), tipo, subcategoria_id, proveedor_id, unidad_medida_id, costo_unitario, frecuencia_inventario, stock_seguridad, tiempo_entrega_dias, activo |
+| `Item` | codigo (único), nombre (único), tipo, subcategoria_id, proveedor_id, unidad_medida_id, costo_unitario (por defecto global, COP sin decimales), frecuencia_inventario, stock_seguridad, tiempo_entrega_dias, activo |
+| `ItemCostoTienda` | item_id (FK), tienda_id (FK), costo_unitario (COP sin decimales), fecha_vigencia; clave compuesta (item_id, tienda_id, fecha_vigencia) |
+
+---
+
+## Fuera de Alcance
+
+- **Importación masiva (CSV/Excel)**: la carga del catálogo inicial se realiza manualmente
+  (item por item). La importación masiva queda diferida para una iteración futura.
 
 ---
 
@@ -250,3 +267,17 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
   caso no participará en la generación de pedidos automáticos.
 - No existe un cuarto nivel de tipo de item en esta versión; los tipos son fijos:
   `insumo`, `material_consumo`, `activo`.
+- El `costo_unitario` global del item (`Item.costo_unitario`) es el valor por defecto para
+  todas las tiendas que no hayan registrado un costo propio en `ItemCostoTienda`. El costo
+  fijado al crear el item no se actualiza retroactivamente en recepciones ni módulos
+  posteriores (ver regla global de costo).
+
+## Clarifications
+
+### Session 2026-05-24
+
+- Q: ¿El costo unitario es global o puede variar por tienda? → A: Cada tienda puede tener su propio costo por item; `costo_unitario` es un valor por defecto global que puede sobreescribirse por tienda mediante la entidad `ItemCostoTienda`.
+- Q: ¿El código del item puede editarse en un item recién creado sin uso? → A: Sí, el código puede editarse libremente mientras el item no tenga ningún registro en inventarios, pedidos ni recetas; una vez que existe al menos un uso queda bloqueado.
+- Q: ¿Se requiere importación masiva (CSV/Excel) para el setup inicial del catálogo? → A: No; la carga es exclusivamente manual (item por item) en esta versión. Importación masiva queda diferida.
+- Q: ¿Las subcategorías tienen restricción de tipo de item? → A: No; las subcategorías son independientes del tipo de item. Cualquier tipo puede asignarse a cualquier subcategoría.
+- Q: ¿El campo `stock_seguridad` es obligatorio para items de tipo `activo`? → A: Sí, es obligatorio para todos los tipos incluyendo `activo`; el admin ingresa `0` cuando no aplica operativamente.
