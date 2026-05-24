@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `005-categorias-catalogo`
 **Creado**: 2026-05-19
-**Estado**: Borrador
+**Estado**: En implementación
 **Referencia funcional**: [§3.1.3 Categorización en Dos Niveles](../loopi-v2-funcional/spec.md)
 
 ---
@@ -99,11 +99,13 @@ comprobando que los items que la usaban muestran el nuevo nombre sin pérdida de
 
 ---
 
-### Historia de Usuario 4 — Inactivar una categoría o subcategoría (Prioridad: P2)
+### Historia de Usuario 4 — Inactivar o reactivar una categoría o subcategoría (Prioridad: P2)
 
 El administrador marca como inactiva una categoría o subcategoría que ya no aplica
-al negocio. La categoría o subcategoría inactiva no aparece como opción al crear o
-editar items, pero los items que ya la tenían asignada conservan su clasificación.
+al negocio, o la reactiva cuando vuelve a ser relevante. La categoría o subcategoría
+inactiva no aparece como opción al crear o editar items, pero los items que ya la
+tenían asignada conservan su clasificación. Una vez reactivada, vuelve a estar
+disponible como opción sin necesidad de recrearla.
 
 **Por qué esta prioridad**: La inactivación preserva la trazabilidad histórica de
 reportes sin eliminar datos, en línea con el Principio IV de la constitución.
@@ -122,6 +124,16 @@ que no aparece al crear un nuevo item, pero sí en el historial de los items exi
    **Cuando** el admin intenta inactivar la categoría padre,
    **Entonces** el sistema advierte que existen subcategorías activas y requiere confirmación
    antes de proceder; al confirmar, inactiva la categoría y todas sus subcategorías activas.
+
+3. **Dado** que existe la subcategoría "Quesos" inactiva en "Lácteo",
+   **Cuando** el admin la reactiva,
+   **Entonces** "Quesos" vuelve a aparecer como opción al crear o editar items, sin pérdida
+   de datos ni reasignación de items existentes.
+
+4. **Dado** que existe una categoría inactiva (con subcategorías inactivas por cascade),
+   **Cuando** el admin reactiva la categoría,
+   **Entonces** la categoría queda activa pero sus subcategorías permanecen inactivas; cada
+   subcategoría debe reactivarse individualmente.
 
 ---
 
@@ -154,26 +166,31 @@ comprobando que el listado las muestra agrupadas y con su estado.
 
 ### RF-CAT-01: Gestión de categorías
 
-- RF-CAT-01.1: Solo el administrador puede crear, editar e inactivar categorías.
-  Cualquier otro rol recibe acceso denegado.
+- RF-CAT-01.1: Solo el administrador puede crear, editar, inactivar y reactivar
+  categorías. Cualquier otro rol recibe acceso denegado.
 - RF-CAT-01.2: Una categoría requiere como mínimo: nombre. El nombre es único en todo
   el sistema.
-- RF-CAT-01.3: No es posible eliminar una categoría; solo inactivarla.
+- RF-CAT-01.3: No es posible eliminar una categoría; solo inactivarla o reactivarla.
 - RF-CAT-01.4: Al inactivar una categoría que tiene subcategorías activas, el sistema
   inactiva también todas sus subcategorías activas, previa confirmación del admin.
 - RF-CAT-01.5: Una categoría inactiva no aparece como opción al crear o editar
   subcategorías. Los items que ya tenían subcategorías de esa categoría conservan su
   clasificación.
 - RF-CAT-01.6: El catálogo de categorías es compartido entre todas las tiendas de la marca.
+- RF-CAT-01.7: Al reactivar una categoría, sus subcategorías permanecen inactivas; deben
+  reactivarse individualmente.
 
 ### RF-CAT-02: Gestión de subcategorías
 
-- RF-CAT-02.1: Solo el administrador puede crear, editar e inactivar subcategorías.
+- RF-CAT-02.1: Solo el administrador puede crear, editar, inactivar y reactivar
+  subcategorías.
 - RF-CAT-02.2: Una subcategoría requiere como mínimo: nombre y categoría padre. El
   nombre es único dentro de la categoría padre (puede repetirse en categorías distintas).
+  La validación es insensible a mayúsculas/minúsculas ("Quesos" y "quesos" se consideran
+  duplicados dentro de la misma categoría).
 - RF-CAT-02.3: Una subcategoría pertenece a exactamente una categoría. No puede
   reasignarse a otra categoría una vez creada.
-- RF-CAT-02.4: No es posible eliminar una subcategoría; solo inactivarla.
+- RF-CAT-02.4: No es posible eliminar una subcategoría; solo inactivarla o reactivarla.
 - RF-CAT-02.5: Una subcategoría inactiva no aparece como opción al crear o editar items.
   Los items que ya la tenían asignada conservan su subcategoría visible en sus fichas.
 
@@ -198,7 +215,8 @@ comprobando que el listado las muestra agrupadas y con su estado.
 ## Criterios de Éxito
 
 - **Configuración rápida**: El admin puede registrar el conjunto inicial de categorías
-  y subcategorías de la marca en menos de 15 minutos.
+  y subcategorías de la marca (hasta 20 categorías y 100 subcategorías) en menos de
+  15 minutos. El listado se renderiza completo sin paginación.
 - **Control de acceso**: El 100% de los intentos de gestión de categorías por parte de
   roles no admin son bloqueados.
 - **Integridad del catálogo**: El sistema previene el 100% de los casos de nombres
@@ -215,8 +233,20 @@ comprobando que el listado las muestra agrupadas y con su estado.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Categoria` | nombre (único en sistema), activo |
-| `Subcategoria` | nombre (único dentro de la categoría), categoria_id, activo |
+| `Categoria` | nombre (único en sistema, insensible a mayúsculas), activo, creado_por, creado_en, actualizado_por, actualizado_en |
+| `Subcategoria` | nombre (único dentro de la categoría, insensible a mayúsculas), categoria_id, activo, creado_por, creado_en, actualizado_por, actualizado_en |
+
+---
+
+## Clarificaciones
+
+### Sesión 2026-05-24
+
+- Q: ¿Puede el administrador reactivar una categoría o subcategoría que fue marcada como inactiva? → A: Sí, el admin puede reactivarla en cualquier momento.
+- Q: ¿La validación de nombres duplicados en subcategorías es también insensible a mayúsculas/minúsculas? → A: Sí, misma regla que en categorías ("Quesos" y "quesos" son duplicados dentro de la misma categoría padre).
+- Q: ¿Se debe registrar quién realizó cada cambio en categorías y subcategorías? → A: Sí, registrar `creado_por`, `actualizado_por` + timestamps por cada operación (nomenclatura en español).
+- Q: ¿Cuántas categorías y subcategorías se estiman en el catálogo de una marca típica? → A: Volumen pequeño — < 20 categorías y < 100 subcategorías en total; sin necesidad de paginación.
+- Q: ¿Deben las categorías o subcategorías tener un campo de descripción opcional? → A: No — solo nombre y estado es suficiente para esta versión.
 
 ---
 
@@ -232,11 +262,14 @@ comprobando que el listado las muestra agrupadas y con su estado.
 
 ### Suposiciones
 
-- El catálogo de categorías y subcategorías no se precargan automáticamente; el admin
+- El catálogo de categorías y subcategorías no se precarga automáticamente; el admin
   las crea manualmente según la estructura de su negocio.
+- El volumen esperado es pequeño (< 20 categorías, < 100 subcategorías); el listado
+  completo puede renderizarse sin paginación.
 - Una subcategoría no puede reasignarse a otra categoría una vez creada. Si se necesita
   mover una subcategoría, el flujo es: inactivar la subcategoría original y crear una
   nueva en la categoría destino.
 - No existe un tercer nivel de clasificación (solo categoría → subcategoría → item).
-- Los nombres de categorías no distinguen entre mayúsculas y minúsculas para la
-  validación de duplicados (ej. "Lácteo" y "lácteo" se consideran duplicados).
+- Los nombres de categorías y subcategorías no distinguen entre mayúsculas y minúsculas
+  para la validación de duplicados (ej. "Lácteo" y "lácteo" se consideran duplicados en
+  categorías; "Quesos" y "quesos" se consideran duplicados dentro de la misma categoría).
