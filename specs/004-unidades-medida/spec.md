@@ -7,12 +7,24 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-05-24
+
+- Q: ¿Dónde debe almacenarse la referencia a la unidad de origen en las conversiones? → A: Campo `unidad_origen` y `cantidad_origen` en cada registro transaccional del módulo consumidor (ej. `LineaCompra`, `IngredienteReceta`, `LineaRecepcion`)
+- Q: ¿Qué debe ocurrir en transacciones nuevas para un item con unidad canónica inactiva? → A: Bloquear la transacción e informar al usuario; mostrar confirmación con implicaciones antes de inactivar
+- Q: ¿Cuántos decimales debe admitir el campo `factor_conversion`? → A: 4 decimales — `DECIMAL(12,4)`
+- Q: ¿Qué debe incluir el seed de datos inicial de unidades? → A: Unidades base + conjunto estándar de gastronomía (`kg`, `t`, `mg`, `L`, `dL`, `cL`, `docena`, `par`, `caja`)
+- Q: ¿Debe incluirse el tipo "área" en el alcance de esta versión inicial? → A: No; diferido a versión futura. Versión inicial: solo peso, volumen y unidad
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Crear una unidad de medida (Prioridad: P1)
 
 El administrador registra una nueva unidad de medida indicando su código corto, nombre
-completo, tipo (peso, volumen, unidad, área) y su factor de conversión respecto a la
+completo, tipo (peso, volumen o unidad) y su factor de conversión respecto a la
 unidad base de ese tipo. Una vez creada, queda disponible para asignar a items y usar
 en recetas y compras.
 
@@ -75,7 +87,7 @@ que el listado las muestra agrupadas con su código, nombre, tipo y factor.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que existen unidades de peso, volumen, unidad y área registradas,
+1. **Dado** que existen unidades de peso, volumen y unidad registradas,
    **Cuando** el admin consulta el catálogo de unidades,
    **Entonces** las ve listadas con código, nombre, tipo y factor de conversión.
 
@@ -117,12 +129,20 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 - RF-UM-01.1: Solo el administrador puede crear, editar e inactivar unidades de medida.
 - RF-UM-01.2: Cada unidad requiere: código corto (único), nombre completo, tipo de medida
   y factor de conversión respecto a la unidad base de su tipo.
-- RF-UM-01.3: Los tipos de medida válidos son: peso, volumen, unidad y área.
+- RF-UM-01.3: Los tipos de medida válidos en esta versión son: peso, volumen y unidad.
+  El tipo área (`cm2`) queda diferido para una versión futura.
 - RF-UM-01.4: El código corto es único en todo el sistema y no puede modificarse una vez
   que la unidad está asignada a algún item.
-- RF-UM-01.5: No es posible eliminar una unidad; solo inactivarla. Una unidad inactiva
-  no aparece como opción al crear o editar items, pero los items que ya la tenían asignada
-  conservan su configuración.
+- RF-UM-01.5: No es posible eliminar una unidad; solo inactivarla.
+  - Antes de inactivar, el sistema muestra un mensaje de confirmación que indica cuántos
+    items tienen esa unidad como canónica y advierte que las transacciones nuevas sobre
+    esos items quedarán bloqueadas hasta que se les reasigne una unidad canónica activa.
+  - Una unidad inactiva no aparece como opción al crear o editar items.
+  - Cualquier transacción nueva (compra, receta, recepción) que involucre un item cuya
+    unidad canónica está inactiva es rechazada con un mensaje que identifica el item y
+    solicita actualizar su unidad canónica antes de continuar.
+  - Los registros históricos (transacciones ya confirmadas) que referencian la unidad
+    no se alteran.
 - RF-UM-01.6: El catálogo de unidades es compartido entre todas las tiendas de la marca.
 
 ### RF-UM-02: Unidad base por tipo
@@ -132,7 +152,6 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
   - Peso → gramos (`g`)
   - Volumen → mililitros (`ml`)
   - Unidad → unidad (`und`)
-  - Área → centímetros cuadrados (`cm2`)
 - RF-UM-02.2: La unidad base de cada tipo tiene factor de conversión `1`. No puede
   modificarse ni inactivarse mientras haya unidades del mismo tipo activas.
 
@@ -144,7 +163,10 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 - RF-UM-03.2: La conversión solo aplica entre unidades del mismo tipo. El sistema rechaza
   conversiones entre tipos distintos (ej. peso a volumen) con mensaje explicativo.
 - RF-UM-03.3: El resultado de la conversión se almacena siempre en la unidad canónica
-  del item; la unidad de origen se conserva como referencia para trazabilidad.
+  del item. La unidad de origen y la cantidad original se conservan en el registro
+  transaccional del módulo consumidor (p. ej., campos `unidad_origen` y `cantidad_origen`
+  en `LineaCompra`, `IngredienteReceta`, `LineaRecepcion`); este módulo no define
+  una entidad centralizada de log de conversiones.
 
 ### RF-UM-04: Listado y consulta
 
@@ -172,7 +194,7 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `UnidadMedida` | codigo (único), nombre, tipo_medida, factor_conversion, unidad_base, activo |
+| `UnidadMedida` | codigo (único), nombre, tipo_medida, factor_conversion `DECIMAL(12,4)`, unidad_base `BOOLEAN`, activo `BOOLEAN` |
 
 ---
 
@@ -186,11 +208,13 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 
 ### Suposiciones
 
-- Las unidades base por tipo (g, ml, und, cm2) vienen precargadas en el sistema en la
-  configuración inicial; el admin no necesita crearlas manualmente.
+- El seed de datos inicial incluye las 3 unidades base (`g`, `ml`, `und`) más un
+  conjunto estándar de gastronomía: `kg`, `t`, `mg` (peso); `L`, `dL`, `cL` (volumen);
+  `docena`, `par`, `caja` (unidad). El admin puede agregar unidades adicionales según
+  las necesidades de la marca; no necesita crear las del seed manualmente.
 - No existe conversión entre tipos de medida distintos en ningún caso (ej. litros a
   kilogramos requeriría densidad, lo cual está fuera del alcance).
 - El factor de conversión es siempre respecto a la unidad base del tipo, no entre
   pares de unidades arbitrarios. Esto simplifica el modelo y garantiza consistencia.
-- Los factores de conversión son decimales positivos; no se admiten factores negativos
-  ni cero.
+- Los factores de conversión son decimales positivos con hasta 4 decimales de precisión
+  (`DECIMAL(12,4)`); no se admiten factores negativos ni cero.
