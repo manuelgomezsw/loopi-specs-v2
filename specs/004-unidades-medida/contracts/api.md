@@ -195,8 +195,6 @@ sin `items_con_unidad_canonica`)
 | 401 | `no_autenticado` | Token ausente o expirado |
 | 403 | `acceso_denegado` | El token no corresponde a un `admin` activo |
 | 404 | `unidad_no_encontrada` | No existe unidad con ese id |
-| 409 | `codigo_duplicado` | `codigo` ya existe (si se intenta cambiar el código) |
-| 422 | `codigo_en_uso` | `codigo` no puede cambiarse porque la unidad tiene items asignados |
 | 422 | `factor_invalido` | `factor_conversion` ≤ 0 |
 | 422 | `factor_base_inmutable` | Intento de cambiar el factor de una unidad base |
 

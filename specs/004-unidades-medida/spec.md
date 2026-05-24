@@ -93,7 +93,7 @@ que el listado las muestra agrupadas con su código, nombre, tipo y factor.
 
 2. **Dado** que el admin consulta el catálogo,
    **Cuando** selecciona una unidad,
-   **Entonces** puede ver qué items del catálogo la tienen asignada como unidad canónica.
+   **Entonces** puede ver cuántos items del catálogo la tienen asignada como unidad canónica.
 
 ---
 
@@ -172,8 +172,8 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 
 - RF-UM-04.1: El administrador puede consultar el catálogo completo de unidades agrupado
   por tipo, con código, nombre, factor de conversión y estado (activa/inactiva).
-- RF-UM-04.2: Desde el detalle de una unidad, el admin puede ver qué items la tienen
-  como unidad canónica.
+- RF-UM-04.2: Desde el detalle de una unidad, el admin puede ver cuántos items la tienen
+  asignada como unidad canónica (campo `items_con_unidad_canonica` en la respuesta del detalle).
 
 ---
 

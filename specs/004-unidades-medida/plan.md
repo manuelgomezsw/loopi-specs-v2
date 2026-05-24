@@ -102,7 +102,7 @@ internal/
     repository.go   # Queries MySQL: CRUD + filtros por tipo/activo + paginación
     model.go        # Structs: UnidadMedida, CrearUMRequest, EditarUMRequest, ImpactoResponse
   conversion/
-    conversion.go   # Función pura: Convertir(cantidad float64, desde, hacia *UnidadMedida)
+    conversion.go   # Función pura: Convertir(cantidad, factorDesde float64, tipoDesde string, factorHacia float64, tipoHacia string) (float64, error)
     conversion_test.go
 
 db/migrations/
@@ -153,4 +153,4 @@ src/app/features/unidades-medida/
 | Data Model | `specs/004-unidades-medida/data-model.md` | ✅ Completo (1 tabla + 2 migraciones seed) |
 | Contratos API | `specs/004-unidades-medida/contracts/api.md` | ✅ Completo (6 endpoints) |
 | Quickstart | `specs/004-unidades-medida/quickstart.md` | ✅ Completo |
-| Tasks | `specs/004-unidades-medida/tasks.md` | ⏳ Pendiente (`/speckit-tasks`) |
+| Tasks | `specs/004-unidades-medida/tasks.md` | ✅ Completo (52 tareas, 2026-05-24) |

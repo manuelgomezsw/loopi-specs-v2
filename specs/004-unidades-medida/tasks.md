@@ -119,6 +119,9 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
   `ExisteConCodigo(ctx, codigo string) (bool, error)`,
   `ContarItemsConUnidadCanonica(ctx, id int64) (int, error)` (query sobre `items` si existe,
   graceful degradation retornando 0 si tabla no existe),
+  `ContarUnidadesActivasPorTipo(ctx, tipo string, excludeID int64) (int, error)`
+  (`SELECT COUNT(*) FROM unidades_medida WHERE tipo_medida=? AND activo=1 AND id!=?`,
+  requerido por `service.Inactivar` para verificar RF-UM-02.2 `unidad_base_no_inactivable`),
   `Inactivar(ctx, id int64) error` (UPDATE activo=0),
   `ObtenerPorID(ctx, id int64) (*UnidadMedida, error)` — todas con queries parametrizadas;
   columnas explícitas (nunca `SELECT *`)
@@ -143,6 +146,10 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
 
 ### Backend — Handler y Rutas
 
+> ⚠️ **Constitución §VI (Observabilidad)**: La instrumentación OTel y los logs JSON DEBEN
+> agregarse **al crear** T020/T021 (handler) y T017-T019 (service), no diferirse a Fase 7.
+> T047/T048 en Fase 7 verifican y completan la cobertura — no realizan la instrumentación inicial.
+
 - [ ] T020 Crear `loopi-api-v2/internal/unidades_medida/handler.go` con struct `UMHandler`
   que inyecta `UMService`; implementar `CrearUnidad(w http.ResponseWriter, r *http.Request)`:
   parsear body JSON → `CrearUMRequest`; body malformado → 400; llamar `service.Crear`; retornar
@@ -165,8 +172,14 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
   `TestCrearUnidadFactorCero` (factor=0 → 422 factor_invalido),
   `TestCrearUnidadTipoInvalido` (tipo="area" → 422 tipo_invalido),
   `TestCrearUnidadExitosa` (retorna UnidadMedida con id ≥ 1),
-  `TestInactivarUnidadBase` (unidad_base=true con unidades activas → 422),
-  `TestInactivarYaInactiva` (activo=false → 409)
+  `TestInactivarUnidadBase` (unidad_base=true y ContarUnidadesActivasPorTipo > 0 → 422),
+  `TestInactivarYaInactiva` (activo=false → 409),
+  `TestCacheInvalidacionEnCreate` (tras Crear exitoso, mock verifica que `invalidarCatalogo`
+  fue llamado exactamente 1 vez),
+  `TestCacheInvalidacionEnInactivar` (tras Inactivar exitoso, mock verifica que
+  `invalidarCatalogo` fue llamado exactamente 1 vez),
+  `TestAccesoSinAdminFalla` (handler test: request sin rol admin a POST/PUT/PATCH → 403
+  `acceso_denegado`; usar `httptest.NewRecorder` + token con rol `lider_tienda`)
 
 ### Frontend — Service y Componentes
 
@@ -326,14 +339,17 @@ está deshabilitado en el formulario; intento de cambiar factor en unidad base `
 
 **Propósito**: Observabilidad, accesibilidad, pruebas de extremo a extremo y gates de calidad.
 
-- [ ] T047 [P] Agregar trazas OpenTelemetry en `loopi-api-v2/internal/unidades_medida/handler.go`:
-  `span, ctx := tracer.Start(r.Context(), "um.{operacion}")` en los 6 endpoints; atributos OTel:
-  `unidad.id`, `user.id`, `user.rol`, `operacion`; `span.SetStatus(codes.Error, ...)` en errores
-  4xx/5xx — según Principio VI de la constitución
-- [ ] T048 [P] Agregar logs JSON estructurados en `loopi-api-v2/internal/unidades_medida/service.go`:
-  campos `"user_id"`, `"rol"`, `"operacion"` (`crear_unidad`, `editar_unidad`, `inactivar_unidad`,
-  `listar_unidades`), `"unidad_id"` cuando aplica; INFO para operaciones exitosas; ERROR para
-  errores de negocio con `"error"` string — según lineamientos de constitución §Observabilidad
+- [ ] T047 [P] Verificar y completar trazas OpenTelemetry en
+  `loopi-api-v2/internal/unidades_medida/handler.go`: confirmar que los 6 endpoints tienen
+  `span, ctx := tracer.Start(r.Context(), "um.{operacion}")`; atributos OTel: `unidad.id`,
+  `user.id`, `user.rol`, `operacion`; `span.SetStatus(codes.Error, ...)` en errores 4xx/5xx
+  — la instrumentación básica debe haberse iniciado al implementar T020/T021 (Constitución §VI)
+- [ ] T048 [P] Verificar y completar logs JSON estructurados en
+  `loopi-api-v2/internal/unidades_medida/service.go`: confirmar cobertura en todas las
+  operaciones (`crear_unidad`, `editar_unidad`, `inactivar_unidad`, `listar_unidades`);
+  campos requeridos: `"user_id"`, `"rol"`, `"operacion"`, `"unidad_id"` cuando aplica;
+  INFO en éxito; ERROR en errores de negocio — los logs básicos deben haberse iniciado
+  al implementar T017-T019/T030/T041 (Constitución §VI)
 - [ ] T049 [P] Verificar accesibilidad WCAG 2.1 AA en los 4 componentes Angular: confirmar que
   `formulario-unidad.component.html` tiene `<label for>` en todos los campos, `aria-describedby`
   en inputs con error, `aria-live="polite"` en zona de mensajes de error; confirmar que el modal

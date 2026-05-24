@@ -174,7 +174,6 @@ go tool cover -html=coverage.out
 |------|-------------|
 | `TestCrearUnidadCodigoDuplicado` | Error 409 |
 | `TestCrearUnidadFactorCero` | Error 422 factor_invalido |
-| `TestEditarCodigoEnUso` | Error 422 cuando hay items asignados (mock) |
 | `TestEditarFactorUnidadBase` | Error 422 factor_base_inmutable |
 | `TestInactivarUnidadBase` | Error 422 unidad_base_no_inactivable |
 | `TestConvertirKgAGramos` | 2.0 kg → 2000.0000 g |
