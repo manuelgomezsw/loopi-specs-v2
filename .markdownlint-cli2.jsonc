@@ -8,6 +8,8 @@
     // MD013: líneas largas — deshabilitado para permitir tablas y descripciones legibles
     "MD013": false,
     // MD041: primer heading en h1 — deshabilitado para CLAUDE.md que empieza con comment de speckit
-    "MD041": false
+    "MD041": false,
+    // MD060: table column style aligned — deshabilitado; tablas de entidades tienen columnas de ancho variable
+    "MD060": false
   }
 }
