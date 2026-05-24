@@ -1,105 +1,113 @@
-# Plan de Implementación: Gestión de Tiendas
+# Implementation Plan: [FEATURE]
 
-**Branch**: `002-gestion-tiendas` | **Fecha**: 2026-05-23 | **Spec**: [spec.md](./spec.md)
-**Entrada**: Especificación de feature desde `/specs/002-gestion-tiendas/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 
-## Resumen
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-Implementación del módulo de Gestión de Tiendas para Loopi v2. Permite al `admin`
-crear, editar, inactivar y reactivar puntos de venta físicos con trazabilidad de auditoría
-completa. Es la feature fundacional de la arquitectura multi-tienda: sin al menos una tienda
-activa, ningún módulo operacional puede funcionar.
+**Note**: This template is filled in by the `/speckit-plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
-Enfoque técnico: API REST en Go con MySQL (tabla `tiendas`), migración versionada,
-validación de unicidad case-insensitive a nivel de BD (collation), RBAC estricto solo para
-`admin`, e interfaz Angular con listado filtrable por estado y formulario de creación/edición.
+## Summary
 
-## Contexto Técnico
+[Extract from feature spec: primary requirement + technical approach from research]
 
-**Lenguaje/Versión Backend**: Go 1.22+
-**Lenguaje/Versión Frontend**: TypeScript 5.x, Angular (última versión estable)
-**Dependencias Principales Backend**: chi (router HTTP), golang-migrate (migraciones MySQL),
-OpenTelemetry (trazas y métricas), sqlx (query builder), golang-jwt/jwt/v5 (middleware JWT)
-**Dependencias Principales Frontend**: Angular Standalone Components, Signals, Tailwind CSS v4
-**Almacenamiento**: MySQL 8.0+ en GCP Cloud SQL — tabla `tiendas` (nueva, sin dependencias
-de datos previos; sí depende de `usuarios` para FK de auditoría de `001-autenticacion`)
-**Testing Backend**: `go test` + testify/assert; sqlmock (database/sql mock) para mocks de BD
-**Testing Frontend**: Karma/Jasmine (unitarios por componente)
-**Plataforma Objetivo**: GCP Cloud Run (backend) + Firebase Hosting (frontend)
-**Tipo de Proyecto**: Servicio web — API REST + SPA Angular
-**Objetivos de Rendimiento**: Operaciones CRUD de admin < 500 ms p95; listado completo < 200 ms p95
-**Restricciones**: Paginación server-side obligatoria (constitución). Sin DELETE físico.
-Unicidad de nombre con `utf8mb4_unicode_ci` (collation). Campos de auditoría en toda operación.
-`codigo` inmutable tras creación.
-**Escala/Alcance**: 10–50 tiendas por instalación. Feature de admin exclusiva; baja concurrencia.
+## Technical Context
 
-## Verificación de Constitución
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
 
-*GATE: Debe pasar antes de la investigación de Fase 0. Re-verificado tras el diseño de Fase 1.*
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
 
-| Principio | Estado | Evidencia |
-|-----------|--------|-----------|
-| **I. Spec-First** | ✅ PASA | `spec.md` con clarificaciones mergeadas al PR #33 antes del plan |
-| **II. Multi-Tienda** | ✅ PASA | Feature que define la entidad `tiendas`; toda operación futura lleva `tienda_id` explícito |
-| **III. RBAC** | ✅ PASA | Solo `admin` gestiona tiendas (RF-TDA-01.1, 02.1, 03.1). Denegado para `lider_tienda` y `barista` |
-| **IV. Trazabilidad** | ✅ PASA | RF-TDA-06: `creado_por`, `creado_en`, `actualizado_por`, `actualizado_en` en toda operación |
-| **V. Prevención de Pérdidas** | ✅ PASA | RF-TDA-03.5: solo inactivación, sin borrado físico. Historial siempre accesible para el admin |
-| **VI. Observabilidad** | ✅ PASA | Logs estructurados JSON con `user_id`, `rol`, `tienda_id`, `operacion` en todos los endpoints |
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
 
-**Resultado**: Sin violaciones. No se requiere Registro de Complejidad.
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
-## Estructura del Proyecto
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
 
-### Documentación (esta feature)
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+
+**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
+
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
+
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
+
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+[Gates determined based on constitution file]
+
+## Project Structure
+
+### Documentation (this feature)
 
 ```text
-specs/002-gestion-tiendas/
-├── plan.md              ← este archivo
-├── research.md          ← Fase 0
-├── data-model.md        ← Fase 1
-├── quickstart.md        ← Fase 1
-├── contracts/
-│   └── api-tiendas.md   ← Fase 1
-└── tasks.md             ← Fase 2 (/speckit-tasks — NO creado aquí)
+specs/[###-feature]/
+├── plan.md              # This file (/speckit-plan command output)
+├── research.md          # Phase 0 output (/speckit-plan command)
+├── data-model.md        # Phase 1 output (/speckit-plan command)
+├── quickstart.md        # Phase 1 output (/speckit-plan command)
+├── contracts/           # Phase 1 output (/speckit-plan command)
+└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
 ```
 
-### Código Fuente
-
-**Backend** (`loopi-api-v2/`):
+### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
-loopi-api-v2/
-├── cmd/
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
 │   └── api/
-│       └── main.go                        # Bootstrap: router, middleware, inyección deps
-├── internal/
-│   ├── tiendas/
-│   │   ├── model.go                       # Structs Tienda, TiendaRequest, TiendaResponse
-│   │   ├── repository.go                  # Queries SQL (crear, editar, listar, buscar por id/codigo)
-│   │   ├── service.go                     # Lógica de negocio + validaciones de unicidad
-│   │   └── handler.go                     # HTTP handlers chi + logging + respuestas JSON
-│   └── middleware/
-│       └── auth.go                        # Validación JWT + extracción rol/user_id
-├── migrations/
-│   ├── 002_tiendas.up.sql                 # Crear tabla tiendas
-│   └── 002_tiendas.down.sql               # DROP TABLE tiendas
-└── go.mod
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Frontend** (`loopi-web-v2/`):
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
-```text
-loopi-web-v2/src/app/
-└── tiendas/
-    ├── tiendas-lista/
-    │   ├── tiendas-lista.component.ts     # Lista con filtro activa/inactiva/todas
-    │   └── tiendas-lista.component.html
-    ├── tienda-form/
-    │   ├── tienda-form.component.ts       # Formulario creación/edición
-    │   └── tienda-form.component.html
-    └── tiendas.service.ts                 # HttpClient wrapper — CRUD + inactivar/reactivar
-```
+## Complexity Tracking
 
-**Decisión de Estructura**: Opción multi-proyecto (API Go + SPA Angular separados).
-La feature vive en `internal/tiendas/` en el backend y en `src/app/tiendas/` en el frontend.
-Ambos proyectos tienen sus propios repositorios (`loopi-api-v2`, `loopi-web-v2`).
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
