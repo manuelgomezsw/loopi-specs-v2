@@ -48,7 +48,7 @@ dominios `api.loopi.com` y `app.loopi.com` en stage/prod
 *GATE: Debe pasar antes de la investigación de Fase 0. Re-verificar tras el diseño de Fase 1.*
 
 | # | Principio | Estado | Evidencia |
-|---|-----------|--------|-----------|
+| --- | --- | --- | --- |
 | I | Spec-First | ✅ PASA | Spec en PR #29 antes de este plan |
 | II | Multi-Tienda | ✅ PASA | JWT incluye `tienda_id` para lider_tienda/barista; admin sin tienda_id fija |
 | III | RBAC | ✅ PASA | 4 roles definidos; JWT lleva `rol`; backend valida en cada endpoint (RF-AUTH-05) |
@@ -114,6 +114,139 @@ loopi-web/
 
 **Decisión de Estructura**: Full-stack — backend en `loopi-api/internal/auth/`,
 frontend en `loopi-web/src/app/auth/`.
+
+## Diseño UX — Autenticación
+
+### User Flows
+
+**Happy path — Login:**
+
+```text
+[/login — pantalla pública]
+  → usuario ingresa email + contraseña
+  → clic "Iniciar sesión" → [botón deshabilitado + spinner]
+  → AuthService.login() → POST /api/v1/auth/login
+  → 200 OK + cookie httpOnly
+  → GET /api/v1/auth/me → rol resuelto
+  → redirigir según rol:
+      ├─ admin / lider_compras  → /dashboard  (sin tienda_id fijo)
+      └─ lider_tienda / barista → /tienda/:id/dashboard
+```
+
+**Error paths — Login:**
+
+```text
+Credenciales incorrectas (< 5 intentos):
+  → API 401 → mensaje inline debajo del formulario:
+     "Email o contraseña incorrectos."
+  → campo contraseña se vacía; campo email conserva el valor
+  → botón re-habilitado
+
+Cuenta bloqueada (≥ 5 intentos fallidos):
+  → API 423 → mensaje:
+     "Cuenta bloqueada temporalmente. Intenta de nuevo en 15 minutos."
+  → botón deshabilitado mientras dure el bloqueo
+
+Cuenta inactiva:
+  → API 401 con código "cuenta_inactiva" → mensaje:
+     "Tu cuenta está inactiva. Contacta al administrador."
+```
+
+**Happy path — Logout:**
+
+```text
+[Header — botón "Cerrar sesión"]
+  → clic → AuthService.logout() → POST /api/v1/auth/logout
+  → cookie eliminada + token añadido a blacklist en BD
+  → redirigir a /login
+  → toast verde: "Sesión cerrada correctamente." (3 s, auto-cierre)
+```
+
+**Sesión expirada (JWT exp o token revocado):**
+
+```text
+Cualquier vista protegida → AuthGuard o AuthInterceptor detecta 401
+  → redirigir a /login
+  → mensaje informativo: "Tu sesión expiró. Inicia sesión nuevamente."
+```
+
+### Wireframe — Pantalla Login
+
+```text
+┌────────────────────────────────────┐
+│                                    │
+│           🔄  Loopi                │  ← Logo centrado, sin navegación
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Email *                     │  │
+│  │  [__________________________]│  │  ← type="email", autocomplete="email"
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Contraseña *                │  │
+│  │  [____________________]  👁  │  │  ← toggle mostrar/ocultar contraseña
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  ⚠ Mensaje de error aquí    │  │  ← visible solo en estado error/blocked
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │      Iniciar sesión  [⟳]    │  │  ← spinner durante submit
+│  └──────────────────────────────┘  │
+│                                    │
+│  * Campo obligatorio               │
+│                                    │
+└────────────────────────────────────┘
+```
+
+**Layout**: centrado vertical y horizontal. `max-w-sm` en móvil, `max-w-md` en tablet/desktop.
+Sin sidebar ni header de navegación — única pantalla pública de la aplicación.
+Sin enlace "¿Olvidaste tu contraseña?" — fuera de alcance de esta feature.
+
+### Estados del Componente Login
+
+| Estado | Botón | Campos | Área de mensaje |
+| --- | --- | --- | --- |
+| Default | Habilitado, "Iniciar sesión" | Editables, vacíos | Oculta |
+| Cargando | Deshabilitado, spinner `⟳` | Deshabilitados | Oculta |
+| Error credenciales | Habilitado | Email conservado, contraseña vacía | "Email o contraseña incorrectos." |
+| Cuenta bloqueada | Deshabilitado | Deshabilitados | "Cuenta bloqueada. Intenta en 15 min." |
+| Cuenta inactiva | Habilitado | Editables | "Tu cuenta está inactiva. Contacta al admin." |
+
+### Validaciones del Formulario Login
+
+| Campo | Regla | Mensaje de error |
+| --- | --- | --- |
+| Email | Requerido | "El email es obligatorio." |
+| Email | Formato válido (`Validators.email`) | "Ingresa un email válido." |
+| Contraseña | Requerido | "La contraseña es obligatoria." |
+| Contraseña | Mínimo 8 caracteres | "La contraseña debe tener al menos 8 caracteres." |
+
+Validación: **on blur** por campo + **validación completa on submit**.
+Los errores de campo aparecen debajo del input con `text-red-600`.
+El mensaje de error de API (credenciales / bloqueo / inactivo) aparece en el área
+de mensaje general, entre el formulario y el botón de submit.
+
+### Componentes Angular
+
+| Archivo | Responsabilidad UX |
+| --- | --- |
+| `login/login.component.ts` | Formulario reactivo; manejo de estados (default/loading/error/blocked) con `FormBuilder` |
+| `login/login.component.html` | Template Tailwind; accesibilidad (`label`, `aria-describedby` en errores); toggle contraseña |
+| `auth.service.ts` | `login()` y `logout()` con manejo de errores tipados; `getMe()` post-login para resolver rol |
+| `auth.guard.ts` | `CanActivateFn` — verifica sesión activa; redirige a `/login` si no hay sesión |
+| `auth.interceptor.ts` | `HttpInterceptorFn` — intercepta 401 globalmente; redirige a `/login` con mensaje de sesión expirada |
+
+### Comportamiento Responsive del Login
+
+| Viewport | Layout |
+| --- | --- |
+| Móvil < 640 px | Full width, `px-4 py-8`; logo arriba, formulario debajo |
+| Tablet ≥ 640 px | Formulario centrado `max-w-md`, margen superior `mt-16` |
+| Desktop ≥ 1024 px | `max-w-md` centrado; fondo liso o con imagen de marca en split-screen |
+
+---
 
 ## Registro de Complejidad
 
