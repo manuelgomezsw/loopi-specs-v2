@@ -91,7 +91,7 @@ nombre en categoría distinta retorna 201. POST con `categoria_id` de categoría
 ### Frontend — US2
 
 - [ ] T019 [P] [US2] Agregar métodos `crearSubcategoria(nombre: string, categoriaId: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T020 [US2] Agregar lógica de formulario inline para crear subcategoría dentro de cada fila de categoría (toggle visible al hacer clic en "＋ Subcategoría") en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [ ] T020 [US2] Agregar lógica de formulario inline para crear subcategoría dentro de cada fila de categoría (toggle visible al hacer clic en "＋ Subcategoría"); el selector de categorías llama a `obtenerCategorias(soloActivas: true)` para mostrar solo categorías activas (RF-CAT-01.5) en `loopi-web-v2/src/app/categorias/categorias.component.ts`
 - [ ] T021 [US2] Actualizar template HTML con subcategorías anidadas bajo su categoría y formulario de nueva subcategoría expandible en `loopi-web-v2/src/app/categorias/categorias.component.html`
 
 **Checkpoint**: US2 funcional — crear subcategorías con validación de unicidad por categoría.
@@ -115,7 +115,7 @@ subcategoría se muestra su `total_items`.
 ### Frontend — US5
 
 - [ ] T024 [P] [US5] Agregar métodos `obtenerCatalogo(activo?: boolean)` y `obtenerCategoria(id: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T025 [US5] Implementar vista árbol completa en el template: categorías expandibles con subcategorías, badges de estado (activa/inactiva) y contador `total_items` por subcategoría en `loopi-web-v2/src/app/categorias/categorias.component.html`
+- [ ] T025 [US5] Implementar vista árbol completa en el template: categorías expandibles con subcategorías, badges de estado (activa/inactiva) y contador `total_items` por subcategoría; el detalle es inline en la misma vista (sin navegación a ruta distinta — RF-CAT-04.2) en `loopi-web-v2/src/app/categorias/categorias.component.html`
 - [ ] T026 [US5] Implementar filtro de estado (Todas / Solo activas / Solo inactivas) con señales reactivas y actualización del árbol sin recarga completa en `loopi-web-v2/src/app/categorias/categorias.component.ts`
 
 **Checkpoint**: US5 funcional — vista completa del catálogo con filtrado por estado.
@@ -134,8 +134,8 @@ subcategoría existente en la misma categoría retorna 409.
 ### Backend — US3
 
 - [ ] T027 [P] [US3] Implementar `Repository.ActualizarCategoria(ctx, id, nombre, actualizadoPor)` y `Repository.ActualizarSubcategoria(ctx, id, nombre, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T028 [P] [US3] Implementar `Service.EditarCategoria(ctx, id, nombre)` y `Service.EditarSubcategoria(ctx, id, nombre)` con validación de nombre único e invalidación de caché en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T029 [P] [US3] Implementar handlers `PUT /api/v1/categorias/{id}` y `PUT /api/v1/subcategorias/{id}` con guard de rol `admin` y manejo de 400/401/403/404/409 en `loopi-api-v2/internal/categorias/handler.go`
+- [ ] T028 [US3] Implementar `Service.EditarCategoria(ctx, id, nombre)` y `Service.EditarSubcategoria(ctx, id, nombre)` con validación de nombre único, rechazo de intento de cambiar `categoria_id` (RF-CAT-02.3 — inmutable) e invalidación de caché en `loopi-api-v2/internal/categorias/service.go`
+- [ ] T029 [US3] Implementar handlers `PUT /api/v1/categorias/{id}` y `PUT /api/v1/subcategorias/{id}` con guard de rol `admin` y manejo de 400/401/403/404/409 en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US3
 
@@ -164,10 +164,10 @@ categoría padre está inactiva.
 - [ ] T033 [P] [US4] Implementar `Repository.ContarSubcategoriasActivas(ctx, categoriaID)`, `Repository.InactivarCategoria(ctx, id, actualizadoPor)` e `Repository.InactivarSubcategoriasDeCategoria(ctx, categoriaID, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
 - [ ] T034 [P] [US4] Implementar `Repository.ReactivarCategoria(ctx, id, actualizadoPor)`, `Repository.InactivarSubcategoria(ctx, id, actualizadoPor)` y `Repository.ReactivarSubcategoria(ctx, id, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
 - [ ] T035 [US4] Implementar `Service.InactivarCategoria(ctx, id)` con transacción que inactiva la categoría y todas sus subcategorías activas en una sola operación atómica en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T036 [P] [US4] Implementar `Service.ObtenerImpactoCategoria(ctx, id)`, `Service.InactivarSubcategoria(ctx, id)` y `Service.ReactivarCategoria(ctx, id)` en `loopi-api-v2/internal/categorias/service.go`
+- [ ] T036 [US4] Implementar `Service.ObtenerImpactoCategoria(ctx, id)`, `Service.InactivarSubcategoria(ctx, id)` y `Service.ReactivarCategoria(ctx, id)` en `loopi-api-v2/internal/categorias/service.go`
 - [ ] T037 [US4] Implementar `Service.ReactivarSubcategoria(ctx, id)` con validación: retorna 422 `categoria_padre_inactiva` si `categorias.activo = 0` para el `categoria_id` de la subcategoría en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T038 [P] [US4] Implementar handlers `GET /api/v1/categorias/{id}/impacto`, `PATCH /api/v1/categorias/{id}/inactivar` y `PATCH /api/v1/categorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
-- [ ] T039 [P] [US4] Implementar handlers `PATCH /api/v1/subcategorias/{id}/inactivar` y `PATCH /api/v1/subcategorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
+- [ ] T038 [US4] Implementar handlers `GET /api/v1/categorias/{id}/impacto`, `PATCH /api/v1/categorias/{id}/inactivar` y `PATCH /api/v1/categorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
+- [ ] T039 [US4] Implementar handlers `PATCH /api/v1/subcategorias/{id}/inactivar` y `PATCH /api/v1/subcategorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US4
 
@@ -183,10 +183,15 @@ categoría padre está inactiva.
 
 **Propósito**: Observabilidad, tests unitarios y validación de gates de CI.
 
-- [ ] T043 [P] Instrumentar con trazas OTel: spans por endpoint con atributos `categoria.id`, `operacion`, `user.rol` en `loopi-api-v2/internal/categorias/handler.go`
+**⚠️ DEPLOY BLOCKER**: T043 y T044 (OTel + logs) deben completarse **antes del primer deploy
+a stage o producción** — Principio VI de la constitución: "Cada feature DEBE ser monitoreable
+desde el primer deploy en producción."
+
+- [ ] T043 [P] Instrumentar con trazas OTel: spans por endpoint con atributos `categoria.id`, `subcategoria.id`, `operacion`, `user.rol` en `loopi-api-v2/internal/categorias/handler.go`
 - [ ] T044 [P] Agregar logs estructurados JSON con campos `user_id`, `rol`, `operacion`, `categoria_id`, `subcategoria_id` y `resultado` en cada operación de escritura en `loopi-api-v2/internal/categorias/service.go`
 - [ ] T045 [P] Implementar tests unitarios del servicio con mock del repositorio cubriendo los 12 casos de `quickstart.md §5` en `loopi-api-v2/internal/categorias/service_test.go`
 - [ ] T046 [P] Implementar tests unitarios del componente Angular (mock de `CategoriasService`) con casos: listado vacío, crear categoría, error 409, flujo de confirmación de inactivación en `loopi-web-v2/src/app/categorias/categorias.component.spec.ts`
+- [ ] T050 [P] Implementar tests unitarios del servicio Angular (mock de `HttpClient`) con casos: crear categoría exitosa, 409 nombre duplicado, crear subcategoría bajo categoría inactiva, inactivar y reactivar en `loopi-web-v2/src/app/categorias/categorias.service.spec.ts`
 - [ ] T047 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
 - [ ] T048 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`, `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin errores
 - [ ] T049 Ejecutar smoke tests completos del `specs/005-categorias-catalogo/quickstart.md §4` y verificar cada resultado esperado
@@ -223,14 +228,17 @@ categoría padre está inactiva.
 
 ### Oportunidades de Paralelismo
 
-- T002 y T003 (migraciones): paralelas
+- T002 y T003 (migraciones): paralelas entre sí (escritura del SQL); T004 las aplica en secuencia
 - T005 (models Go) puede hacerse en paralelo con T002-T003
 - T009 (backend US1) y T012 (frontend US1): paralelas una vez disponible T008
 - T016 (backend US2) y T019 (frontend US2): paralelas
-- T027-T029 (backend US3): todas paralelas entre sí
-- T033-T034 (repos US4): paralelas entre sí
-- T036 (services US4 paralelos) con T035: paralela
-- T043, T044, T045, T046, T048: todas paralelas entre sí
+- En US3: T027 (repo) y T030 (frontend service) son las únicas tareas paralelas;
+  T028 depende de T027 y T029 depende de T028 (secuenciales)
+- T033 y T034 (repos US4): paralelas entre sí
+- En US4: T033+T034 se completan primero; T035, T036 y T037 pueden ejecutarse en
+  paralelo entre sí una vez T033+T034 estén completos; T038 y T039 dependen de T035-T037
+- T040 (frontend US4 service) puede ejecutarse en paralelo con T033-T037 (backend US4)
+- T043, T044, T045, T046, T048, T050: todas paralelas entre sí
 
 ---
 

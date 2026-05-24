@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `005-categorias-catalogo`
 **Creado**: 2026-05-19
-**Estado**: Borrador
+**Estado**: En implementación
 **Referencia funcional**: [§3.1.3 Categorización en Dos Niveles](../loopi-v2-funcional/spec.md)
 
 ---
@@ -166,8 +166,8 @@ comprobando que el listado las muestra agrupadas y con su estado.
 
 ### RF-CAT-01: Gestión de categorías
 
-- RF-CAT-01.1: Solo el administrador puede crear, editar e inactivar categorías.
-  Cualquier otro rol recibe acceso denegado.
+- RF-CAT-01.1: Solo el administrador puede crear, editar, inactivar y reactivar
+  categorías. Cualquier otro rol recibe acceso denegado.
 - RF-CAT-01.2: Una categoría requiere como mínimo: nombre. El nombre es único en todo
   el sistema.
 - RF-CAT-01.3: No es posible eliminar una categoría; solo inactivarla o reactivarla.
@@ -182,7 +182,8 @@ comprobando que el listado las muestra agrupadas y con su estado.
 
 ### RF-CAT-02: Gestión de subcategorías
 
-- RF-CAT-02.1: Solo el administrador puede crear, editar e inactivar subcategorías.
+- RF-CAT-02.1: Solo el administrador puede crear, editar, inactivar y reactivar
+  subcategorías.
 - RF-CAT-02.2: Una subcategoría requiere como mínimo: nombre y categoría padre. El
   nombre es único dentro de la categoría padre (puede repetirse en categorías distintas).
   La validación es insensible a mayúsculas/minúsculas ("Quesos" y "quesos" se consideran

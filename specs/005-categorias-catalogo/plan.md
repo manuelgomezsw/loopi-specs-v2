@@ -44,7 +44,11 @@ el listado sin paginación.
 **Restricciones**:
 
 - Sin paginación a nivel de BD: el volumen máximo conocido cabe en memoria sin
-  impacto significativo
+  impacto significativo. *Excepción justificada a la regla constitucional de paginación
+  siempre del lado del servidor*: la constitución prohíbe la paginación en memoria para
+  colecciones que puedan crecer ilimitadamente; este catálogo es acotado por diseño
+  (< 120 registros totales), por lo que retornar todos los registros en una sola query
+  sin LIMIT es la implementación correcta y eficiente.
 - Ristretto TTL 5 min; invalidación total en cualquier operación de escritura
 - Nombres únicos case-insensitive: garantizado por collation `utf8mb4_unicode_ci`
 
@@ -91,6 +95,7 @@ specs/005-categorias-catalogo/
 ```text
 internal/
 └── categorias/
+    ├── models.go         # Structs Categoria, Subcategoria y tipos de respuesta
     ├── handler.go        # Handlers HTTP: categorías + subcategorías
     ├── service.go        # Lógica de negocio (cascade, validaciones)
     ├── repository.go     # Consultas MySQL con transacciones
