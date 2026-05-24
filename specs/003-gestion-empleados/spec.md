@@ -7,6 +7,18 @@
 
 ---
 
+## Clarificaciones
+
+### Sesión 2026-05-24
+
+- Q: ¿Qué ocurre si el admin intenta inactivar al último administrador activo del sistema? → A: El sistema impide la operación si quedaría cero admins activos (protección sistémica).
+- Q: ¿Puede un empleado estar asignado a múltiples tiendas simultáneamente? → A: No; un empleado tiene exactamente una tienda asignada (FK simple, sin relación N:M).
+- Q: ¿Qué algoritmo se usa para el hashing de contraseñas? → A: `bcrypt` con factor de coste 12 (`golang.org/x/crypto/bcrypt`).
+- Q: ¿Se requiere audit log de cambios en empleados? → A: Sí — log inmutable con actor, acción, entidad afectada y timestamp (tabla `employee_audit_log`).
+- Q: ¿El listado de empleados requiere búsqueda por texto y paginación? → A: Sí — búsqueda por nombre o usuario (ILIKE) + paginación por offset (page/limit).
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Crear un empleado nuevo (Prioridad: P1)
@@ -95,6 +107,11 @@ intento de login es rechazado sin revelar el motivo.
    **Cuando** el admin lo reactiva,
    **Entonces** el empleado puede volver a autenticarse con sus credenciales previas.
 
+4. **Dado** que solo hay un empleado con rol admin activo en el sistema,
+   **Cuando** el admin intenta inactivar esa cuenta (propia o de otro),
+   **Entonces** el sistema rechaza la operación con el mensaje
+   "No es posible inactivar al último administrador activo."
+
 ---
 
 ### Historia de Usuario 4 — Resetear contraseña de un empleado (Prioridad: P2)
@@ -142,6 +159,15 @@ estados, validando que el listado los muestra correctamente filtrados.
    **Cuando** selecciona una tienda específica,
    **Entonces** ve únicamente los empleados asignados a esa tienda.
 
+3. **Dado** que el admin escribe "ana" en el campo de búsqueda,
+   **Cuando** ejecuta la búsqueda,
+   **Entonces** ve solo los empleados cuyo nombre completo o usuario contenga "ana"
+   (insensible a mayúsculas), paginados con `limit` 20 y el total de resultados.
+
+4. **Dado** que hay más empleados que el límite de página,
+   **Cuando** el admin navega a la página siguiente,
+   **Entonces** ve el siguiente bloque de empleados conservando los filtros activos.
+
 ---
 
 ## Requisitos Funcionales
@@ -179,6 +205,9 @@ estados, validando que el listado los muestra correctamente filtrados.
 - RF-EMP-03.3: No es posible eliminar un empleado; solo inactivarlo. El historial de
   operaciones del empleado se conserva.
 - RF-EMP-03.4: Al reactivar un empleado, recupera su rol y tienda asignada previos.
+- RF-EMP-03.5: El sistema impide inactivar a un empleado con rol `admin` si esa operación
+  dejaría el sistema sin ningún administrador activo. En ese caso, se rechaza la operación
+  con un mensaje explícito: "No es posible inactivar al último administrador activo."
 
 ### RF-EMP-04: Reset de contraseña
 
@@ -187,6 +216,18 @@ estados, validando que el listado los muestra correctamente filtrados.
   vez al admin. No se envía por correo en esta versión.
 - RF-EMP-04.3: El empleado con contraseña temporal debe establecer una nueva contraseña en su
   primer inicio de sesión. No puede acceder al sistema sin completar este paso.
+- RF-EMP-04.4: Todas las contraseñas (temporales y definitivas) se almacenan exclusivamente
+  como hash `bcrypt` con factor de coste 12. No se persiste ninguna contraseña en texto plano.
+
+### RF-EMP-05-A: Audit log de operaciones
+
+- RF-EMP-05-A.1: Toda operación de escritura sobre un empleado (crear, editar, inactivar,
+  reactivar, resetear contraseña) genera un registro inmutable en `employee_audit_log`.
+- RF-EMP-05-A.2: Cada entrada del audit log contiene: `id`, `actor_id` (admin que ejecutó),
+  `accion` (enum: CREAR, EDITAR, INACTIVAR, REACTIVAR, RESET_CONTRASENA),
+  `empleado_id` (afectado), `detalle` (campo JSON con valores anteriores/nuevos),
+  `created_at` (timestamp UTC, no modificable).
+- RF-EMP-05-A.3: Los registros del audit log no pueden editarse ni eliminarse.
 
 ### RF-EMP-05: Listado y consulta
 
@@ -194,6 +235,10 @@ estados, validando que el listado los muestra correctamente filtrados.
   rol, tienda asignada y estado (activo/inactivo).
 - RF-EMP-05.2: El listado puede filtrarse por tienda y por estado.
 - RF-EMP-05.3: Desde el listado, el admin puede acceder al detalle y edición de cualquier empleado.
+- RF-EMP-05.4: El listado soporta búsqueda por texto libre sobre nombre completo o nombre de
+  usuario (coincidencia parcial, insensible a mayúsculas/minúsculas).
+- RF-EMP-05.5: El listado está paginado por offset: parámetros `page` (1-based) y `limit`
+  (default 20, máximo 100). La respuesta incluye el total de registros que coinciden.
 
 ---
 
@@ -203,7 +248,8 @@ estados, validando que el listado los muestra correctamente filtrados.
 - **Control de acceso inmediato**: Al inactivar un empleado, su acceso queda bloqueado
   en la próxima operación que intente, sin demora.
 - **Seguridad de contraseñas**: El 100% de las contraseñas temporales se muestran una
-  única vez y nunca quedan almacenadas en texto legible.
+  única vez y nunca quedan almacenadas en texto legible. Todas las contraseñas se almacenan
+  con `bcrypt` factor de coste 12; ninguna contraseña en texto plano persiste en base de datos.
 - **Unicidad de usuarios**: El sistema previene el 100% de los casos de nombre de usuario
   duplicado en el momento de crear.
 - **Integridad del historial**: Al inactivar un empleado, el 100% de sus registros
@@ -215,7 +261,8 @@ estados, validando que el listado los muestra correctamente filtrados.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Empleado` | nombre, apellido, usuario (único), contraseña (hash), tipo_documento, numero_documento, telefono, email, fecha_nacimiento, rol, tienda_asignada, activo, requiere_cambio_contrasena |
+| `Empleado` | nombre, apellido, usuario (único), contraseña (hash), tipo_documento, numero_documento, telefono, email, fecha_nacimiento, rol, tienda_id (FK a Tienda, nullable solo para admins), activo, requiere_cambio_contrasena |
+| `EmployeeAuditLog` | id, actor_id (FK a Empleado), accion (enum), empleado_id (FK a Empleado), detalle (JSON), created_at (UTC, inmutable) |
 
 ---
 
@@ -235,6 +282,8 @@ estados, validando que el listado los muestra correctamente filtrados.
 - El nombre de usuario no se puede editar una vez creado para mantener la trazabilidad
   del historial de operaciones.
 - Un admin puede gestionar empleados de cualquier tienda, sin restricción.
+- Cada empleado tiene exactamente una tienda asignada (FK simple). No existe relación N:M
+  entre empleados y tiendas. La asignación múltiple queda diferida a una versión futura.
 - La contraseña temporal no tiene expiración propia; expira cuando el empleado la cambia
   o cuando el admin hace un nuevo reset.
 - No existe auto-bloqueo de cuenta por inactividad temporal (solo el admin puede inactivar).
