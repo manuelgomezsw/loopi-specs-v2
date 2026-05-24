@@ -95,9 +95,11 @@
 ### 8. Estructura de respuesta de error
 
 - **Decisión**: Seguir el esquema estándar del CLAUDE.md del backend:
+
   ```json
   { "error": "nombre_duplicado", "mensaje": "Ya existe una tienda con ese nombre.", "campo": "nombre" }
   ```
+
 - **Códigos HTTP**: 400 (input inválido), 409 (conflicto de unicidad), 404 (no existe),
   422 (regla de negocio — ej. inactivar una tienda ya inactiva), 403 (rol sin permiso).
 - **Rationale**: Consistencia con el resto de la API. El campo `campo` permite al frontend

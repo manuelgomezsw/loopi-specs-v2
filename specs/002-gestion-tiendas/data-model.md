@@ -64,7 +64,7 @@ CREATE TABLE tiendas (
 
 ## Transiciones de Estado
 
-```
+```text
 Estado inicial: activo = 1  (al crear)
 
      activo = 1                     activo = 0
@@ -84,7 +84,7 @@ Estado inicial: activo = 1  (al crear)
 
 ## Relaciones con Otras Tablas
 
-```
+```text
 usuarios (001-autenticacion)
   └── tiendas.creado_por     → usuarios.id  [FK, RESTRICT]
   └── tiendas.actualizado_por → usuarios.id [FK, RESTRICT]
