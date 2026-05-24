@@ -7,6 +7,18 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-05-24
+
+- Q: ¿Es el NIT editable después de que el proveedor es creado? → A: Sí, el NIT es editable con validación de unicidad (Opción A)
+- Q: ¿El sistema valida el formato del NIT (colombiano estricto, solo numérico, o cadena libre)? → A: Cadena libre no vacía; solo valida unicidad, sin restricción de formato (Opción B)
+- Q: ¿El listado de proveedores requiere búsqueda o filtrado? → A: Filtro por estado (activo/inactivo) y búsqueda por texto (razón social o NIT) (Opción B)
+- Q: ¿La reactivación de un proveedor requiere su propia Historia de Usuario o se cubre como escenario dentro de HU-3? → A: Escenario adicional dentro de HU-3; no requiere historia separada (Opción A)
+- Q: ¿Qué muestra el listado de proveedores cuando el catálogo está vacío? → A: Mensaje "No hay proveedores registrados" con botón CTA para crear el primero (Opción A)
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Registrar un proveedor (Prioridad: P1)
@@ -68,17 +80,21 @@ y comprobando que el cambio se refleja en el listado y en los items que lo tiene
 
 ---
 
-### Historia de Usuario 3 — Inactivar un proveedor (Prioridad: P2)
+### Historia de Usuario 3 — Inactivar y reactivar un proveedor (Prioridad: P2)
 
-El administrador marca un proveedor como inactivo cuando deja de trabajar con él. El proveedor
-inactivo ya no aparece como opción para nuevos pedidos, pero los items que lo tenían asignado
-conservan esa referencia y el historial de pedidos previos se mantiene intacto.
+El administrador marca un proveedor como inactivo cuando deja de trabajar con él, o lo
+reactiva si retoma la relación comercial. El proveedor inactivo ya no aparece como opción
+para nuevos pedidos, pero los items que lo tenían asignado conservan esa referencia y el
+historial de pedidos previos se mantiene intacto. Al reactivarse, el proveedor vuelve a
+estar disponible sin pérdida de historial.
 
 **Por qué esta prioridad**: El retiro de un proveedor es un evento de negocio real; inactivar
 sin borrar preserva la trazabilidad histórica exigida por el Principio IV de la constitución.
 
 **Prueba Independiente**: Puede verificarse inactivando un proveedor y comprobando que no
 aparece como opción al crear un nuevo pedido, pero sus pedidos históricos siguen visibles.
+La reactivación se verifica comprobando que el proveedor vuelve a aparecer disponible en
+pedidos sin perder su historial.
 
 **Escenarios de Aceptación**:
 
@@ -95,6 +111,11 @@ aparece como opción al crear un nuevo pedido, pero sus pedidos históricos sigu
    **Cuando** el admin consulta esos items,
    **Entonces** los items muestran el proveedor como referencia histórica pero con indicación
    de que está inactivo.
+
+4. **Dado** que un proveedor está inactivo con historial de pedidos previos,
+   **Cuando** el admin lo reactiva,
+   **Entonces** el proveedor vuelve a aparecer como opción en la generación de nuevos pedidos
+   y su historial de pedidos previos permanece intacto.
 
 ---
 
@@ -121,6 +142,16 @@ comprobando que el listado los muestra todos con su información de contacto y e
    **Entonces** puede ver y editar todos sus datos, así como la lista de items que lo tienen
    asignado como proveedor habitual.
 
+3. **Dado** que el admin está en el listado,
+   **Cuando** escribe parte de una razón social o NIT en el campo de búsqueda, o aplica el
+   filtro por estado,
+   **Entonces** el listado muestra solo los proveedores que coinciden con el criterio aplicado.
+
+4. **Dado** que no existe ningún proveedor registrado,
+   **Cuando** el admin accede al listado de proveedores,
+   **Entonces** el sistema muestra el mensaje "No hay proveedores registrados" y un botón
+   para crear el primero.
+
 ---
 
 ## Requisitos Funcionales
@@ -133,17 +164,18 @@ comprobando que el listado los muestra todos con su información de contacto y e
   contacto (nombre, teléfono, email) son opcionales al crear pero recomendados para la
   gestión de pedidos.
 - RF-PROV-01.3: El NIT es único en todo el sistema. El sistema rechaza registros con NIT
-  duplicado tanto al crear como al editar.
+  duplicado tanto al crear como al editar. No se impone ningún formato específico: se acepta
+  cualquier cadena alfanumérica no vacía (incluyendo códigos internos para proveedores informales).
 - RF-PROV-01.4: Un proveedor recién creado queda en estado activo por defecto.
 - RF-PROV-01.5: El catálogo de proveedores es compartido entre todas las tiendas de la marca.
 
 ### RF-PROV-02: Edición de proveedores
 
 - RF-PROV-02.1: Solo el administrador puede editar los datos de un proveedor.
-- RF-PROV-02.2: Se pueden editar: razón social, nombre de contacto, teléfono de contacto
+- RF-PROV-02.2: Se pueden editar: NIT, razón social, nombre de contacto, teléfono de contacto
   y email de contacto.
 - RF-PROV-02.3: Al editar el NIT, el sistema verifica que no exista otro proveedor con ese
-  NIT.
+  NIT antes de guardar el cambio.
 - RF-PROV-02.4: La edición no afecta el historial de pedidos asociados al proveedor.
 
 ### RF-PROV-03: Inactivación de proveedores
@@ -166,6 +198,10 @@ comprobando que el listado los muestra todos con su información de contacto y e
   inactivos) con razón social, NIT, contacto y estado.
 - RF-PROV-04.2: Desde el detalle de un proveedor, el admin puede ver qué items del catálogo
   lo tienen como proveedor habitual asignado.
+- RF-PROV-04.3: El listado permite filtrar por estado (activo / inactivo / todos) y buscar
+  por razón social o NIT mediante texto libre.
+- RF-PROV-04.4: Cuando no existe ningún proveedor registrado, el listado muestra el mensaje
+  "No hay proveedores registrados" junto con un botón de acceso directo para crear el primero.
 
 ---
 
