@@ -176,7 +176,8 @@ estados, validando que el listado los muestra correctamente filtrados.
 
 - RF-EMP-01.1: Solo el administrador puede crear empleados.
 - RF-EMP-01.2: Los campos obligatorios son: nombre, apellido, nombre de usuario, rol y,
-  para los roles lider_tienda y barista, la tienda asignada.
+  para los roles lider_tienda y barista, la tienda asignada. La tienda asignada debe
+  existir y estar activa; el sistema rechaza la operación si la tienda está inactiva.
 - RF-EMP-01.3: Los campos opcionales son: tipo de documento, número de documento, teléfono,
   email y fecha de nacimiento.
 - RF-EMP-01.4: El nombre de usuario es único en todo el sistema. El sistema rechaza duplicados.
@@ -191,33 +192,49 @@ estados, validando que el listado los muestra correctamente filtrados.
 - RF-EMP-02.1: Solo el administrador puede editar empleados.
 - RF-EMP-02.2: Se pueden editar todos los campos excepto el nombre de usuario.
 - RF-EMP-02.3: Si el admin cambia el rol de un empleado a lider_tienda o barista y no tiene
-  tienda asignada, el sistema obliga a seleccionarla antes de guardar.
+  tienda asignada, el sistema obliga a seleccionarla antes de guardar. La tienda asignada
+  debe existir y estar activa; el sistema rechaza la operación si la tienda está inactiva.
 - RF-EMP-02.4: Si el admin cambia el rol a admin, el sistema elimina la tienda asignada
   del empleado automáticamente.
 - RF-EMP-02.5: Los cambios de rol y tienda aplican en la próxima sesión del empleado;
-  las sesiones activas no se interrumpen hasta su expiración natural.
+  las sesiones activas no se interrumpen hasta su expiración natural. La ventana máxima
+  con permisos obsoletos equivale al TTL de sesión definido en RF-AUTH-01.3 de
+  001-autenticacion.
 
 ### RF-EMP-03: Inactivación y reactivación
 
 - RF-EMP-03.1: Solo el administrador puede inactivar o reactivar empleados.
 - RF-EMP-03.2: Un empleado inactivo no puede autenticarse. El mensaje de rechazo es genérico
-  (igual que credenciales incorrectas, sin revelar que la cuenta está inactiva).
+  y usa el mismo texto exacto que define RF-AUTH-02.3 en la feature 001-autenticacion,
+  sin revelar que la cuenta está inactiva.
 - RF-EMP-03.3: No es posible eliminar un empleado; solo inactivarlo. El historial de
   operaciones del empleado se conserva.
-- RF-EMP-03.4: Al reactivar un empleado, recupera su rol y tienda asignada previos.
+- RF-EMP-03.4: Al reactivar un empleado, recupera su rol y tienda asignada previos. El flag
+  `requiere_cambio_contrasena` y la contraseña (temporal o definitiva) se conservan tal
+  como estaban al momento de la inactivación; inactivar/reactivar no altera las credenciales.
 - RF-EMP-03.5: El sistema impide inactivar a un empleado con rol `admin` si esa operación
   dejaría el sistema sin ningún administrador activo. En ese caso, se rechaza la operación
   con un mensaje explícito: "No es posible inactivar al último administrador activo."
+  La verificación debe ejecutarse de forma atómica para garantizar correctitud ante
+  operaciones concurrentes.
 
 ### RF-EMP-04: Reset de contraseña
 
 - RF-EMP-04.1: Solo el administrador puede resetear contraseñas.
 - RF-EMP-04.2: Al resetear, el sistema genera una contraseña temporal y la muestra una única
-  vez al admin. No se envía por correo en esta versión.
+  vez al admin. No se envía por correo en esta versión. Cada llamada al endpoint genera una
+  nueva contraseña temporal distinta; el endpoint no es idempotente.
 - RF-EMP-04.3: El empleado con contraseña temporal debe establecer una nueva contraseña en su
-  primer inicio de sesión. No puede acceder al sistema sin completar este paso.
+  primer inicio de sesión. No puede acceder al sistema sin completar este paso. El reset no
+  invalida sesiones activas existentes del empleado; estas expiran en su tiempo natural.
 - RF-EMP-04.4: Todas las contraseñas (temporales y definitivas) se almacenan exclusivamente
   como hash `bcrypt` con factor de coste 12. No se persiste ninguna contraseña en texto plano.
+- RF-EMP-04.5: La nueva contraseña que establece el empleado debe tener un mínimo de
+  4 caracteres. El sistema rechaza contraseñas más cortas con mensaje de validación.
+- RF-EMP-04.6: Mientras `requiere_cambio_contrasena = 1`, todos los endpoints del sistema
+  quedan bloqueados con HTTP 403 para ese empleado, excepto el endpoint de cambio de
+  contraseña. Esta feature define el flag; la intercepción y el bloqueo son responsabilidad
+  del flujo de sesión definido en 001-autenticacion.
 
 ### RF-EMP-05-A: Audit log de operaciones
 
@@ -226,7 +243,8 @@ estados, validando que el listado los muestra correctamente filtrados.
 - RF-EMP-05-A.2: Cada entrada del audit log contiene: `id`, `actor_id` (admin que ejecutó),
   `accion` (enum: CREAR, EDITAR, INACTIVAR, REACTIVAR, RESET_CONTRASENA),
   `empleado_id` (afectado), `detalle` (campo JSON con valores anteriores/nuevos),
-  `created_at` (timestamp UTC, no modificable).
+  `created_at` (timestamp UTC, no modificable). El campo `detalle` nunca incluye
+  contraseñas ni hashes de contraseña, independientemente de la acción registrada.
 - RF-EMP-05-A.3: Los registros del audit log no pueden editarse ni eliminarse.
 
 ### RF-EMP-05: Listado y consulta
@@ -239,6 +257,8 @@ estados, validando que el listado los muestra correctamente filtrados.
   usuario (coincidencia parcial, insensible a mayúsculas/minúsculas).
 - RF-EMP-05.5: El listado está paginado por offset: parámetros `page` (1-based) y `limit`
   (default 20, máximo 100). La respuesta incluye el total de registros que coinciden.
+- RF-EMP-05.6: El campo `contrasena_hash` nunca se incluye en ninguna respuesta de API,
+  en ningún endpoint (listado, detalle, creación, edición ni cambio de estado).
 
 ---
 
