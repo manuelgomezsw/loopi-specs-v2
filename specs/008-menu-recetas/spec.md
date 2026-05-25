@@ -239,6 +239,7 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
   archivada; el 100% del historial de versiones es accesible para el admin.
 - **Control de acceso**: El 100% de los intentos de gestión del menú o recetas por roles
   no admin son bloqueados.
+
 ---
 
 ## Entidades Clave
