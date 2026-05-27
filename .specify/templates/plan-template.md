@@ -103,6 +103,27 @@ ios/ or android/
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
 
+<!--
+  NOTA PARA PROYECTOS GO (loopi-api):
+  Cuando el árbol de archivos lista los archivos del dominio (handler.go, service.go,
+  repository.go), documentar la responsabilidad de CADA archivo siguiendo la separación
+  de capas de la constitución §Stack Técnico:
+
+  - handler.go   → HTTP: parsear request, llamar service, escribir response. Sin SQL.
+  - service.go   → Lógica de negocio. Sin SQL ni dependencia a *sql.DB.
+  - repository.go → TODO el SQL del dominio, incluyendo consultas a tablas de otros
+                    dominios cuando sean necesarias para la lógica de autenticación,
+                    permisos o datos de contexto. Si el service necesita un dato de BD,
+                    la solución es agregar el método al repositorio, no agregar un
+                    dbQuerier al service.
+
+  Ejemplo correcto de descripción en el árbol:
+    repository.go  # Cloud SQL: usuarios (buscar, actualizar intentos), tokens_revocados (insert/select)
+  Ejemplo incorrecto (genera SQL en el service):
+    repository.go  # Cloud SQL: tokens_revocados INSERT/SELECT   ← scope demasiado estrecho
+-->
+
+
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**

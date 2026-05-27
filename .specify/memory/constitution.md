@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -13,6 +13,9 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.4.0 — nueva sección "Diseño de Interfaz (UX/UI)": responsive mobile-first,
                 accesibilidad WCAG 2.1 AA, estados de carga/error/vacío, convenciones
                 de formularios, feedback de acciones y estructura mínima de vistas (MINOR).
+        1.5.0 — nueva subsección "Arquitectura del backend Go — separación de capas":
+                tabla Handler/Service/Repository con responsabilidades exclusivas,
+                reglas de cruce, test corolario. Previene SQL en la capa service (MINOR).
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -133,6 +136,31 @@ Despliegue en **Firebase Hosting** (GCP). Ver §Diseño de Interfaz (UX/UI) para
 y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-migrate).
 
 **Autenticación**: JWT con expiración configurable (default 24 h).
+
+**Arquitectura del backend Go — separación de capas:**
+
+Cada módulo del backend (`internal/<dominio>/`) sigue tres capas con responsabilidades
+exclusivas y no negociables:
+
+| Capa | Archivo | Responsabilidad única |
+|------|---------|----------------------|
+| **Handler** | `handler.go` | HTTP: parsear request, llamar al service, escribir response. Sin lógica de negocio ni SQL. |
+| **Service** | `service.go` | Lógica de negocio: decisiones, validaciones, orquestación. **Sin ninguna sentencia SQL ni dependencia directa a `*sql.DB`.** |
+| **Repository** | `repository.go` | **Todo** acceso a la base de datos. Es la única capa que importa `database/sql`. Una sentencia SQL fuera del repository es una violación. |
+
+Reglas de cruce entre capas:
+
+- El handler llama al service. El handler NUNCA llama al repositorio directamente
+  (salvo en handlers de jobs que no tienen lógica de negocio).
+- El service declara **qué datos necesita** a través de métodos de la interfaz `Repository`;
+  nunca sabe que existe MySQL, `sql.Row` ni `db.Exec`.
+- Si el service necesita un dato de la BD que no está en el repositorio, la solución es
+  **agregar el método al repositorio**, no agregar un `dbQuerier` al service.
+- Los métodos del repositorio tienen nombres de dominio (`BuscarUsuarioPorNombre`,
+  `ResetearIntentosLogin`), no nombres de SQL (`QueryUsuarios`, `ExecUpdate`).
+
+**Test corolario:** si un test del service requiere una conexión real a BD (o un mock de
+`*sql.DB`), el service tiene SQL que no le pertenece.
 
 **Lineamientos transversales:**
 
@@ -519,4 +547,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.4.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.5.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-27
