@@ -18,10 +18,10 @@
 **Propósito**: Dependencias, migración y configuración base — sin estas piezas no puede comenzar
 ninguna historia de usuario.
 
-- [ ] T001 Agregar dependencias Go al `loopi-api/go.mod`: `github.com/golang-jwt/jwt/v5`, `golang.org/x/crypto`, `github.com/google/uuid`
-- [ ] T002 Crear archivo de migración `loopi-api/migrations/XXXX_auth_tokens_revocados.sql` con el contenido de `data-model.md` (CREATE TABLE tokens_revocados + ALTER TABLE usuarios)
-- [ ] T003 [P] Crear struct de configuración JWT en `loopi-api/config/config.go`: campos `JWTSecret` (string) y `JWTExpiryHours` (int), cargados desde variables de entorno `JWT_SECRET` y `JWT_EXPIRY_HOURS` (default 24)
-- [ ] T004 [P] Configurar XSRF y cliente HTTP en `loopi-web/src/app/app.config.ts` (standalone): usar `provideHttpClient(withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }))`. Verificar o crear `loopi-web/src/proxy.conf.json` con `{"/api": {"target": "http://localhost:8080", "secure": false}}` para redirigir llamadas API al backend en dev.
+- [X] T001 Agregar dependencias Go al `loopi-api/go.mod`: `github.com/golang-jwt/jwt/v5`, `golang.org/x/crypto`, `github.com/google/uuid`
+- [X] T002 Crear archivo de migración `loopi-api/migrations/XXXX_auth_tokens_revocados.sql` con el contenido de `data-model.md` (CREATE TABLE tokens_revocados + ALTER TABLE usuarios)
+- [X] T003 [P] Crear struct de configuración JWT en `loopi-api/config/config.go`: campos `JWTSecret` (string) y `JWTExpiryHours` (int), cargados desde variables de entorno `JWT_SECRET` y `JWT_EXPIRY_HOURS` (default 24)
+- [X] T004 [P] Configurar XSRF y cliente HTTP en `loopi-web/src/app/app.config.ts` (standalone): usar `provideHttpClient(withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }))`. Verificar o crear `loopi-web/src/proxy.conf.json` con `{"/api": {"target": "http://localhost:8080", "secure": false}}` para redirigir llamadas API al backend en dev.
 
 ---
 
@@ -32,10 +32,10 @@ cualquier historia de usuario.
 
 **⚠️ CRÍTICO**: Ninguna historia de usuario puede comenzar hasta que esta fase esté completa.
 
-- [ ] T005 Crear repositorio de autenticación en `loopi-api/internal/auth/repository.go` con las interfaces y métodos: `InsertTokenRevocado(jti string, expiraEn time.Time) error` e `ExisteTokenRevocado(jti string) (bool, error)` — consultas directas a Cloud SQL sin Ristretto
-- [ ] T006 Crear middleware JWT en `loopi-api/internal/auth/middleware.go`: validar en orden (1) firma HS256 con `golang-jwt/jwt/v5`, (2) claim `exp` no vencido, (3) `jti` no existe en `tokens_revocados` vía repositorio; responder 401 y redirigir al login si cualquier verificación falla; política fail-closed: responder 503 si Cloud SQL no está disponible
-- [ ] T007 [P] Configurar middleware CORS con `github.com/rs/cors` en `loopi-api` (agregar a go.mod y al router o main.go): origen permitido por ambiente (`localhost:4200` dev, `app.stage.loopi.com` stage, `app.loopi.com` prod), `Access-Control-Allow-Credentials: true`, sin wildcard `*`
-- [ ] T008 Registrar rutas de autenticación en el router de `loopi-api` (archivo de rutas o `main.go`): `POST /api/v1/auth/login` (sin middleware JWT), `POST /api/v1/auth/logout` (con middleware JWT), `GET /api/v1/auth/me` (con middleware JWT), `POST /internal/jobs/limpiar_tokens_revocados` (sin middleware JWT, con validación de header `X-CloudScheduler`). El middleware inyecta los claims del JWT validado (`rol`, `tienda_id`, `jti`, `sub`) en el contexto del request para que los handlers de otros módulos puedan verificar permisos por rol (RF-AUTH-05.2) sin re-parsear el token.
+- [X] T005 Crear repositorio de autenticación en `loopi-api/internal/auth/repository.go` con las interfaces y métodos: `InsertTokenRevocado(jti string, expiraEn time.Time) error` e `ExisteTokenRevocado(jti string) (bool, error)` — consultas directas a Cloud SQL sin Ristretto
+- [X] T006 Crear middleware JWT en `loopi-api/internal/auth/middleware.go`: validar en orden (1) firma HS256 con `golang-jwt/jwt/v5`, (2) claim `exp` no vencido, (3) `jti` no existe en `tokens_revocados` vía repositorio; responder 401 y redirigir al login si cualquier verificación falla; política fail-closed: responder 503 si Cloud SQL no está disponible
+- [X] T007 [P] Configurar middleware CORS con `github.com/rs/cors` en `loopi-api` (agregar a go.mod y al router o main.go): origen permitido por ambiente (`localhost:4200` dev, `app.stage.loopi.com` stage, `app.loopi.com` prod), `Access-Control-Allow-Credentials: true`, sin wildcard `*`
+- [X] T008 Registrar rutas de autenticación en el router de `loopi-api` (archivo de rutas o `main.go`): `POST /api/v1/auth/login` (sin middleware JWT), `POST /api/v1/auth/logout` (con middleware JWT), `GET /api/v1/auth/me` (con middleware JWT), `POST /internal/jobs/limpiar_tokens_revocados` (sin middleware JWT, con validación de header `X-CloudScheduler`). El middleware inyecta los claims del JWT validado (`rol`, `tienda_id`, `jti`, `sub`) en el contexto del request para que los handlers de otros módulos puedan verificar permisos por rol (RF-AUTH-05.2) sin re-parsear el token.
 
 **Punto de control**: Fundación lista — la implementación de historias de usuario puede comenzar.
 
@@ -50,13 +50,13 @@ httpOnly + XSRF-TOKEN cookie legible por Angular.
 **Prueba Independiente**: Ejecutar el flujo curl del `quickstart.md §5` (login exitoso → 200 con
 cookies) y verificar que credenciales incorrectas devuelven 401, usuario bloqueado devuelve 423.
 
-- [ ] T009 [HU1] Implementar `AuthService.Authenticate` en `loopi-api/internal/auth/service.go`: consultar usuario por nombre, verificar `activo`, verificar `bloqueado_hasta > NOW()`, aplicar `bcrypt.CompareHashAndPassword` siempre (incluso si usuario no existe, usar hash dummy para evitar timing attack), en login exitoso emitir JWT HS256 con claims `jti` (UUID v4), `sub`, `rol`, `tienda_id`, `iat`, `exp`; en login fallido incrementar `intentos_fallidos`; al llegar a 5 intentos establecer `bloqueado_hasta = NOW() + 5 min` y resetear contador a 0 en login exitoso
-- [ ] T010 [HU1] Implementar handler `POST /api/v1/auth/login` en `loopi-api/internal/auth/handler.go`: leer `usuario` y `contrasena` del body JSON, llamar a `AuthService.Authenticate`, en éxito setear cookie `jwt` (`httpOnly; Secure; SameSite=Strict; Max-Age=JWT_EXPIRY_HOURS*3600`) y cookie `XSRF-TOKEN` (`Secure; SameSite=Strict`, sin `httpOnly`) con valor UUID v4 aleatorio, responder 200 según contrato `POST_api_v1_auth_login.md`; en fallo responder 401 (credenciales) o 423 (bloqueado) con mensaje genérico. Nota: POST /auth/login retorna 200, no 201, porque la autenticación no crea un recurso persistente — la sesión vive en cookie httpOnly.
-- [ ] T025 [P] [HU1] Agregar spans OTel en los handlers de autenticación en `loopi-api/internal/auth/handler.go`: atributos `auth.result` (`success` | `invalid_credentials` | `account_inactive` | `account_locked`), `user.role` (solo en login exitoso), `http.route` — RF-AUTH-06 es requisito funcional, no pulido cosmético
-- [ ] T026 [P] [HU1] Agregar métricas OTel en `loopi-api/internal/auth/`: histograma `auth.login.duration` (ms), contador `auth.login.result` (por etiqueta `result`), histograma `auth.blacklist.check.duration` (ms) para monitorear latencia de consulta a `tokens_revocados`
-- [ ] T011 [P] [HU1] Crear componente de login en `loopi-web/src/app/auth/login/login.component.ts` y `login.component.html` (standalone): formulario con campos `usuario` y `contrasena`, botón de envío deshabilitado durante el request con indicador visual de carga (spinner o texto), manejo de errores 401 (mensaje genérico) y 423 (mensaje de cuenta bloqueada)
-- [ ] T012 [P] [HU1] Implementar método `login(usuario: string, contrasena: string): Observable<void>` en `loopi-web/src/app/auth/auth.service.ts`: POST a `/api/v1/auth/login` con `withCredentials: true`; en éxito almacenar en memoria el rol y tienda_id (NO en localStorage)
-- [ ] T013 [HU1] Registrar ruta `/login` en `loopi-web/src/app/app.routes.ts` apuntando al `LoginComponent` (standalone); configurar redirección de raíz `/` al login si no hay sesión activa
+- [X] T009 [HU1] Implementar `AuthService.Authenticate` en `loopi-api/internal/auth/service.go`: consultar usuario por nombre, verificar `activo`, verificar `bloqueado_hasta > NOW()`, aplicar `bcrypt.CompareHashAndPassword` siempre (incluso si usuario no existe, usar hash dummy para evitar timing attack), en login exitoso emitir JWT HS256 con claims `jti` (UUID v4), `sub`, `rol`, `tienda_id`, `iat`, `exp`; en login fallido incrementar `intentos_fallidos`; al llegar a 5 intentos establecer `bloqueado_hasta = NOW() + 5 min` y resetear contador a 0 en login exitoso
+- [X] T010 [HU1] Implementar handler `POST /api/v1/auth/login` en `loopi-api/internal/auth/handler.go`: leer `usuario` y `contrasena` del body JSON, llamar a `AuthService.Authenticate`, en éxito setear cookie `jwt` (`httpOnly; Secure; SameSite=Strict; Max-Age=JWT_EXPIRY_HOURS*3600`) y cookie `XSRF-TOKEN` (`Secure; SameSite=Strict`, sin `httpOnly`) con valor UUID v4 aleatorio, responder 200 según contrato `POST_api_v1_auth_login.md`; en fallo responder 401 (credenciales) o 423 (bloqueado) con mensaje genérico. Nota: POST /auth/login retorna 200, no 201, porque la autenticación no crea un recurso persistente — la sesión vive en cookie httpOnly.
+- [X] T025 [P] [HU1] Agregar spans OTel en los handlers de autenticación en `loopi-api/internal/auth/handler.go`: atributos `auth.result` (`success` | `invalid_credentials` | `account_inactive` | `account_locked`), `user.role` (solo en login exitoso), `http.route` — RF-AUTH-06 es requisito funcional, no pulido cosmético
+- [X] T026 [P] [HU1] Agregar métricas OTel en `loopi-api/internal/auth/metrics.go`: histograma `auth.login.duration` (ms), contador `auth.login.result` (por etiqueta `result`), histograma `auth.blacklist.check.duration` (ms) para monitorear latencia de consulta a `tokens_revocados`
+- [X] T011 [P] [HU1] Crear componente de login en `loopi-web/src/app/auth/login/login.component.ts` y `login.component.html` (standalone): formulario con campos `usuario` y `contrasena`, botón de envío deshabilitado durante el request con indicador visual de carga (spinner o texto), manejo de errores 401 (mensaje genérico) y 423 (mensaje de cuenta bloqueada)
+- [X] T012 [P] [HU1] Implementar método `login(usuario: string, contrasena: string): Observable<void>` en `loopi-web/src/app/auth/auth.service.ts`: POST a `/api/v1/auth/login` con `withCredentials: true`; en éxito almacenar en memoria el rol y tienda_id (NO en localStorage)
+- [X] T013 [HU1] Registrar ruta `/login` en `loopi-web/src/app/app.routes.ts` apuntando al `LoginComponent` (standalone); configurar redirección de raíz `/` al login si no hay sesión activa
 
 **Punto de control**: Login completo y funcionando — HU1 + HU2 deben ser testeables de forma
 independiente con `curl` y con el formulario Angular.
@@ -71,9 +71,9 @@ inmediata y cualquier request posterior con ese JWT es rechazado.
 **Prueba Independiente**: Después de hacer login, ejecutar logout (204), luego intentar `/me`
 y recibir 401 — aunque el JWT aún no haya expirado por TTL.
 
-- [ ] T014 [HU3] Implementar `AuthService.RevocarToken` en `loopi-api/internal/auth/service.go`: insertar el `jti` extraído del JWT activo en la tabla `tokens_revocados` con su `expira_en` original; expirar la cookie `jwt` (Max-Age=0) y la cookie `XSRF-TOKEN` (Max-Age=0)
-- [ ] T015 [HU3] Implementar handler `POST /api/v1/auth/logout` en `loopi-api/internal/auth/handler.go`: invocar `AuthService.RevocarToken` con el JWT de la cookie, responder 204 según contrato `POST_api_v1_auth_logout.md`; responder 403 si el header `X-XSRF-TOKEN` no coincide con la cookie `XSRF-TOKEN`
-- [ ] T016 [P] [HU3] Implementar método `logout(): Observable<void>` en `loopi-web/src/app/auth/auth.service.ts`: POST a `/api/v1/auth/logout` con `withCredentials: true`; en éxito limpiar estado de sesión en memoria y navegar al `/login`
+- [X] T014 [HU3] Implementar `AuthService.RevocarToken` en `loopi-api/internal/auth/service.go`: insertar el `jti` extraído del JWT activo en la tabla `tokens_revocados` con su `expira_en` original; expirar la cookie `jwt` (Max-Age=0) y la cookie `XSRF-TOKEN` (Max-Age=0)
+- [X] T015 [HU3] Implementar handler `POST /api/v1/auth/logout` en `loopi-api/internal/auth/handler.go`: invocar `AuthService.RevocarToken` con el JWT de la cookie, responder 204 según contrato `POST_api_v1_auth_logout.md`; responder 403 si el header `X-XSRF-TOKEN` no coincide con la cookie `XSRF-TOKEN`
+- [X] T016 [P] [HU3] Implementar método `logout(): Observable<void>` en `loopi-web/src/app/auth/auth.service.ts`: POST a `/api/v1/auth/logout` con `withCredentials: true`; en éxito limpiar estado de sesión en memoria y navegar al `/login`
 
 **Punto de control**: Logout revoca el token en el servidor — verificable con curl de quickstart.md.
 
@@ -87,11 +87,11 @@ y recibir 401 — aunque el JWT aún no haya expirado por TTL.
 **Prueba Independiente**: Con sesión activa, recargar la app; el usuario llega a su pantalla
 sin pasar por el login. Sin sesión activa, la recarga redirige al login.
 
-- [ ] T017 [HU4] Implementar handler `GET /api/v1/auth/me` en `loopi-api/internal/auth/handler.go`: extraer claims del JWT validado por el middleware (el middleware pasa los claims en el contexto del request); responder 200 con `usuario_id`, `usuario`, `rol` y `tienda_id` según contrato `GET_api_v1_auth_me.md`
-- [ ] T018 [P] [HU4] Implementar método `getMe(): Observable<SesionActual>` en `loopi-web/src/app/auth/auth.service.ts`: GET a `/api/v1/auth/me` con `withCredentials: true`; en éxito almacenar `rol` y `tienda_id` en memoria; exponer estado de sesión como observable para que los componentes reaccionen
-- [ ] T019 [P] [HU4] Crear `AuthGuard` en `loopi-web/src/app/auth/auth.guard.ts`: implementar `CanActivate`; si hay sesión activa en memoria permitir navegación; si no, llamar a `getMe()` y en éxito permitir, en error (401) redirigir al `/login`
-- [ ] T020 [P] [HU4] Crear `AuthInterceptor` en `loopi-web/src/app/auth/auth.interceptor.ts`: interceptar respuestas 401 de cualquier endpoint protegido, limpiar estado de sesión en memoria y redirigir al `/login`
-- [ ] T021 [HU4] Registrar `canActivate: [authGuard]` en las rutas protegidas de `loopi-web/src/app/app.routes.ts` y añadir `withInterceptors([authInterceptor])` al `provideHttpClient()` en `loopi-web/src/app/app.config.ts` (standalone); llamar a `auth.service.getMe()` en `ngOnInit` de `AppComponent` (`loopi-web/src/app/app.component.ts`) para restaurar sesión en memoria al cargar la app
+- [X] T017 [HU4] Implementar handler `GET /api/v1/auth/me` en `loopi-api/internal/auth/handler.go`: extraer claims del JWT validado por el middleware (el middleware pasa los claims en el contexto del request); responder 200 con `usuario_id`, `usuario`, `rol` y `tienda_id` según contrato `GET_api_v1_auth_me.md`
+- [X] T018 [P] [HU4] Implementar método `getMe(): Observable<SesionActual>` en `loopi-web/src/app/auth/auth.service.ts`: GET a `/api/v1/auth/me` con `withCredentials: true`; en éxito almacenar `rol` y `tienda_id` en memoria; exponer estado de sesión como observable para que los componentes reaccionen
+- [X] T019 [P] [HU4] Crear `AuthGuard` en `loopi-web/src/app/auth/auth.guard.ts`: implementar `CanActivate`; si hay sesión activa en memoria permitir navegación; si no, llamar a `getMe()` y en éxito permitir, en error (401) redirigir al `/login`
+- [X] T020 [P] [HU4] Crear `AuthInterceptor` en `loopi-web/src/app/auth/auth.interceptor.ts`: interceptar respuestas 401 de cualquier endpoint protegido, limpiar estado de sesión en memoria y redirigir al `/login`
+- [X] T021 [HU4] Registrar `canActivate: [authGuard]` en las rutas protegidas de `loopi-web/src/app/app.routes.ts` y añadir `withInterceptors([authInterceptor])` al `provideHttpClient()` en `loopi-web/src/app/app.config.ts` (standalone); llamar a `auth.service.getMe()` en `ngOnInit` de `AppComponent` (`loopi-web/src/app/app.component.ts`) para restaurar sesión en memoria al cargar la app
 
 **Punto de control**: Recargar la app con sesión activa lleva al usuario a su pantalla; sin sesión
 activa redirige al login.
@@ -108,7 +108,7 @@ de la pantalla actual.
 esperar expiración y realizar cualquier operación — el interceptor debe distinguir expiración
 de sesión de una falta de autenticación inicial.
 
-- [ ] T022 [HU5] Actualizar `AuthInterceptor` en `loopi-web/src/app/auth/auth.interceptor.ts`: al interceptar 401 en endpoint no-login, verificar si había sesión previa en memoria (el usuario estaba autenticado); si sí, mostrar notificación de "Sesión expirada" antes de redirigir al `/login`; si no había sesión previa, redirigir al login sin mensaje adicional
+- [X] T022 [HU5] Actualizar `AuthInterceptor` en `loopi-web/src/app/auth/auth.interceptor.ts`: al interceptar 401 en endpoint no-login, verificar si había sesión previa en memoria (el usuario estaba autenticado); si sí, mostrar notificación de "Sesión expirada" antes de redirigir al `/login`; si no había sesión previa, redirigir al login sin mensaje adicional
 
 **Nota**: El backend ya maneja la expiración en el middleware de Fase 2 (validación del claim
 `exp` → 401 si vencido).
@@ -122,8 +122,8 @@ de forma independiente.
 
 **Propósito**: Mantener la tabla `tokens_revocados` pequeña eliminando registros expirados.
 
-- [ ] T023 Implementar handler del job en `loopi-api/internal/jobs/limpiar_tokens.go`: ejecutar `DELETE FROM tokens_revocados WHERE expira_en < NOW()`, registrar `iniciado_en`, `completado_en`, `eliminados` y `resultado` en log estructurado JSON; responder 200 con el body del contrato `POST_internal_jobs_limpiar_tokens_revocados.md`
-- [ ] T024 Implementar middleware de validación del header `X-CloudScheduler: true` en el handler del job (rechazar con 403 si el header está ausente o tiene valor distinto); conectar al route registrado en T008
+- [X] T023 Implementar handler del job en `loopi-api/internal/jobs/limpiar_tokens.go`: ejecutar `DELETE FROM tokens_revocados WHERE expira_en < NOW()`, registrar `iniciado_en`, `completado_en`, `eliminados` y `resultado` en log estructurado JSON; responder 200 con el body del contrato `POST_internal_jobs_limpiar_tokens_revocados.md`
+- [X] T024 Implementar middleware de validación del header `X-CloudScheduler: true` en el handler del job (rechazar con 403 si el header está ausente o tiene valor distinto); conectar al route registrado en T008
 
 ---
 
@@ -131,8 +131,8 @@ de forma independiente.
 
 **Propósito**: Tests y validación end-to-end del flujo completo. OTel se implementa en Fase 3 (RF-AUTH-06 es requisito funcional).
 
-- [ ] T027 [P] Escribir tests de handler en `loopi-api/internal/auth/handler_test.go` con mocks del servicio y repositorio (política de constitución): cubrir login exitoso (cada rol), credenciales incorrectas, cuenta bloqueada (423), logout exitoso, logout con CSRF inválido (403), /me con token válido, /me con token revocado (401)
-- [ ] T028 [P] Escribir tests de componente Angular en `loopi-web/src/app/auth/login/login.component.spec.ts`: formulario deshabilitado durante request, mensaje de error en 401, mensaje de bloqueo en 423
+- [X] T027 [P] Escribir tests de handler en `loopi-api/internal/auth/handler_test.go` con mocks del servicio y repositorio (política de constitución): cubrir login exitoso (cada rol), credenciales incorrectas, cuenta bloqueada (423), logout exitoso, logout con CSRF inválido (403), /me con token válido, /me con token revocado (401)
+- [X] T028 [P] Escribir tests de componente Angular en `loopi-web/src/app/auth/login/login.component.spec.ts`: formulario deshabilitado durante request, mensaje de error en 401, mensaje de bloqueo en 423
 - [ ] T029 Ejecutar la validación completa del flujo según `quickstart.md §5`: login → 200 + cookies, `/me` → 200 con rol, logout → 204, `/me` → 401; verificar que la cookie `jwt` no es visible en las DevTools y confirmar revocación real en `tokens_revocados`
 
 ---
