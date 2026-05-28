@@ -84,25 +84,28 @@ select {
 }
 
 /* 5. Utilidades de componente */
+/* btn-primary: primary-700 (#9c5630) — contraste 5.5:1 con texto blanco (WCAG 2.1 AA ✅) */
 @utility btn-primary {
-  @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold
+  @apply bg-primary-700 hover:bg-primary-800 text-white font-semibold
          py-3 px-4 rounded-lg transition-colors duration-200
          disabled:opacity-50 disabled:cursor-not-allowed
-         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+         focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2;
 }
 
+/* btn-secondary: primary-700 (#9c5630) — contraste 5.5:1 sobre blanco (WCAG 2.1 AA ✅) */
 @utility btn-secondary {
-  @apply bg-transparent hover:bg-primary-50 text-primary-600 font-semibold
-         py-3 px-4 rounded-lg border-2 border-primary-600
+  @apply bg-transparent hover:bg-primary-50 text-primary-700 font-semibold
+         py-3 px-4 rounded-lg border-2 border-primary-700
          transition-colors duration-200
          disabled:opacity-50 disabled:cursor-not-allowed
-         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+         focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2;
 }
 
+/* input-field: placeholder-gray-500 — contraste 4.8:1 sobre blanco (WCAG 2.1 AA ✅) */
 @utility input-field {
   @apply w-full px-4 py-3 border border-gray-300 rounded-lg
-         focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-         placeholder-gray-400 transition-colors duration-200;
+         focus:ring-2 focus:ring-primary-600 focus:border-primary-600
+         placeholder-gray-500 transition-colors duration-200;
 }
 
 @utility card {
