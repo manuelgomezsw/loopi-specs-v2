@@ -18,8 +18,8 @@
 **Propósito**: Agregar los paquetes OTel SDK y `otelsql` al proyecto Go.
 Sin este paso no puede compilar ninguna tarea posterior.
 
-- [ ] T001 Agregar los 5 paquetes OTel SDK + `otelsql` al `go.mod` de `loopi-api-v2` (comandos en quickstart.md §Paso 5)
-- [ ] T002 Ejecutar `go mod tidy` y verificar `go build ./...` sin errores en `loopi-api-v2`
+- [x] T001 Agregar los 5 paquetes OTel SDK + `otelsql` al `go.mod` de `loopi-api-v2` (comandos en quickstart.md §Paso 5)
+- [x] T002 Ejecutar `go mod tidy` y verificar `go build ./...` sin errores en `loopi-api-v2`
 
 ---
 
@@ -31,8 +31,8 @@ Ninguna historia de usuario puede verificarse en stage hasta completar esta fase
 **⚠️ CRÍTICO**: El agente en Cloud Run y la `DD_API_KEY` en Secret Manager son prerequisitos
 para toda verificación en stage y prod.
 
-- [ ] T003 [P] Crear `loopi-api-v2/internal/observability/setup.go` con la función `Setup()` (código completo en quickstart.md §Paso 6)
-- [ ] T004 [P] Crear `loopi-api-v2/internal/observability/setup_test.go` con dos casos: no-op (endpoint vacío) y shutdown exitoso (usando `httptest.NewServer` como receptor OTLP)
+- [x] T003 [P] Crear `loopi-api-v2/internal/observability/setup.go` con la función `Setup()` (código completo en quickstart.md §Paso 6)
+- [x] T004 [P] Crear `loopi-api-v2/internal/observability/setup_test.go` con dos casos: no-op (endpoint vacío) y shutdown exitoso (usando `httptest.NewServer` como receptor OTLP)
 - [ ] T005 [P] Crear secret `DD_API_KEY` en GCP Secret Manager del proyecto stage (comando en quickstart.md §Paso 1)
 - [ ] T006 [P] Crear secret `DD_API_KEY` en GCP Secret Manager del proyecto prod (comando en quickstart.md §Paso 1)
 - [ ] T007 [P] Desplegar servicio `dd-agent` en Cloud Run stage con `--ingress=internal` y `--min-instances=1` (comandos en quickstart.md §Paso 2)
@@ -51,11 +51,11 @@ configure providers. En entorno local (sin endpoint) arranca sin errores.
 **Prueba independiente**: Desplegar en stage, ejecutar un login y verificar en Datadog APM
 que aparece un trace `service:loopi-api` con `env:staging` en menos de 30 segundos.
 
-- [ ] T010 [US1] Modificar `loopi-api-v2/cmd/api/main.go`: agregar `ctx := context.Background()`, llamar `observability.Setup(ctx)` al inicio de `main()` y diferir el shutdown con timeout de 5 s (código en quickstart.md §Paso 7)
-- [ ] T011 [P] [US1] Actualizar `loopi-api-v2/app.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: ""` al bloque `env_variables` (endpoint vacío = modo no-op en dev local)
-- [ ] T012 [P] [US1] Actualizar `loopi-api-v2/app.prod.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: "<URL-prod-de-T009>"` al bloque `env_variables`
-- [ ] T013 [P] [US1] Crear `loopi-api-v2/app.stage.yaml` copiando la estructura de `app.yaml` y asignando `OTEL_EXPORTER_OTLP_ENDPOINT: "<URL-stage-de-T009>"` para que el deploy en stage exporte trazas reales
-- [ ] T014 [US1] Verificar modo no-op localmente: ejecutar `go run ./cmd/api/` sin `OTEL_EXPORTER_OTLP_ENDPOINT` configurada y confirmar que stderr no contiene líneas con `otel`, `error` o `panic` en los primeros 5 s de arranque
+- [x] T010 [US1] Modificar `loopi-api-v2/cmd/api/main.go`: agregar `ctx := context.Background()`, llamar `observability.Setup(ctx)` al inicio de `main()` y diferir el shutdown con timeout de 5 s (código en quickstart.md §Paso 7)
+- [x] T011 [P] [US1] Actualizar `loopi-api-v2/app.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: ""` al bloque `env_variables` (endpoint vacío = modo no-op en dev local)
+- [x] T012 [P] [US1] Actualizar `loopi-api-v2/app.prod.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: "<URL-prod-de-T009>"` al bloque `env_variables`
+- [x] T013 [P] [US1] Crear `loopi-api-v2/app.stage.yaml` copiando la estructura de `app.yaml` y asignando `OTEL_EXPORTER_OTLP_ENDPOINT: "<URL-stage-de-T009>"` para que el deploy en stage exporte trazas reales
+- [x] T014 [US1] Verificar modo no-op localmente: ejecutar `go run ./cmd/api/` sin `OTEL_EXPORTER_OTLP_ENDPOINT` configurada y confirmar que stderr no contiene líneas con `otel`, `error` o `panic` en los primeros 5 s de arranque
 - [ ] T015 [US1] Desplegar en stage con `gcloud app deploy app.stage.yaml`, ejecutar `POST /api/v1/auth/login`
 - [ ] T016 [US1] Verificar en Datadog APM → Traces: span `auth.login` con atributos `service.name=loopi-api`, `deployment.environment=staging`, `auth.result=success` visible en menos de 30 s
 
@@ -71,7 +71,7 @@ en el trace HTTP, con `db.system`, `db.operation` y `db.sql.table`.
 **Prueba independiente**: Ejecutar `POST /api/v1/auth/login` en stage y verificar en
 Datadog APM que el trace muestra spans hijos con `db.system:mysql`.
 
-- [ ] T017 [US2] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `sql.Open("mysql", dsn)` por `otelsql.Open("mysql", dsn, otelsql.WithAttributes(semconv.DBSystemMySQL), otelsql.WithSpanOptions(otelsql.SpanOptions{Ping: false}))` (código completo en quickstart.md §Paso 7)
+- [x] T017 [US2] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `sql.Open("mysql", dsn)` por `otelsql.Open("mysql", dsn, otelsql.WithAttributes(semconv.DBSystemMySQL), otelsql.WithSpanOptions(otelsql.SpanOptions{Ping: false}))` (código completo en quickstart.md §Paso 7)
 - [ ] T018 [US2] Desplegar en stage y ejecutar `POST /api/v1/auth/login`
 - [ ] T019 [US2] Verificar en Datadog APM: el trace de `auth.login` muestra spans hijos con `db.system:mysql`, `db.operation:SELECT` y `db.sql.table` para cada query de `tokens_revocados` y `usuarios`
 
@@ -88,7 +88,7 @@ se conectan al `MeterProvider` real y aparecen en Datadog Metrics Explorer.
 **Prueba independiente**: Ejecutar logins exitosos y fallidos en stage y verificar
 histograma y contador en Datadog Metrics Explorer, filtrados por `resultado` y `env`.
 
-- [ ] T020 [US3] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `auth.NewHandler(authSvc, authRepo)` por `auth.NewHandlerWithMetrics(authSvc, authRepo, m)` donde `m, err := auth.NewMetrics()` se llama después de `observability.Setup()` (el `MeterProvider` global ya está configurado en ese punto)
+- [x] T020 [US3] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `auth.NewHandler(authSvc, authRepo)` por `auth.NewHandlerWithMetrics(authSvc, authRepo, m)` donde `m, err := auth.NewMetrics()` se llama después de `observability.Setup()` (el `MeterProvider` global ya está configurado en ese punto)
 - [ ] T021 [US3] Desplegar en stage y ejecutar: 1 login exitoso, 1 login con credenciales inválidas, 1 logout
 - [ ] T022 [US3] Verificar en Datadog Metrics Explorer: histograma `auth.login.duration` con percentiles p50/p90/p99 visibles, unidad `ms`
 - [ ] T023 [US3] Verificar en Datadog Metrics Explorer: contador `auth.login.result` con etiqueta `result` diferenciando `success` e `invalid_credentials`
@@ -116,11 +116,11 @@ no aparece en ningún archivo del repositorio.
 
 **Propósito**: Garantizar cobertura mínima (≥ 70%), linting, gates CI y conformidad RF-OBS-08.
 
-- [ ] T027 [P] Ejecutar `go test ./internal/observability/... -coverprofile=coverage.out -covermode=atomic` en `loopi-api-v2` y verificar cobertura ≥ 70% en `setup.go`
-- [ ] T028 [P] Ejecutar `golangci-lint run ./internal/observability/...` en `loopi-api-v2` y confirmar cero issues
-- [ ] T029 [P] Ejecutar `go test ./...` en `loopi-api-v2` y confirmar que todos los tests existentes (incluidos `internal/auth/`) siguen pasando sin modificaciones
-- [ ] T030 Ejecutar `go build ./...` final en `loopi-api-v2` y confirmar compilación limpia
-- [ ] T031 [P] Verificar RF-OBS-08: ejecutar `grep -rn "datadog" loopi-api-v2/internal/ --include="*.go"` y confirmar que ningún archivo Go configura un exporter de logs hacia Datadog; confirmar que `main.go` escribe logs a stdout (no a un writer externo)
+- [x] T027 [P] Ejecutar `go test ./internal/observability/... -coverprofile=coverage.out -covermode=atomic` en `loopi-api-v2` y verificar cobertura ≥ 70% en `setup.go`
+- [x] T028 [P] Ejecutar `golangci-lint run ./internal/observability/...` en `loopi-api-v2` y confirmar cero issues
+- [x] T029 [P] Ejecutar `go test ./...` en `loopi-api-v2` y confirmar que todos los tests existentes (incluidos `internal/auth/`) siguen pasando sin modificaciones
+- [x] T030 Ejecutar `go build ./...` final en `loopi-api-v2` y confirmar compilación limpia
+- [x] T031 [P] Verificar RF-OBS-08: ejecutar `grep -rn "datadog" loopi-api-v2/internal/ --include="*.go"` y confirmar que ningún archivo Go configura un exporter de logs hacia Datadog; confirmar que `main.go` escribe logs a stdout (no a un writer externo)
 
 ---
 
