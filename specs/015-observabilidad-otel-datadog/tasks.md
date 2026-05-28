@@ -1,0 +1,193 @@
+# Tasks: Fundación de Observabilidad — OTel + Datadog APM
+
+**Input**: Documentos de diseño en `specs/015-observabilidad-otel-datadog/`
+
+**Prerrequisitos**: plan.md ✅ spec.md ✅ research.md ✅ quickstart.md ✅
+
+**Repo de implementación**: `loopi-api-v2`
+
+**Formato**: `[ID] [P?] [Story?] Descripción con ruta exacta`
+
+- **[P]**: Paralelizable (archivos distintos, sin dependencias incompletas)
+- **[Story]**: Historia de usuario a la que pertenece (US1–US4)
+
+---
+
+## Phase 1: Setup — Dependencias Go
+
+**Propósito**: Agregar los paquetes OTel SDK y `otelsql` al proyecto Go.
+Sin este paso no puede compilar ninguna tarea posterior.
+
+- [ ] T001 Agregar los 5 paquetes OTel SDK + `otelsql` al `go.mod` de `loopi-api-v2` (comandos en quickstart.md §Paso 5)
+- [ ] T002 Ejecutar `go mod tidy` y verificar `go build ./...` sin errores en `loopi-api-v2`
+
+---
+
+## Phase 2: Foundational — Paquete `observability` e Infraestructura GCP
+
+**Propósito**: Crear el paquete compartido Go y desplegar el agente Datadog en Cloud Run.
+Ninguna historia de usuario puede verificarse en stage hasta completar esta fase.
+
+**⚠️ CRÍTICO**: El agente en Cloud Run y la `DD_API_KEY` en Secret Manager son prerequisitos
+para toda verificación en stage y prod.
+
+- [ ] T003 [P] Crear `loopi-api-v2/internal/observability/setup.go` con la función `Setup()` (código completo en quickstart.md §Paso 6)
+- [ ] T004 [P] Crear `loopi-api-v2/internal/observability/setup_test.go` con dos casos: no-op (endpoint vacío) y shutdown exitoso (usando `httptest.NewServer` como receptor OTLP)
+- [ ] T005 [P] Crear secret `DD_API_KEY` en GCP Secret Manager del proyecto stage (comando en quickstart.md §Paso 1)
+- [ ] T006 [P] Crear secret `DD_API_KEY` en GCP Secret Manager del proyecto prod (comando en quickstart.md §Paso 1)
+- [ ] T007 [P] Desplegar servicio `dd-agent` en Cloud Run stage con `--ingress=internal` y `--min-instances=1` (comandos en quickstart.md §Paso 2)
+- [ ] T008 [P] Desplegar servicio `dd-agent` en Cloud Run prod con `--ingress=internal` y `--min-instances=1` (comandos en quickstart.md §Paso 2)
+- [ ] T009 Obtener URL interna del agente en stage y prod: `gcloud run services describe dd-agent --format='value(status.url)'`; anotar ambas URLs para los pasos siguientes
+
+**Checkpoint**: Paquete `observability` compila, tests pasan ≥ 70% cobertura, agente activo en stage y prod
+
+---
+
+## Phase 3: US1 — Trazas sin configuración adicional (Prioridad: P1) 🎯 MVP
+
+**Goal**: El backend exporta trazas a Datadog APM al arrancar, sin que ningún feature
+configure providers. En entorno local (sin endpoint) arranca sin errores.
+
+**Prueba independiente**: Desplegar en stage, ejecutar un login y verificar en Datadog APM
+que aparece un trace `service:loopi-api` con `env:staging` en menos de 30 segundos.
+
+- [ ] T010 [US1] Modificar `loopi-api-v2/cmd/api/main.go`: agregar `ctx := context.Background()`, llamar `observability.Setup(ctx)` al inicio de `main()` y diferir el shutdown con timeout de 5 s (código en quickstart.md §Paso 7)
+- [ ] T011 [P] [US1] Actualizar `loopi-api-v2/app.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: ""` al bloque `env_variables` (Decisión 8 del research)
+- [ ] T012 [P] [US1] Actualizar `loopi-api-v2/app.prod.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: "<URL-prod-de-T009>"` al bloque `env_variables`
+- [ ] T013 [US1] Verificar modo no-op localmente: ejecutar `go run ./cmd/api/` sin `OTEL_EXPORTER_OTLP_ENDPOINT` configurada y confirmar que el servidor arranca sin errores OTel
+- [ ] T014 [US1] Desplegar en stage con la URL del agente en `app.yaml` (`OTEL_EXPORTER_OTLP_ENDPOINT: "<URL-stage-de-T009>"`), ejecutar `POST /api/v1/auth/login`
+- [ ] T015 [US1] Verificar en Datadog APM → Traces: span `auth.login` con atributos `service.name=loopi-api`, `deployment.environment=staging`, `auth.result=success` visible en menos de 30 s
+
+**Checkpoint**: US1 completo — trazas visibles en Datadog APM para cualquier request al backend
+
+---
+
+## Phase 4: US2 — Queries de BD visibles como spans hijo (Prioridad: P2)
+
+**Goal**: Cada `db.Query/Exec` del repositorio genera automáticamente un span hijo
+en el trace HTTP, con `db.system`, `db.operation` y `db.sql.table`.
+
+**Prueba independiente**: Ejecutar `POST /api/v1/auth/login` en stage y verificar en
+Datadog APM que el trace muestra spans hijos con `db.system:mysql`.
+
+- [ ] T016 [US2] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `sql.Open("mysql", dsn)` por `otelsql.Open("mysql", dsn, otelsql.WithAttributes(semconv.DBSystemMySQL), otelsql.WithSpanOptions(otelsql.SpanOptions{Ping: false}))` (código completo en quickstart.md §Paso 7)
+- [ ] T017 [US2] Desplegar en stage y ejecutar `POST /api/v1/auth/login`
+- [ ] T018 [US2] Verificar en Datadog APM: el trace de `auth.login` muestra spans hijos con `db.system:mysql`, `db.operation:SELECT` y `db.sql.table` para cada query de `tokens_revocados` y `usuarios`
+
+**Checkpoint**: US2 completo — latencia de cada query de BD visible como span hijo en Datadog APM
+
+---
+
+## Phase 5: US3 — Métricas del feature visibles en Datadog (Prioridad: P2)
+
+**Goal**: Las métricas de autenticación (`auth.login.duration`, `auth.login.result`,
+`auth.blacklist.check.duration`) ya implementadas en `internal/auth/metrics.go`
+se conectan al `MeterProvider` real y aparecen en Datadog Metrics Explorer.
+
+**Prueba independiente**: Ejecutar logins exitosos y fallidos en stage y verificar
+histograma y contador en Datadog Metrics Explorer, filtrados por `resultado` y `env`.
+
+- [ ] T019 [US3] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `auth.NewHandler(authSvc, authRepo)` por `auth.NewHandlerWithMetrics(authSvc, authRepo, m)` donde `m, err := auth.NewMetrics()` se llama después de `observability.Setup()` (el `MeterProvider` global ya está configurado en ese punto)
+- [ ] T020 [US3] Desplegar en stage y ejecutar: 1 login exitoso, 1 login con credenciales inválidas, 1 logout
+- [ ] T021 [US3] Verificar en Datadog Metrics Explorer: histograma `auth.login.duration` con percentiles p50/p90/p99 visibles, unidad `ms`
+- [ ] T022 [US3] Verificar en Datadog Metrics Explorer: contador `auth.login.result` con etiqueta `result` diferenciando `success` e `invalid_credentials`
+
+**Checkpoint**: US3 completo — métricas de autenticación visibles y filtrables en Datadog
+
+---
+
+## Phase 6: US4 — Verificación de acceso seguro (Prioridad: P3)
+
+**Goal**: Confirmar que el agente no es accesible desde internet y que la `DD_API_KEY`
+no aparece en ningún archivo del repositorio.
+
+**Prueba independiente**: `curl` externo al agente retorna 403; `gitleaks` no detecta secrets.
+
+- [ ] T023 [P] [US4] Verificar que el agente en stage rechaza tráfico externo: `curl -v https://dd-agent-<HASH>-uc.a.run.app` desde fuera de GCP debe retornar error de acceso (403 o conexión rechazada)
+- [ ] T024 [P] [US4] Verificar que no hay secrets en el repositorio: ejecutar `gitleaks detect --no-git` en `loopi-api-v2` y confirmar que la clave real de `DD_API_KEY` no aparece en ningún resultado
+- [ ] T025 [P] [US4] Verificar que `app.yaml` y `app.prod.yaml` no contienen el valor real de `DD_API_KEY`: `grep -r "DD_API" loopi-api-v2/app*.yaml` debe mostrar solo referencias a Secret Manager, no el valor
+
+**Checkpoint**: US4 completo — agente inaccesible desde internet, credenciales solo en Secret Manager
+
+---
+
+## Phase 7: Polish y Calidad
+
+**Propósito**: Garantizar cobertura mínima (≥ 70%), linting y gates CI.
+
+- [ ] T026 [P] Ejecutar `go test ./internal/observability/... -coverprofile=coverage.out -covermode=atomic` en `loopi-api-v2` y verificar cobertura ≥ 70% en `setup.go`
+- [ ] T027 [P] Ejecutar `golangci-lint run ./internal/observability/...` en `loopi-api-v2` y confirmar cero issues
+- [ ] T028 [P] Ejecutar `go test ./...` en `loopi-api-v2` y confirmar que todos los tests existentes (incluidos `internal/auth/`) siguen pasando sin modificaciones
+- [ ] T029 Ejecutar `go build ./...` final en `loopi-api-v2` y confirmar compilación limpia
+
+---
+
+## Dependencias y Orden de Ejecución
+
+### Dependencias entre fases
+
+- **Phase 1 (Setup)**: Sin dependencias — arrancar inmediatamente
+- **Phase 2 (Foundational)**: Depende de Phase 1 — **bloquea todas las historias**
+- **Phase 3 (US1)**: Depende de Phase 2 — MVP entregable al completarla
+- **Phase 4 (US2)**: Depende de Phase 3 (necesita trazas activas para verificar spans hijo)
+- **Phase 5 (US3)**: Depende de Phase 3 (necesita `MeterProvider` global activo)
+- **Phase 6 (US4)**: Depende de Phase 2 (el agente debe estar desplegado para verificar 403)
+- **Phase 7 (Polish)**: Depende de todas las fases anteriores
+
+### Dependencias dentro de las fases
+
+- T003 y T004 son independientes entre sí [P] — pueden crearse en paralelo
+- T005, T006, T007, T008 son independientes entre sí [P] — pueden ejecutarse en paralelo
+- T009 depende de T007 y T008 (necesita que el agente esté desplegado para obtener las URLs)
+- T010 depende de T009 (necesita la URL del agente para `app.yaml`)
+- T011 y T012 son independientes de T010 [P] — pueden editarse en paralelo con T010
+- T014 depende de T010, T011, T012 (deploy requiere todos los cambios)
+- T019 depende de T010 (el `MeterProvider` global lo configura `observability.Setup()`)
+
+### Oportunidades de paralelismo
+
+```bash
+# Phase 2 — Tasks paralelas (distintos archivos/recursos):
+T003: internal/observability/setup.go
+T004: internal/observability/setup_test.go
+T005: Secret Manager stage (GCP)
+T006: Secret Manager prod (GCP)
+T007: Cloud Run stage (GCP)
+T008: Cloud Run prod (GCP)
+
+# Phase 3 — Tasks paralelas dentro de US1:
+T011: app.yaml
+T012: app.prod.yaml
+# (T010 modifica main.go — no paralela con T011/T012 si el mismo dev las hace)
+```
+
+---
+
+## Estrategia de Implementación
+
+### MVP (solo US1)
+
+1. Completar Phase 1 — dependencias Go
+2. Completar Phase 2 — paquete + agente (T003, T005, T007 mínimo para stage)
+3. Completar Phase 3 — US1 (T010–T015)
+4. **PARAR y VALIDAR**: trazas visibles en Datadog APM
+5. Desplegar en stage — foundation operativa
+
+### Entrega incremental
+
+1. MVP (Phase 1–3) → Trazas activas en Datadog APM
+2. Agregar US2 (Phase 4) → Latencia de queries visible en traces
+3. Agregar US3 (Phase 5) → Métricas de negocio en Datadog Metrics Explorer
+4. Agregar US4 (Phase 6) → Verificación de seguridad
+5. Polish (Phase 7) → Gates CI verdes
+
+---
+
+## Notas
+
+- `[P]` = archivos distintos, sin dependencias entre sí — pueden ejecutarse en paralelo
+- `[USn]` = historia de usuario a la que pertenece la tarea
+- Hacer commit después de cada fase o grupo lógico
+- El código exacto de `setup.go` y las modificaciones a `main.go` están en `quickstart.md`
+- Las URLs de Cloud Run se obtienen en T009 y se usan en T012 y T014
+- En dev local, `OTEL_EXPORTER_OTLP_ENDPOINT: ""` garantiza modo no-op; nunca apuntar a agente real desde local
