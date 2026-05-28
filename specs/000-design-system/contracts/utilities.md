@@ -24,14 +24,14 @@ directamente en los templates Angular. No requieren imports adicionales.
 
 **Estilos aplicados**:
 
-- Fondo: `primary-600` (#b86b3d)
-- Hover: `primary-700` (#9c5630)
+- Fondo: `primary-700` (#9c5630) — contraste 5.5:1 con texto blanco (WCAG 2.1 AA ✅)
+- Hover: `primary-800` (#80462a)
 - Texto: blanco, semibold
 - Padding: `py-3 px-4` (área táctil ≥ 44 px)
 - Esquinas: `rounded-lg`
 - Transición: colores 200 ms
 - Disabled: opacidad 50%, cursor `not-allowed`
-- Focus: ring 2px `primary-500` + offset 2px
+- Focus: ring 2px `primary-600` + offset 2px
 
 **Restricciones**:
 
@@ -53,13 +53,13 @@ directamente en los templates Angular. No requieren imports adicionales.
 **Estilos aplicados**:
 
 - Fondo: transparente (hover: `primary-50`)
-- Borde: 2px `primary-600`
-- Texto: `primary-600`, semibold
+- Borde: 2px `primary-700` — contraste 5.5:1 sobre blanco (WCAG 2.1 AA ✅)
+- Texto: `primary-700`, semibold
 - Padding: `py-3 px-4` (área táctil ≥ 44 px)
 - Esquinas: `rounded-lg`
 - Transición: colores 200 ms
 - Disabled: opacidad 50%, cursor `not-allowed`
-- Focus: ring 2px `primary-500` + offset 2px
+- Focus: ring 2px `primary-600` + offset 2px
 
 ---
 
@@ -82,8 +82,8 @@ directamente en los templates Angular. No requieren imports adicionales.
 - Ancho: `w-full`
 - Padding: `px-4 py-3` (área táctil ≥ 44 px en móvil)
 - Borde: `border border-gray-300 rounded-lg`
-- Focus: ring 2px `primary-500`, borde `primary-500`
-- Placeholder: `text-gray-400`
+- Focus: ring 2px `primary-600`, borde `primary-600`
+- Placeholder: `text-gray-500` — contraste 4.8:1 sobre blanco (WCAG 2.1 AA ✅)
 - Transición: colores 200 ms
 - Font-size: 16px (previene zoom en iOS)
 
