@@ -142,14 +142,16 @@ distintos para normal, hover, foco, deshabilitado y carga.
   de marca basada en tonos café-cálido, definida como tokens (variables
   CSS) reutilizables en toda la aplicación.
 - **FR-002**: El sistema de diseño DEBE incluir la fuente Inter como
-  tipografía principal, con una cadena de respaldo (system-ui, sans-serif)
-  cuando no esté disponible.
+  tipografía principal, servida de forma autohosteada (archivos `.woff2`
+  incluidos en el proyecto, sin dependencia de CDN externo), con una
+  cadena de respaldo (system-ui, sans-serif) cuando no esté disponible.
 - **FR-003**: El sistema de diseño DEBE proveer la clase utilitaria
   `btn-primary` para la acción principal de cada vista: color de fondo
   de marca, texto blanco, estados hover/foco/deshabilitado/carga.
 - **FR-004**: El sistema de diseño DEBE proveer la clase utilitaria
-  `btn-secondary` para acciones secundarias: apariencia de contorno o
-  relleno suave, coherente con la paleta.
+  `btn-secondary` para acciones secundarias: estilo outline — borde
+  del color primario, fondo transparente, texto del color primario;
+  estados hover/foco/deshabilitado coherentes con la paleta.
 - **FR-005**: El sistema de diseño DEBE proveer la clase utilitaria
   `input-field` para campos de formulario: borde sutil, padding
   táctil adecuado, estados normal/foco/error/deshabilitado.
@@ -210,14 +212,18 @@ distintos para normal, hover, foco, deshabilitado y carga.
 - Los componentes se implementan como clases utilitarias de Tailwind
   (via `@utility` o `@layer components`) en el archivo de estilos
   global, no como Web Components ni librerías externas.
-- La fuente Inter se carga desde Google Fonts o se sirve localmente;
-  la decisión de hosting se toma durante la implementación.
+- La fuente Inter se sirve de forma autohosteada (archivos `.woff2`
+  incluidos en el proyecto); no se usa Google Fonts CDN para evitar
+  requests externas y dependencias de terceros.
 - Las especificaciones exactas de cada token de color (valores hex)
   se derivan de la paleta documentada en loopi v1 durante la fase
   de planificación.
 - Este design system es la base para todas las specs de UI a partir
-  de la `001-autenticacion`; cualquier vista ya implementada debe
-  migrarse como parte de esta spec.
+  de la `001-autenticacion`. La migración de vistas existentes es
+  **completa**: los templates de login, logout y cualquier otra vista
+  ya implementada deben actualizarse para usar `btn-primary`,
+  `input-field`, `card` y demás utilidades del design system en lugar
+  de clases Tailwind directas.
 
 ## Diseño de Interfaz (UX/UI)
 
@@ -238,7 +244,7 @@ siguen la escala semántica:
 
 ### Tipografía
 
-- **Fuente principal**: Inter (Google Fonts o local)
+- **Fuente principal**: Inter (autohosteada — archivos `.woff2` en el proyecto)
 - **Escala**: headings h1–h4, body, label, caption — definidos
   como tokens de tamaño en la configuración de Tailwind
 - **Peso**: Regular (400) para cuerpo, Medium (500) para labels,
@@ -274,3 +280,9 @@ siguen la escala semántica:
 - Q: ¿Debe el design system incluir dark mode? → A: No en esta iteración; queda como decisión diferida.
 - Q: ¿Los componentes se implementan como utilidades Tailwind o como librerías de componentes? → A: Utilidades Tailwind en hoja de estilos global (`@utility`/`@layer components`).
 - Q: ¿La fuente Inter se carga desde CDN o se sirve localmente? → A: Se decide en la fase de planificación según las restricciones de rendimiento y privacidad.
+
+### Session 2026-05-28
+
+- Q: ¿Qué nivel de migración aplica a las vistas ya implementadas (001-autenticacion)? → A: Migración completa — los templates de login/logout se actualizan para usar btn-primary, input-field, card en lugar de clases Tailwind directas.
+- Q: ¿Qué estilo visual tendrá btn-secondary? → A: Outline — borde del color primario, fondo transparente, texto del color primario.
+- Q: ¿Desde dónde se carga la fuente Inter? → A: Self-hosted — archivos .woff2 incluidos en el proyecto; sin Google Fonts CDN.
