@@ -14,7 +14,7 @@ en GCP Cloud Logging exclusivamente; Datadog recibe solo trazas y métricas.
 
 ## Contexto Técnico
 
-**Lenguaje/Versión**: Go 1.25 (backend)
+**Lenguaje/Versión**: Go 1.25 (backend — siempre la versión estable más reciente del `go.mod` del repo)
 
 **Dependencias Principales**:
 

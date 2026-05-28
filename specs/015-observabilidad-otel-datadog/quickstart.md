@@ -50,7 +50,6 @@ gcloud run deploy dd-agent \
   --region=us-central1 \
   --port=4318 \
   --ingress=internal \
-  --no-allow-unauthenticated \
   --min-instances=1 \
   --max-instances=1 \
   --memory=512Mi \
@@ -75,6 +74,11 @@ Repetir con `--project=loopi-prod-497600` y `DD_HOSTNAME=loopi-api-agent-prod` p
 
 **Nota**: `--min-instances=1` es obligatorio para evitar cold starts que descartarían las
 primeras trazas del día. Con `--max-instances=1` el agente es un singleton por ambiente.
+
+`--ingress=internal` restringe el acceso al tráfico del mismo proyecto GCP (App Engine
+incluido) sin requerir tokens IAM en el exporter OTLP. No se usa `--no-allow-unauthenticated`
+porque obligaría al SDK OTel a adjuntar un `Authorization: Bearer` en cada petición, lo que
+requiere lógica de refresco de tokens no soportada nativamente por el exporter OTLP/HTTP.
 
 ---
 

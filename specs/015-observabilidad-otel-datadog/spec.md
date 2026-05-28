@@ -4,7 +4,7 @@
 
 **Creado**: 2026-05-26
 
-**Estado**: Draft
+**Estado**: Aprobado
 
 **Tipo**: Infraestructura transversal — base para todos los demás use cases
 
@@ -220,10 +220,11 @@ de todos los features de Loopi v2 y reenviarlos a Datadog SaaS.
 
 **RF-OBS-06 — Acceso interno al agente (sin acceso público)**
 
-El agente en Cloud Run DEBE estar configurado sin acceso público. El único principal
-autorizado para invocarlo DEBE ser el service account de App Engine mediante IAM.
-El backend DEBE autenticarse con el agente usando credenciales de la cuenta de servicio
-de GCP (no credenciales embebidas).
+El agente en Cloud Run DEBE estar configurado con `--ingress=internal`, de forma que
+solo el tráfico proveniente del mismo proyecto GCP (App Engine Standard incluido) pueda
+alcanzarlo. El tráfico de internet DEBE ser descartado por la capa de red de Cloud Run
+antes de llegar al agente. No se requieren tokens IAM en el exporter OTLP: el aislamiento
+lo garantiza la restricción de red, no la autenticación de llamada.
 
 **RF-OBS-07 — Credenciales en Secret Manager**
 
