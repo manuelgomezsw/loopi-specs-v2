@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0 → 1.6.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -16,6 +16,12 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.5.0 — nueva subsección "Arquitectura del backend Go — separación de capas":
                 tabla Handler/Service/Repository con responsabilidades exclusivas,
                 reglas de cruce, test corolario. Previene SQL en la capa service (MINOR).
+        1.6.0 — estrategia de testing backend Go: técnica por capa (httptest/mock/sqlmock/t.Setenv),
+                thresholds (≥ 95% lógica, ≥ 90% infraestructura, ≥ 70% OTel), gate CI,
+                qué cubrir obligatoriamente en service y middleware (MINOR).
+        1.7.0 — §VI Monitoreo Preventivo ampliado: logs exclusivamente en GCP Cloud Logging
+                (Datadog no recibe logs), reglas de cardinalidad de métricas (tienda_id ✅ / user_id ❌),
+                convención de nomenclatura de métricas y referencia a spec 015 (MINOR).
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -110,18 +116,44 @@ y brechas operacionales. Un flujo que crea oportunidad de fraude DEBE rediseñar
 Cada feature DEBE ser monitoreable desde el primer deploy en producción. El sistema DEBE permitir
 diagnosticar degradaciones en menos de 5 segundos.
 
-**Stack de observabilidad**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
-**Datadog** como plataforma de observabilidad (trazas, métricas, dashboards y alertas).
-Los logs estructurados van a stdout → GCP Cloud Logging → Datadog vía integración GCP nativa.
+**Stack de observabilidad**:
+
+- **Trazas y métricas**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
+  **Datadog** exclusivamente para APM (trazas) y métricas. Datadog NO recibe logs.
+- **Logs**: stdout → **GCP Cloud Logging** exclusivamente. No se configura ningún reenvío de
+  logs a Datadog. Los logs se consultan en GCP Log Explorer.
+
+**Qué instrumentar:**
 
 - Todo endpoint crítico (autenticación, conteo de inventario, movimientos de stock, generación
   y recepción de pedidos, integración con ventas) DEBE tener trazas OTel y métricas de latencia
-  y tasa de errores visibles en Datadog.
+  y tasa de errores visibles en Datadog APM.
 - Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp,
-  operación.
+  operación y nivel (`info`/`warn`/`error`).
 - Las alertas DEBEN configurarse en Datadog y ser preventivas: detectar anomalías antes de que
   impacten al usuario final.
 - El monitoreo es responsabilidad del equipo de desarrollo, no solo de operaciones.
+
+**Convención de nomenclatura de métricas** (normativa para todos los features):
+
+- Formato: `[dominio].[entidad].[operacion].[tipo]`
+  - Dominio: nombre corto del módulo (`auth`, `inventario`, `pedidos`, `ventas`, `mermas`, etc.)
+  - Tipo al final: `duration` (histograma en ms), `total` (contador), `size` (gauge)
+- Etiqueta `resultado` SIEMPRE presente en operaciones que pueden fallar. Valores descriptivos
+  en español: `success`, `not_found`, `validation_error`, `account_locked`, `timeout`, etc.
+- Etiqueta `tienda_id` DEBE incluirse en operaciones de negocio (cardinalidad baja: ≤ 20 tiendas).
+  Permite filtrado por tienda en dashboards y alertas de Datadog.
+- **`user_id` NUNCA como etiqueta de métrica**: cardinalidad alta → coste en Datadog.
+  El `user_id` va en el atributo del span (traza), no en la métrica.
+- No incluir valores de alta cardinalidad en etiquetas: IPs, UUIDs de request, tokens.
+
+**Implementación de la fundación**: ver [spec 015-observabilidad-otel-datadog](../../specs/015-observabilidad-otel-datadog/spec.md)
+para el paquete `internal/observability`, configuración del agente Datadog en Cloud Run
+e instrumentación automática de queries de BD.
+
+**Declaración en specs de feature**: todo feature con endpoints críticos DEBE incluir una
+sección `## Observabilidad` en su `spec.md` con las tablas de spans y métricas que define.
+Ver plantilla en `.specify/templates/spec-template.md`.
 
 ---
 
@@ -175,6 +207,50 @@ Reglas de cruce entre capas:
 - Pruebas backend: las integraciones con base de datos y servicios externos (POS, GCP services) DEBEN
   testearse mediante **mocks**. Prohibida la integración directa en tests — los entornos de CI no
   tienen acceso a infraestructura real y la paridad mock/real se valida en stage (ver sección Ambientes).
+
+**Estrategia de testing backend Go — técnica por capa:**
+
+Cada capa usa una técnica específica que aísla exactamente lo que prueba:
+
+| Capa | Archivo de test | Técnica | Qué valida |
+|------|----------------|---------|-----------|
+| **Handler** | `handler_test.go` | `httptest.NewRecorder()` + mock `Service` + mock `Repository` | Contrato HTTP: códigos de status, headers, cookies, body JSON |
+| **Service** | `service_test.go` | Mock de interfaz `Repository` (sin BD) | Lógica de negocio: flujos, decisiones, manejo de errores de dominio |
+| **Middleware** | `middleware_test.go` | `httptest` + JWT generado en el test + mock `Repository` | Validación de tokens: todos los caminos de aceptación y rechazo |
+| **Repository** | `repository_test.go` | `go-sqlmock` (`github.com/DATA-DOG/go-sqlmock`) | Construcción correcta de queries SQL y manejo de errores de BD |
+| **Config** | `config_test.go` | `t.Setenv()` | Carga de variables de entorno, defaults y errores de configuración |
+| **Metrics/OTel** | cubierto desde `handler_test.go` o `service_test.go` | OTel noop provider (incluido en SDK) | Wiring de instrumentos; no se requiere Datadog real |
+
+**Cobertura mínima obligatoria:**
+
+- Paquetes de lógica (`internal/<dominio>/service.go`, `internal/<dominio>/middleware.go`): **≥ 95%**
+- Paquetes de infraestructura (`internal/<dominio>/repository.go`, `config/`): **≥ 90%**
+- Paquetes de wiring OTel (`metrics.go`, `otel.go`): **≥ 70%** — la inicialización del SDK depende de providers externos; se prioriza el wiring sobre los caminos de error del SDK
+- **Excluidos** del gate de cobertura: `cmd/` (punto de entrada), `main.go` (inyección de dependencias)
+
+El gate se verifica con:
+
+```bash
+go test ./internal/... ./config/... -coverprofile=coverage.out -covermode=atomic
+go tool cover -func=coverage.out
+```
+
+Un PR no puede mergearse si algún paquete bajo `internal/` cae por debajo del 90%.
+
+**Qué cubrir obligatoriamente en cada service:**
+
+- Todos los caminos `if/switch` en funciones exportadas.
+- El camino de error de cada llamada al repositorio (simular `error != nil`).
+- La rama de bloqueo de cuenta cuando el contador llega al límite.
+- El camino "usuario no existe" y "usuario inactivo" como distintos casos de test,
+  aunque devuelvan el mismo error de dominio.
+
+**Qué cubrir obligatoriamente en cada middleware:**
+
+- Token ausente, vacío, firma inválida, expirado, algoritmo incorrecto.
+- Token revocado (blacklist = true).
+- BD no disponible durante la verificación de blacklist (política fail-closed → 503).
+- Token válido: el handler siguiente recibe los claims en el contexto.
 - Markdown: sub-listas con indentación de 2 espacios; línea en blanco antes/después de headings
   y listas; archivo termina con newline (markdownlint MD007, MD022, MD032, MD047).
 
@@ -547,4 +623,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.5.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-27
+**Version**: 1.7.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-26

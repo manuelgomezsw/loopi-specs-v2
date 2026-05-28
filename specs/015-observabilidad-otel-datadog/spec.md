@@ -1,4 +1,4 @@
-# Feature Specification: Observabilidad — OTel + Datadog
+# Feature Specification: Fundación de Observabilidad — OTel + Datadog APM
 
 **Feature Branch**: `015-observabilidad-otel-datadog`
 
@@ -6,114 +6,179 @@
 
 **Estado**: Draft
 
-**Input**: Configurar la plataforma de observabilidad de Loopi v2 con OpenTelemetry como SDK
-de instrumentación y Datadog como backend, incluyendo la integración nativa GCP → Datadog
-para logs y el pipeline OTel para trazas y métricas.
+**Tipo**: Infraestructura transversal — base para todos los demás use cases
+
+**Input**: Establecer las bases de observabilidad (trazas y métricas) compartidas por
+todos los use cases de Loopi v2, usando OpenTelemetry como SDK y Datadog exclusivamente
+para APM y métricas. Los logs permanecen en GCP Cloud Logging. Incluye la convención
+que cada feature spec debe seguir para definir su propia instrumentación.
+
+---
+
+## Contexto y Alcance
+
+Esta feature es **infraestructura transversal**, no un caso de uso de negocio. Su propósito
+es doble:
+
+1. **Implementar la fundación técnica**: el paquete compartido de observabilidad que todo
+   use case importa para obtener trazas y métricas en Datadog APM sin configurar nada
+   adicional.
+
+2. **Establecer la convención**: la plantilla estándar que cada spec de feature DEBE
+   incluir para declarar sus propias métricas y spans, garantizando consistencia a lo
+   largo de todo el sistema.
+
+**Lo que NO cubre esta spec:**
+
+- Logs: permanecen en GCP Cloud Logging. No se configura ningún reenvío de logs a Datadog.
+- Métricas específicas de negocio de cada feature: cada spec define las suyas.
+- Datadog DBM (Database Monitoring full): diferido. Esta spec incluye instrumentación
+  de queries vía OTel, que da visibilidad suficiente sin infra adicional.
+- Dashboards y alertas específicos de features: responsabilidad de cada feature.
 
 ---
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
-### Historia 1 — Diagnóstico de degradación en tiempo real (Prioridad: P1)
+### Historia 1 — Nuevo use case obtiene trazas sin configuración adicional (Prioridad: P1)
 
-Un desarrollador de Loopi detecta que el tiempo de login está aumentando. Abre Datadog
-APM, busca el servicio `loopi-api`, y en menos de 5 segundos puede ver el histograma
-`auth.login.duration` desglosado por resultado (`success`, `invalid_credentials`,
-`account_locked`). Identifica que las consultas a `tokens_revocados` en Cloud SQL están
-tardando más de lo esperado y puede correlacionar el span de blacklist con el trace completo
-del request de login.
+Un desarrollador implementa el feature "Gestión de Tiendas". Al importar el paquete de
+observabilidad compartido e iniciar los spans en su handler, las trazas del nuevo feature
+aparecen automáticamente en Datadog APM bajo el servicio `loopi-api`, sin que tenga que
+configurar ningún exporter, provider ni credencial. La fundación ya lo resuelve.
 
-**Por qué esta prioridad**: Sin observabilidad funcional, cualquier degradación en producción
-se detecta cuando el usuario final ya fue impactado. Esta es la promesa central del principio
-VI de la constitución.
+**Por qué esta prioridad**: Si cada feature tuviera que configurar su propio pipeline de
+observabilidad, habría inconsistencias, errores de configuración y duplicación. La fundación
+elimina esa fricción para todos los use cases futuros.
 
-**Prueba independiente**: Se puede verificar haciendo un login exitoso y uno fallido,
-luego buscando en Datadog Metrics Explorer `auth.login.result` con etiqueta `result`.
-Entrega valor completo de monitoreo de autenticación sin otros módulos.
+**Prueba independiente**: Implementar un handler mínimo de prueba que use el paquete
+`observability`, desplegarlo en stage y verificar que el span aparece en Datadog APM.
+Entrega valor completo de la fundación de forma aislada.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el backend de Loopi está desplegado en App Engine con OTel configurado,
-   **Cuando** se realiza un login exitoso,
-   **Entonces** aparece un trace en Datadog APM con atributo `auth.result=success` y
-   `user.role` dentro de los 30 segundos.
+1. **Dado** que el backend está desplegado en App Engine con `OTEL_EXPORTER_OTLP_ENDPOINT`
+   configurado, **Cuando** cualquier handler inicia un span usando el paquete compartido,
+   **Entonces** el span aparece en Datadog APM dentro de los 30 segundos con los atributos
+   de recurso: `service.name=loopi-api`, `deployment.environment` y `service.version`.
 
-2. **Dado** que un usuario falla el login 5 veces consecutivas,
-   **Cuando** el sistema bloquea la cuenta,
-   **Entonces** el contador `auth.login.result` con etiqueta `result=account_locked`
-   incrementa en 1 en Datadog Metrics Explorer.
+2. **Dado** que el entorno es local (dev) y `OTEL_EXPORTER_OTLP_ENDPOINT` no está
+   configurado, **Cuando** el backend arranca, **Entonces** no hay errores relacionados
+   con OTel y la aplicación funciona con normalidad (modo no-op silencioso).
 
-3. **Dado** que la consulta a `tokens_revocados` tarda más de 100 ms,
-   **Cuando** el desarrollador abre el trace en Datadog,
-   **Entonces** el histograma `auth.blacklist.check.duration` refleja la latencia real
-   observada.
+3. **Dado** que el Datadog Agent en Cloud Run no está disponible temporalmente,
+   **Cuando** el backend intenta exportar trazas, **Entonces** el backend no falla ni
+   degrada su rendimiento: el exporter descarta silenciosamente los datos no enviados.
 
 ---
 
-### Historia 2 — Correlación de logs con trazas (Prioridad: P2)
+### Historia 2 — Queries de BD visibles como spans hijo (Prioridad: P2)
 
-Un desarrollador quiere entender por qué un logout falló para un usuario específico.
-Busca en Datadog Log Management por `user_id` y encuentra el log JSON estructurado del
-evento. Desde ese log puede navegar directamente al trace de Datadog APM usando el
-`trace_id` incluido en el log, viendo el span completo del request fallido.
+Un desarrollador observa que un endpoint está tardando más de lo esperado. Abre el trace
+en Datadog APM y puede ver, dentro del span del handler HTTP, los spans hijos de cada
+consulta a Cloud SQL: cuál tabla se consultó, qué operación (SELECT/INSERT/DELETE) y
+cuánto tardó exactamente. Puede identificar qué query específico es el cuello de botella
+sin necesidad de logs adicionales ni acceso directo a la BD.
 
-**Por qué esta prioridad**: La correlación logs-trazas multiplica el valor diagnóstico.
-Sin ella, los logs y trazas son silos separados.
+**Por qué esta prioridad**: Las queries de BD son la fuente más común de degradación
+en un API Go + Cloud SQL. La instrumentación automática del driver de BD da visibilidad
+al costo real de cada request sin instrumentación manual en cada repositorio.
 
-**Prueba independiente**: Se puede verificar ejecutando un logout y buscando el log en
-Datadog Log Management. El log debe contener `tienda_id`, `user_id`, `rol` y un
-`trace_id` navigable.
+**Prueba independiente**: Ejecutar cualquier request que consulte la BD y verificar en
+Datadog APM que el trace muestra spans hijos con el nombre de la operación SQL y la tabla.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el backend emite logs JSON estructurados a stdout,
-   **Cuando** Cloud Logging los recibe vía Pub/Sub,
-   **Entonces** aparecen en Datadog Log Management con los campos `tienda_id`,
-   `user_id`, `rol`, `timestamp` y `operacion` indexados y buscables.
+1. **Dado** que la instrumentación de BD está activa, **Cuando** el repositorio ejecuta
+   cualquier consulta (`SELECT`, `INSERT`, `UPDATE`, `DELETE`), **Entonces** aparece un
+   span hijo en el trace con los atributos `db.system=mysql`, `db.operation` y
+   `db.sql.table`.
 
-2. **Dado** que un log de error incluye un `trace_id`,
-   **Cuando** el desarrollador hace clic en el `trace_id` en Datadog Logs,
-   **Entonces** navega directamente al trace correspondiente en Datadog APM.
+2. **Dado** que una query tarda más de 200 ms, **Cuando** el desarrollador abre el trace
+   en Datadog APM, **Entonces** puede identificar el span exacto de la query lenta y su
+   duración, sin necesidad de instrumentación adicional en el repositorio.
+
+3. **Dado** que el repositorio ejecuta múltiples queries en un solo request,
+   **Cuando** el trace se visualiza en Datadog APM, **Entonces** cada query aparece como
+   un span hijo separado, con su duración individual, bajo el span padre del handler HTTP.
 
 ---
 
-### Historia 3 — Alerta preventiva ante anomalías (Prioridad: P3)
+### Historia 3 — Feature define sus métricas y aparecen en Datadog (Prioridad: P2)
 
-El equipo recibe una alerta de Datadog antes de que los usuarios reporten problemas.
-La alerta se dispara cuando la tasa de `auth.login.result{result:invalid_credentials}`
-supera 3 desviaciones estándar respecto al baseline de la última hora, indicando un
-posible ataque de fuerza bruta.
+Un desarrollador implementa el feature "Conteo de Inventario". Siguiendo la convención
+de la Constitución §VI y la plantilla de spec, declara en su propia spec las métricas
+`inventario.conteo.duration` e `inventario.conteo.total`. Al implementarlas usando el
+paquete compartido de observabilidad,
+esas métricas aparecen en Datadog Metrics Explorer correctamente etiquetadas con
+`service:loopi-api` y `env:staging`, listas para configurar alertas y dashboards.
 
-**Por qué esta prioridad**: Las alertas reactivas (cuando el usuario ya fue impactado)
-no cumplen el principio de monitoreo preventivo de la constitución.
+**Por qué esta prioridad**: Sin una convención clara, cada desarrollador nombra métricas
+de forma distinta, los dashboards son inconsistentes y las alertas no cubren todos los
+casos. La convención asegura uniformidad desde el primer feature hasta el último.
 
-**Prueba independiente**: Se puede simular disparando 20 logins fallidos seguidos y
-verificando que la alerta se activa en Datadog Monitors antes de que pasen 5 minutos.
+**Prueba independiente**: Implementar las métricas del feature de autenticación (ya
+existentes en código) usando la fundación y verificar que aparecen en Datadog Metrics
+Explorer con las etiquetas correctas.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que existe un Monitor de Datadog configurado sobre `auth.login.result`,
-   **Cuando** la tasa de `invalid_credentials` supera el umbral configurado,
-   **Entonces** el equipo recibe una notificación (email / canal configurado) en
-   menos de 5 minutos.
+1. **Dado** que un feature registra una métrica siguiendo la convención de nomenclatura,
+   **Cuando** el evento ocurre en el sistema, **Entonces** la métrica aparece en Datadog
+   Metrics Explorer con las etiquetas estándar: `service`, `env` y `version`.
 
-2. **Dado** que la latencia media de `auth.login.duration` supera 2 500 ms,
-   **Cuando** el monitor de SLO detecta la violación,
-   **Entonces** se genera una alerta de severidad `warning` en Datadog.
+2. **Dado** que un feature registra un histograma de duración, **Cuando** el desarrollador
+   busca la métrica en Datadog, **Entonces** puede visualizar los percentiles p50, p90 y
+   p99, y la unidad aparece correctamente como milisegundos.
+
+3. **Dado** que un feature registra un contador de resultados con etiquetas por resultado,
+   **Cuando** el desarrollador construye un monitor en Datadog, **Entonces** puede filtrar
+   por cualquier valor de la etiqueta sin configuración adicional.
+
+---
+
+### Historia 4 — Acceso seguro al agente desde App Engine (Prioridad: P3)
+
+El equipo de seguridad revisa la configuración del agente Datadog en Cloud Run y confirma
+que el servicio no es accesible públicamente: solo el service account de App Engine tiene
+permiso para invocarlo. La API Key de Datadog no está en ningún archivo de configuración
+del repositorio.
+
+**Por qué esta prioridad**: Una API Key de Datadog expuesta permite a terceros enviar
+datos arbitrarios a la cuenta y agotar la cuota. Un agente expuesto públicamente amplía
+la superficie de ataque.
+
+**Prueba independiente**: Intentar llamar al endpoint del agente en Cloud Run sin
+autenticación IAM debe retornar 403. Verificar en GCP IAM que solo el service account
+de App Engine tiene `roles/run.invoker`.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** que el agente está desplegado en Cloud Run sin acceso público,
+   **Cuando** cualquier origen externo intenta llamar al endpoint OTLP del agente,
+   **Entonces** recibe una respuesta de acceso denegado (HTTP 403).
+
+2. **Dado** que `DD_API_KEY` está almacenada en GCP Secret Manager,
+   **Cuando** un desarrollador revisa el repositorio (incluyendo `app.yaml` y
+   `app.prod.yaml`), **Entonces** no encuentra la clave de API en texto plano en ningún
+   archivo.
 
 ---
 
 ### Casos Límite
 
-- ¿Qué ocurre si el receptor OTLP (Datadog Agent en Cloud Run) no está disponible?
-  Las trazas y métricas del período se pierden; los logs siguen llegando por la
-  integración nativa GCP → Datadog de forma independiente.
-- ¿Qué ocurre si Pub/Sub tiene un backlog de logs? Los logs llegan con retraso a Datadog
-  pero no se pierden (retención configurable en Pub/Sub).
-- ¿Qué ocurre en entorno local (dev)? Sin `OTEL_EXPORTER_OTLP_ENDPOINT` configurado,
-  el SDK opera en modo no-op; no hay errores ni trazas exportadas.
-- ¿Qué ocurre si la API Key de Datadog caduca o es inválida? El agente rechaza el envío
-  y lo reporta en sus propios logs; Cloud Logging sigue funcionando independientemente.
+- Si el agente Datadog en Cloud Run tiene un cold start en el primer request del día,
+  las primeras trazas del período se pierden. Mitigación: configurar `--min-instances=1`
+  en Cloud Run para eliminar cold starts.
+- Si se rota la `DD_API_KEY` en Secret Manager sin actualizar la variable de entorno del
+  agente en Cloud Run, el agente rechaza el envío hasta que se redespliega. Los logs en
+  GCP no se ven afectados.
+- En entorno local, si un desarrollador configura `OTEL_EXPORTER_OTLP_ENDPOINT` apuntando
+  a un agente inexistente, los errores de conexión deben ser silenciosos (no crashear el
+  proceso ni llenar los logs de errores).
+- Si dos features definen métricas con el mismo nombre pero unidades distintas, el segundo
+  registro sobreescribe la definición del primero en el MeterProvider global. La convención
+  de nomenclatura previene esto.
 
 ---
 
@@ -121,75 +186,82 @@ verificando que la alerta se activa en Datadog Monitors antes de que pasen 5 min
 
 ### Requisitos Funcionales
 
-**Canal de Logs (GCP → Datadog nativo)**
+**RF-OBS-01 — Paquete de observabilidad compartido**
 
-- **RF-OBS-01**: El sistema DEBE emitir todos los logs a stdout en formato JSON estructurado,
-  incluyendo los campos obligatorios: `tienda_id`, `user_id`, `rol`, `timestamp`,
-  `operacion` y `nivel` (info/warn/error).
-- **RF-OBS-02**: GCP Cloud Logging DEBE capturar automáticamente los logs de App Engine
-  desde stdout sin configuración adicional en el código.
-- **RF-OBS-03**: Un sink de Cloud Logging DEBE exportar los logs del recurso `gae_app`
-  a un topic de Pub/Sub dedicado (`datadog-logs`).
-- **RF-OBS-04**: La integración nativa de Datadog con GCP DEBE consumir el topic Pub/Sub
-  y hacer los logs disponibles en Datadog Log Management en menos de 60 segundos.
-- **RF-OBS-05**: Los logs DEBEN ser buscables en Datadog por `tienda_id`, `user_id`,
-  `operacion` y `nivel`.
+El sistema DEBE proveer un paquete reutilizable (`internal/observability`) que inicialice
+el `TracerProvider` y el `MeterProvider` globales de OTel, configurados para exportar
+a Datadog via OTLP/HTTP. Este paquete DEBE ser el único lugar donde se configuran los
+providers; ningún feature lo hace por su cuenta.
 
-**Canal de Trazas y Métricas (OTel → Datadog Agent)**
+**RF-OBS-02 — Modo no-op en entornos sin configuración**
 
-- **RF-OBS-06**: El backend Go DEBE inicializar un `TracerProvider` y un `MeterProvider`
-  globales al arrancar, configurados para exportar vía OTLP/HTTP al agente Datadog.
-- **RF-OBS-07**: En ausencia de `OTEL_EXPORTER_OTLP_ENDPOINT`, el sistema DEBE operar
-  en modo no-op sin errores (soporte para entorno local/dev).
-- **RF-OBS-08**: El Datadog Agent DEBE desplegarse como servicio independiente (no sidecar)
-  con el receptor OTLP habilitado en puerto HTTP 4318.
-- **RF-OBS-09**: El agente DEBE enriquecer las trazas con los atributos de recurso:
-  `service.name=loopi-api`, `deployment.environment` (staging/production) y
-  `service.version`.
-- **RF-OBS-10**: La clave de API de Datadog (`DD_API_KEY`) DEBE almacenarse en
-  GCP Secret Manager; nunca en texto plano en repositorios ni en `app.yaml`.
+Cuando `OTEL_EXPORTER_OTLP_ENDPOINT` no está definida en el entorno, el paquete DEBE
+operar en modo no-op: los instrumentos retornan implementaciones vacías, no hay errores
+ni goroutines extra, y el arranque del servidor no se ve afectado.
 
-**Instrumentación de Autenticación (RF-AUTH-06 de la feature 001)**
+**RF-OBS-03 — Atributos de recurso estándar**
 
-- **RF-OBS-11**: Cada request a `POST /api/v1/auth/login` DEBE generar un span OTel con
-  los atributos `auth.result`, `user.role` (solo en éxito) y `http.route`.
-- **RF-OBS-12**: El sistema DEBE registrar el histograma `auth.login.duration` (ms)
-  por cada intento de login, etiquetado por resultado.
-- **RF-OBS-13**: El sistema DEBE incrementar el contador `auth.login.result` (etiqueta
-  `result`) por cada intento de login.
-- **RF-OBS-14**: El sistema DEBE registrar el histograma `auth.blacklist.check.duration`
-  (ms) por cada consulta a `tokens_revocados`.
+Cada traza y métrica exportada DEBE incluir los atributos de recurso:
+`service.name` (valor: `loopi-api`), `deployment.environment` (dev/staging/production)
+y `service.version` (valor: variable de entorno `APP_VERSION`).
 
-**Alertas y Dashboards**
+**RF-OBS-04 — Instrumentación automática de queries de BD**
 
-- **RF-OBS-15**: DEBE existir al menos un Monitor de Datadog sobre `auth.login.result`
-  que alerte cuando la tasa de `invalid_credentials` supere el umbral configurado.
-- **RF-OBS-16**: DEBE existir al menos un Monitor sobre `auth.login.duration` que alerte
-  cuando la latencia media supere 2 500 ms en una ventana de 5 minutos.
+El driver de base de datos DEBE estar envuelto para generar spans automáticos por cada
+operación: `SELECT`, `INSERT`, `UPDATE`, `DELETE`. Cada span DEBE incluir los atributos
+`db.system`, `db.operation` y `db.sql.table`. Esta instrumentación NO requiere cambios
+en los repositorios existentes ni en los futuros.
 
-**Seguridad y Control de Acceso**
+**RF-OBS-05 — Agente Datadog como receptor OTLP**
 
-- **RF-OBS-17**: El service account de GCP para la integración Datadog DEBE tener
-  únicamente los roles mínimos necesarios: `roles/logging.viewer`,
-  `roles/monitoring.viewer`, `roles/cloudasset.viewer`, `roles/browser` y
-  `roles/pubsub.subscriber`.
-- **RF-OBS-18**: El servicio del agente Datadog en Cloud Run DEBE estar configurado
-  sin acceso público (`--no-allow-unauthenticated`); solo el service account de
-  App Engine tendrá el rol `roles/run.invoker`.
+DEBE existir un servicio Datadog Agent desplegado en Cloud Run con el receptor OTLP
+habilitado en el protocolo HTTP (puerto 4318). Este agente DEBE recibir trazas y métricas
+de todos los features de Loopi v2 y reenviarlos a Datadog SaaS.
+
+**RF-OBS-06 — Acceso interno al agente (sin acceso público)**
+
+El agente en Cloud Run DEBE estar configurado sin acceso público. El único principal
+autorizado para invocarlo DEBE ser el service account de App Engine mediante IAM.
+El backend DEBE autenticarse con el agente usando credenciales de la cuenta de servicio
+de GCP (no credenciales embebidas).
+
+**RF-OBS-07 — Credenciales en Secret Manager**
+
+La `DD_API_KEY` DEBE almacenarse en GCP Secret Manager. No debe aparecer en texto plano
+en ningún archivo del repositorio, incluyendo `app.yaml`, `app.prod.yaml` y archivos
+de CI/CD. El agente en Cloud Run la lee desde Secret Manager al arrancar.
+
+**RF-OBS-08 — Logs en GCP Cloud Logging exclusivamente**
+
+Los logs del backend DEBEN emitirse a stdout en formato JSON estructurado. GCP Cloud
+Logging los captura automáticamente. No se configura ningún reenvío de logs a Datadog:
+Datadog se usa exclusivamente para APM (trazas) y métricas.
+
+**RF-OBS-09 — Overhead máximo tolerable**
+
+El overhead introducido por la instrumentación OTel (spans + métricas) NO DEBE superar
+5 ms adicionales por request en el percentil 99, medido en stage bajo carga representativa.
+
+> **Convención de métricas y spans para features**: las reglas de nomenclatura, cardinalidad
+> de etiquetas y la plantilla de la sección `## Observabilidad` que cada feature debe incluir
+> en su `spec.md` están definidas en la **Constitución §VI** y en
+> `.specify/templates/spec-template.md`. Esta spec no las replica.
 
 ### Entidades Clave
 
-- **Datadog Agent**: Servicio intermediario desplegado en Cloud Run que recibe datos OTLP
-  del backend Go y los reenvía a la plataforma Datadog. Actúa como receptor OTLP y
-  enriquecedor de metadata.
-- **Sink de Cloud Logging**: Regla de exportación en GCP que filtra logs del recurso
-  `gae_app` y los publica en Pub/Sub.
-- **Topic Pub/Sub `datadog-logs`**: Canal de transporte de logs entre Cloud Logging
-  y la integración Datadog. Actúa como buffer con retención configurable.
-- **Service Account Datadog**: Identidad GCP con permisos mínimos para que Datadog SaaS
-  lea métricas de Cloud Monitoring y consuma logs de Pub/Sub.
-- **Secret `DD_API_KEY`**: Credencial almacenada en GCP Secret Manager, accesible
-  únicamente por el service account de App Engine y el agente en Cloud Run.
+- **Paquete `internal/observability`**: Módulo Go compartido que inicializa y gestiona
+  el ciclo de vida de los providers OTel globales. Es el único componente que conoce
+  el endpoint del agente y las credenciales de configuración.
+
+- **Datadog Agent (Cloud Run)**: Servicio intermediario que recibe datos OTLP del backend
+  y los reenvía a Datadog SaaS. Actúa como receptor OTLP, enriquecedor de metadata y
+  buffer ante inestabilidad de red.
+
+- **Driver BD instrumentado**: Reemplazo transparente del driver MySQL estándar que
+  genera spans OTel automáticos por cada operación de base de datos.
+
+- **Secret `DD_API_KEY`**: Credencial en GCP Secret Manager. Accesible solo por el
+  service account del agente en Cloud Run y el service account de App Engine.
 
 ---
 
@@ -197,39 +269,52 @@ verificando que la alerta se activa en Datadog Monitors antes de que pasen 5 min
 
 ### Resultados Medibles
 
-- **SC-OBS-01**: Un desarrollador puede identificar la causa raíz de una degradación de
-  autenticación en **menos de 5 minutos** desde que detecta el síntoma, usando solo
-  Datadog (trazas + métricas + logs).
-- **SC-OBS-02**: Los logs de App Engine aparecen en Datadog Log Management en **menos de
-  60 segundos** desde que se emiten.
-- **SC-OBS-03**: Las trazas OTel de autenticación aparecen en Datadog APM en **menos de
-  30 segundos** desde que ocurre el evento.
-- **SC-OBS-04**: Las alertas de anomalía se disparan en **menos de 5 minutos** desde que
-  se supera el umbral definido.
-- **SC-OBS-05**: El sistema opera **sin degradación de rendimiento** atribuible a la
-  instrumentación: el overhead de OTel no supera 5 ms adicionales por request de login.
-- **SC-OBS-06**: En entorno local (sin configuración de observabilidad), el backend arranca
-  y opera **sin errores** relacionados con OTel o Datadog.
-- **SC-OBS-07**: **100 % de los eventos críticos** de autenticación (login exitoso, login
-  fallido, logout, bloqueo de cuenta) son visibles en Datadog dentro de la ventana de
-  retención configurada.
+- **SC-OBS-01**: Un desarrollador puede implementar un nuevo feature y obtener sus
+  trazas en Datadog APM **sin escribir ningún código de configuración de observabilidad**:
+  solo importa el paquete compartido y usa `otel.Tracer()` o `otel.Meter()`.
+
+- **SC-OBS-02**: Las trazas de cualquier request al backend aparecen en Datadog APM
+  en **menos de 30 segundos** desde que ocurre el evento.
+
+- **SC-OBS-03**: Los spans de queries de BD aparecen como hijos del span HTTP correspondiente,
+  con **latencia por query visible** sin instrumentación adicional en los repositorios.
+
+- **SC-OBS-04**: El overhead de la instrumentación OTel **no supera 5 ms** adicionales
+  por request en el percentil 99, medido bajo carga representativa en stage.
+
+- **SC-OBS-05**: El backend arranca y opera **sin errores** en entorno local sin
+  `OTEL_EXPORTER_OTLP_ENDPOINT` configurado.
+
+- **SC-OBS-06**: **Ninguna credencial de Datadog** aparece en texto plano en el
+  repositorio: ni en `app.yaml`, ni en `app.prod.yaml`, ni en archivos de CI/CD.
+
+- **SC-OBS-07**: El agente Datadog en Cloud Run devuelve **HTTP 403** ante cualquier
+  llamada desde un origen no autorizado (sin el service account de App Engine).
+
+- **SC-OBS-08**: Los features futuros pueden declarar sus métricas en su `spec.md`
+  siguiendo la convención definida en esta spec y **sin necesidad de aprobar una nueva
+  RFC de observabilidad**.
 
 ---
 
 ## Supuestos
 
-- El proyecto despliega en **GCP App Engine Standard**, que no soporta sidecars; el
-  agente Datadog corre como servicio independiente en Cloud Run.
-- Los logs ya se emiten como JSON estructurado a stdout desde el backend Go; este feature
-  no requiere cambiar el formato de logging existente, sino garantizar el pipeline completo.
-- El Datadog site es `datadoghq.com` (US); si se usara el site EU, los endpoints
-  cambian y debe actualizarse la configuración.
-- Cloud Run está habilitado en el proyecto GCP de stage y producción.
-- El equipo tiene permisos de Owner o Editor en GCP para crear service accounts y sinks.
-- La instrumentación específica de autenticación (RF-OBS-11 a RF-OBS-14) ya tiene
-  implementación parcial en `internal/auth/metrics.go` y `internal/auth/otel.go`;
-  este feature completa el bootstrap del provider global y el pipeline de transporte.
-- Los dashboards de Datadog se crean manualmente en la interfaz web en una primera
-  iteración; la gestión como código (Terraform / Datadog provider) es diferida.
-- La retención de logs en Pub/Sub se configura en 7 días como mínimo para garantizar
-  que no haya pérdida ante backlog temporal.
+- El proyecto despliega en **GCP App Engine Standard** (sin soporte de sidecars); el
+  agente Datadog corre como servicio independiente en Cloud Run en la misma región.
+- El Datadog site es `datadoghq.com` (US); si se cambia al site EU, los endpoints del
+  agente cambian y debe actualizarse la configuración del agente.
+- Cloud Run está habilitado en los proyectos GCP de stage y producción.
+- El equipo tiene permisos de Owner o Editor en GCP para crear service accounts y
+  configurar IAM.
+- La instrumentación de autenticación parcialmente implementada en `internal/auth/`
+  (métricas y tracer) se migra para usar el paquete `internal/observability` como
+  provider: los instrumentos existentes no se reescriben, solo se conectan al provider
+  global que esta feature provee.
+- Datadog Database Monitoring (DBM) — que requiere acceso de red directo del agente
+  a MySQL — queda diferido. La instrumentación de BD vía OTel (spans automáticos por
+  query) cubre el 90% de los casos de diagnóstico sin infra adicional.
+- Los dashboards de Datadog se crean manualmente en la interfaz web en la primera
+  iteración; la gestión como código (Terraform + Datadog provider) es diferida.
+- La tasa de muestreo de trazas (sampling) se configura en `AlwaysSample` en stage;
+  en producción puede ajustarse si el volumen genera costos excesivos — esa decisión
+  se evalúa post-lanzamiento.
