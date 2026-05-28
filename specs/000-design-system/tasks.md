@@ -45,7 +45,7 @@
 
 - [ ] T003 [US1] Migrar `loopi-web-v2/src/app/auth/login/login.component.html`: reemplazar `<section class="login-container">` por `<div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">` + `<div class="card w-full max-w-sm">`; campos `<input>` agregan clase `input-field`; `<button type="submit">` pasa a `btn-primary w-full touch-manipulation`; mantener clases semánticas `error-message` e `info-message` para tests; eliminar clase `field` de los `<div>` wrapper
 
-- [ ] T004 [US1] Verificar compilación: ejecutar `ng build` en `loopi-web-v2/` y confirmar 0 errores SCSS; verificar que `styles.css` compilado ≤ 50 KB (SC-006)
+- [ ] T004 [US1] Verificar compilación de desarrollo: ejecutar `ng build` en `loopi-web-v2/` y confirmar 0 errores SCSS; anotar el tamaño aproximado de `styles.css` (verificación definitiva de SC-006 ≤ 50 KB se hace en T015 con build de producción)
 
 - [ ] T005 [P] [US1] Verificar viewport 320 px: abrir `/login` en DevTools con ancho 320 px y confirmar ausencia de scroll horizontal y todos los elementos visibles sin zoom (SC-003)
 
@@ -63,7 +63,7 @@
 
 ### Implementación US2
 
-- [ ] T007 [US2] Verificar contraste WCAG 2.1 AA: `btn-primary` (texto blanco sobre `#b86b3d`) → ratio esperado ~4.8:1 ≥ 4.5:1 ✅; `btn-secondary` (texto `#b86b3d` sobre blanco) → ratio esperado ~4.8:1 ✅; `input-field` placeholder (`text-gray-400` sobre blanco) → ratio esperado ~3.5:1 — si < 4.5:1 ajustar a `text-gray-500` (ratio ~4.6:1) (SC-002)
+- [ ] T007 [US2] Verificar contraste WCAG 2.1 AA con herramienta automatizada (axe DevTools o Lighthouse): `btn-primary` (blanco sobre `#b86b3d`) → ratio esperado ~4.8:1; `btn-secondary` (`#b86b3d` sobre blanco) → ~4.8:1; `input-field` placeholder (`text-gray-400` sobre blanco) → anotar ratio obtenido (SC-002). Si algún ratio < 4.5:1, crear tarea de corrección antes de continuar (ej. cambiar placeholder a `text-gray-500` para ~4.6:1)
 
 - [ ] T008 [US2] Verificar navegación por teclado en `/login`: presionar Tab desde el inicio de la página y confirmar: (1) campo "Usuario" recibe foco con ring visible `ring-2 ring-primary-500`, (2) Tab avanza a campo "Contraseña" con mismo ring, (3) Tab avanza al botón "Ingresar" con ring visible; confirmar que `aria-describedby` y `aria-invalid` en los inputs siguen funcionando post-migración (SC-004)
 
@@ -101,7 +101,9 @@
 
 - [ ] T013 [US4] Verificar estado de error en `input-field`: en DevTools añadir manualmente `class="input-field border-red-500"` a un input y confirmar borde rojo visible; agregar `<p class="mt-1 text-sm text-red-600">Error de prueba</p>` y confirmar texto de error debajo del campo (FR-005 / SC-004)
 
-**Checkpoint**: User Story 4 completa. Los 5 estados de interacción son verificables visualmente.
+- [ ] T018 [P] [US4] Verificar hover/disabled de `btn-secondary`: en DevTools forzar `:hover` sobre un `btn-secondary` y confirmar fondo `primary-50` visible; agregar `[disabled]` y confirmar `opacity-50` y `cursor-not-allowed` (FR-004 / SC-004)
+
+**Checkpoint**: User Story 4 completa. Los 5 estados de interacción son verificables visualmente en btn-primary, btn-secondary e input-field.
 
 ---
 
@@ -114,6 +116,8 @@
 - [ ] T015 [P] Ejecutar `ng build --configuration production` en `loopi-web-v2/` y verificar que el bundle de `styles.css` compilado sea ≤ 50 KB (SC-006); anotar el tamaño real en el PR
 
 - [ ] T016 [P] Ejecutar `npm run lint` en `loopi-web-v2/` y confirmar 0 errores — el nuevo template no debe introducir violaciones de `@angular-eslint`
+
+- [ ] T017 [P] Verificar carga de fuente Inter (SC-005): abrir la app en DevTools → Network → filtrar por "inter"; confirmar que el archivo `.woff2` se carga desde `localhost` (no desde `fonts.gstatic.com` ni CDN externo); ejecutar Lighthouse y anotar el CLS — debe ser 0 (Inter Variable incluye `font-display: swap` por defecto)
 
 ---
 
@@ -139,7 +143,8 @@
 ### Parallel Opportunities
 
 - T005 y T006 pueden ejecutarse en paralelo (distintos viewports, mismo archivo)
-- T014, T015 y T016 pueden ejecutarse en paralelo (comandos independientes)
+- T014, T015, T016 y T017 pueden ejecutarse en paralelo (comandos independientes)
+- T018 puede ejecutarse en paralelo con T011–T013 (US4, distintos componentes)
 - US2 (T007–T008) y US3 (T009–T010) pueden ejecutarse en paralelo
 
 ---
@@ -153,7 +158,7 @@ T001 → T002 → T003 → T004
 # Paralelo una vez T003 completado:
 T005 (320px)  ||  T006 (1280px)
 T007 (WCAG)   ||  T009 (touch)
-T014 (test)   ||  T015 (build) || T016 (lint)
+T014 (test)   ||  T015 (build) || T016 (lint) || T017 (font CLS)
 ```
 
 ---
@@ -173,8 +178,8 @@ T014 (test)   ||  T015 (build) || T016 (lint)
 1. T001 + T002 → Design system activo en la app
 2. T003 → Login usa las utilidades → **MVP visible**
 3. T007–T010 → Accesibilidad y móvil verificados
-4. T011–T013 → Estados de interacción verificados
-5. T014–T016 → CI verde, bundle verificado
+4. T011–T013, T018 → Estados de interacción verificados (btn-primary, btn-secondary, input-field)
+5. T014–T017 → CI verde, bundle verificado, fuente confirmada sin CDN
 
 ---
 

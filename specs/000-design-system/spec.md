@@ -185,9 +185,6 @@ distintos para normal, hover, foco, deshabilitado y carga.
 
 ### Measurable Outcomes
 
-- **SC-001**: Un desarrollador puede construir una vista completa
-  nueva usando únicamente las utilidades del design system en menos
-  de 30 minutos, sin escribir CSS personalizado.
 - **SC-002**: El 100% de los componentes base pasa auditoría WCAG
   2.1 AA de contraste de color (herramienta automatizada).
 - **SC-003**: Todas las vistas construidas con el design system se
