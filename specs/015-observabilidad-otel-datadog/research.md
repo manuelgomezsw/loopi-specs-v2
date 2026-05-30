@@ -141,7 +141,7 @@ el comportamiento no-op con `OTEL_EXPORTER_OTLP_ENDPOINT=""`.
 
 ## Decisión 7 — Imagen del Datadog Agent
 
-**Decisión**: `gcr.io/datadoghq/agent:7` (imagen oficial en Google Container Registry mirror).
+**Decisión**: `datadog/agent:7` (imagen oficial en Docker Hub; Cloud Run la descarga directamente sin configuración adicional).
 
 Variables de entorno del agente en Cloud Run:
 
@@ -154,11 +154,17 @@ Variables de entorno del agente en Cloud Run:
 | `DD_HOSTNAME` | `loopi-api-agent-<ENV>` | Identidad del agente en Datadog |
 | `DD_LOG_LEVEL` | `warn` | Reducir ruido en logs del agente |
 | `DD_DOGSTATSD_NON_LOCAL_TRAFFIC` | `false` | Sin DogStatsD (no se usa) |
+| `DD_PROCESS_AGENT_ENABLED` | `false` | Deshabilitar proceso agent (no aplica en Cloud Run) |
+| `DD_LOGS_ENABLED` | `false` | Sin recolección de logs (solo trazas y métricas) |
+| `DD_ENABLE_METADATA_COLLECTION` | `false` | Evitar crasheo por ausencia de metadata de host |
 
-**Rationale**: La imagen `gcr.io/datadoghq/agent:7` es el mirror oficial en GCR, sin
-necesidad de configurar Docker Hub pull secrets en Cloud Run. El tag `:7` (major version)
-recibe actualizaciones automáticas de patch. Para producción, se puede fijar a `:7.x.y`
-para builds reproducibles.
+**Rationale**: `gcr.io/datadoghq/agent:7` no existe como imagen pública accesible desde Cloud Run
+(verificado en producción — error PERMISSION_DENIED al hacer pull). Cloud Run soporta Docker Hub
+directamente con `datadog/agent:7`. El tag `:7` recibe actualizaciones automáticas de patch.
+Para producción, se puede fijar a `:7.x.y` para builds reproducibles.
+
+**Prerrequisito de IAM**: el SA de Cloud Run (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`)
+necesita `roles/secretmanager.secretAccessor` sobre el secret `DD_API_KEY` antes del deploy.
 
 ---
 

@@ -46,7 +46,7 @@ gcloud secrets versions access latest --secret=DD_API_KEY --project=loopi-stage-
 ```bash
 # Stage
 gcloud run deploy dd-agent \
-  --image=gcr.io/datadoghq/agent:7 \
+  --image=datadog/agent:7 \
   --region=us-central1 \
   --port=4318 \
   --ingress=internal \
@@ -61,16 +61,28 @@ gcloud run deploy dd-agent \
   --set-env-vars="DD_HOSTNAME=loopi-api-agent-stage" \
   --set-env-vars="DD_LOG_LEVEL=warn" \
   --set-env-vars="DD_DOGSTATSD_NON_LOCAL_TRAFFIC=false" \
-  --project=loopi-stage-XXXXXX
+  --set-env-vars="DD_PROCESS_AGENT_ENABLED=false" \
+  --set-env-vars="DD_LOGS_ENABLED=false" \
+  --set-env-vars="DD_ENABLE_METADATA_COLLECTION=false" \
+  --project=loopi-dev-497600
 
-# Obtener URL interna del agente (guardar este valor para app.yaml)
+# Obtener URL interna del agente (guardar este valor para app.stage.yaml)
 gcloud run services describe dd-agent \
   --region=us-central1 \
-  --project=loopi-stage-XXXXXX \
+  --project=loopi-dev-497600 \
   --format='value(status.url)'
 ```
 
 Repetir con `--project=loopi-prod-497600` y `DD_HOSTNAME=loopi-api-agent-prod` para prod.
+
+**Nota**: Otorgar acceso al Secret Manager al SA de Cloud Run antes del deploy:
+```bash
+PROJECT_NUMBER=$(gcloud projects describe loopi-dev-497600 --format='value(projectNumber)')
+gcloud secrets add-iam-policy-binding DD_API_KEY \
+  --project=loopi-dev-497600 \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
 
 **Nota**: `--min-instances=1` es obligatorio para evitar cold starts que descartarían las
 primeras trazas del día. Con `--max-instances=1` el agente es un singleton por ambiente.
