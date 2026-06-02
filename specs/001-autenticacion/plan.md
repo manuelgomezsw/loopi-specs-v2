@@ -83,11 +83,12 @@ specs/001-autenticacion/
 loopi-api/
 ├── internal/
 │   ├── auth/
-│   │   ├── handler.go          # Handlers HTTP: login, logout, me
-│   │   ├── middleware.go        # Middleware JWT: firma → exp → blacklist
-│   │   ├── service.go          # Lógica: authenticate, revokeToken, validateSession
-│   │   ├── repository.go       # Cloud SQL: tokens_revocados INSERT/SELECT
-│   │   └── handler_test.go     # Tests con mocks de BD y service
+│   │   ├── handler.go          # HTTP: parsear request, llamar service, escribir response. Sin SQL.
+│   │   ├── middleware.go        # Middleware JWT: firma → exp → blacklist (3-step)
+│   │   ├── service.go          # Lógica de negocio: authenticate, revocarToken. Sin SQL ni *sql.DB.
+│   │   ├── repository.go       # TODO el SQL del dominio: tokens_revocados (insert/select/delete)
+│   │   │                       # + usuarios (buscar, actualizar intentos_fallidos, bloquear)
+│   │   └── handler_test.go     # Tests con mocks de Repository y Service
 │   └── jobs/
 │       └── limpiar_tokens.go   # Handler: DELETE tokens_revocados WHERE expira_en < NOW()
 ├── migrations/
