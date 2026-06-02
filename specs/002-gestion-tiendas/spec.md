@@ -7,6 +7,19 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-05-23
+
+- Q: ¿Debe el sistema registrar quién y cuándo realizó cada operación de gestión (creación, edición, inactivación/reactivación) sobre una tienda? → A: Sí, campos de auditoría completos — agregar `creado_por`, `creado_en`, `actualizado_por`, `actualizado_en` a la entidad `Tienda`
+- Q: ¿Necesita la entidad `Tienda` un código corto o identificador externo único para integrarse con el POS? → A: Sí, código corto obligatorio — campo `codigo` único, no editable tras creación, usado como clave de integración con el POS
+- Q: ¿Debe el listado de tiendas incluir filtrado por estado y/o búsqueda por nombre? → A: Solo filtrado por estado — selector activa/inactiva/todas; sin campo de búsqueda por texto
+- Q: ¿La unicidad del nombre de tienda debe ser insensible a mayúsculas/minúsculas? → A: Case-insensitive — `"Tienda Norte"` y `"TIENDA NORTE"` se consideran el mismo nombre
+- Q: Al reactivar una tienda inactiva, ¿debe el sistema pedir confirmación explícita al admin? → A: Confirmación simple — diálogo de confirmación antes de ejecutar, sin precondiciones adicionales
+- Q: Si el `codigo` llega en minúsculas, ¿el sistema falla o normaliza? → A: El sistema normaliza automáticamente el `codigo` a mayúsculas; no retorna error por capitalización
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Crear una tienda nueva (Prioridad: P1)
@@ -34,6 +47,10 @@ el listado de tiendas activas y que es seleccionable como contexto en el panel d
 3. **Dado** que un líder de tienda o barista está autenticado,
    **Cuando** intenta acceder a la pantalla de gestión de tiendas,
    **Entonces** el sistema deniega el acceso; solo el admin puede ver y gestionar tiendas.
+
+4. **Dado** que ya existe una tienda con el código `"TDA-001"`,
+   **Cuando** el admin intenta crear otra tienda con el mismo código,
+   **Entonces** el sistema rechaza la operación con un mensaje indicando que el código ya existe.
 
 ---
 
@@ -89,6 +106,11 @@ aparece como opción para iniciar inventarios o pedidos, pero su historial sigue
    **Entonces** el sistema les permite autenticarse pero no encuentran operaciones disponibles
    en su tienda inactiva.
 
+4. **Dado** que una tienda ya está inactiva,
+   **Cuando** el admin intenta inactivarla nuevamente,
+   **Entonces** el sistema rechaza la operación con un mensaje indicando que la tienda
+   ya se encuentra inactiva.
+
 ---
 
 ### Historia de Usuario 4 — Ver el listado de tiendas (Prioridad: P1)
@@ -112,6 +134,10 @@ comprobando que el listado las muestra todas con su estado correcto.
    **Cuando** hace clic en una tienda,
    **Entonces** puede ver y editar todos sus datos.
 
+3. **Dado** que no existe ninguna tienda registrada en el sistema,
+   **Cuando** el admin accede al listado de tiendas,
+   **Entonces** el sistema muestra un estado vacío con un mensaje que invita a crear la primera tienda.
+
 ---
 
 ## Requisitos Funcionales
@@ -119,15 +145,27 @@ comprobando que el listado las muestra todas con su estado correcto.
 ### RF-TDA-01: Creación de tiendas
 
 - RF-TDA-01.1: Solo el administrador puede crear tiendas. Cualquier otro rol recibe acceso denegado.
-- RF-TDA-01.2: Una tienda requiere como mínimo: nombre, dirección, ciudad y teléfono.
-- RF-TDA-01.3: El nombre de la tienda es único en todo el sistema. El sistema rechaza nombres duplicados.
+- RF-TDA-01.2: Una tienda requiere como mínimo: codigo, nombre, dirección, ciudad y teléfono.
+- RF-TDA-01.3: El nombre de la tienda es único en todo el sistema con comparación case-insensitive
+  (ej. `"Tienda Norte"` y `"TIENDA NORTE"` se consideran duplicados). La unicidad aplica sobre
+  todas las tiendas independientemente de su estado (activas e inactivas). El sistema rechaza
+  nombres duplicados.
 - RF-TDA-01.4: Una tienda recién creada queda en estado activo por defecto.
+- RF-TDA-01.5: El campo `codigo` es único en todo el sistema, no puede estar vacío y no puede
+  modificarse una vez creada la tienda. El sistema rechaza códigos duplicados. El sistema
+  normaliza automáticamente el `codigo` a mayúsculas antes de guardarlo y antes de verificar
+  la unicidad; no retorna error por capitalización.
+- RF-TDA-01.6: El `codigo` se usa como clave de integración con el sistema POS en la feature
+  `012-ventas-integracion-pos`; su formato admite letras (A-Z), dígitos (0-9) y guiones (`-`),
+  con un máximo de 20 caracteres (ej. `"TDA-001"`). El sistema almacena el `codigo` siempre
+  en mayúsculas.
 
 ### RF-TDA-02: Edición de tiendas
 
 - RF-TDA-02.1: Solo el administrador puede editar los datos de una tienda.
-- RF-TDA-02.2: Se pueden editar: nombre, dirección, ciudad y teléfono.
-- RF-TDA-02.3: Al editar el nombre, el sistema verifica que no exista otra tienda con ese nombre.
+- RF-TDA-02.2: Se pueden editar: nombre, dirección, ciudad y teléfono. El campo `codigo` no es editable.
+- RF-TDA-02.3: Al editar el nombre, el sistema verifica con comparación case-insensitive que no
+  exista otra tienda con ese nombre.
 - RF-TDA-02.4: La edición no afecta el historial operativo de la tienda (inventarios, pedidos,
   mermas previos se conservan).
 
@@ -138,18 +176,30 @@ comprobando que el listado las muestra todas con su estado correcto.
   de caja menor. El sistema bloquea estas operaciones con mensaje explicativo.
 - RF-TDA-03.3: El historial de una tienda inactiva (inventarios, pedidos, mermas, ventas)
   es accesible para el administrador.
-- RF-TDA-03.4: Una tienda inactiva puede volver a activarse. Al reactivarse, retoma su
-  operación normal sin perder el historial previo.
+- RF-TDA-03.4: Una tienda inactiva puede volver a activarse. El sistema muestra un diálogo de
+  confirmación simple ("¿Reactivar esta tienda?") antes de ejecutar la operación. Al reactivarse,
+  retoma su operación normal sin perder el historial previo y sin precondiciones adicionales.
 - RF-TDA-03.5: No es posible eliminar una tienda; solo inactivarla.
+- RF-TDA-03.6: Si el admin intenta inactivar una tienda ya inactiva, o reactivar una tienda
+  ya activa, el sistema rechaza la operación con un mensaje explicativo. La operación no es
+  idempotente.
 
 ### RF-TDA-04: Listado y consulta
 
-- RF-TDA-04.1: El administrador puede ver el listado de todas las tiendas (activas e inactivas)
-  con nombre, ciudad y estado.
-- RF-TDA-04.2: Desde el listado, el administrador puede acceder al detalle y edición de
+- RF-TDA-04.1: Solo el administrador puede consultar el listado y el detalle de tiendas.
+  Cualquier otro rol recibe acceso denegado.
+- RF-TDA-04.2: El administrador puede ver el listado de todas las tiendas (activas e inactivas)
+  con nombre, codigo, ciudad y estado. El listado se ordena por nombre ascendente por defecto.
+- RF-TDA-04.3: El listado incluye un selector de filtro con tres opciones: Todas / Activas / Inactivas.
+  Por defecto muestra todas. No incluye búsqueda por texto.
+- RF-TDA-04.4: Cuando no existen tiendas registradas, el listado muestra un estado vacío con
+  un mensaje que invita al admin a crear la primera tienda.
+- RF-TDA-04.5: Desde el listado, el administrador puede acceder al detalle y edición de
   cualquier tienda.
-- RF-TDA-04.3: Las tiendas activas aparecen en el selector global de tienda del panel del
-  administrador. Las inactivas no aparecen en dicho selector.
+- RF-TDA-04.6: Las tiendas activas aparecen en el selector global de tienda del panel del
+  administrador. Las inactivas no aparecen en dicho selector. *(El selector global es un
+  componente compartido de layout/navegación; su implementación corresponde a otra feature.
+  `002-gestion-tiendas` provee el dato `activo` a través de los endpoints de listado.)*
 
 ### RF-TDA-05: Aislamiento de datos por tienda
 
@@ -157,6 +207,25 @@ comprobando que el listado las muestra todas con su estado correcto.
   venta) registra el identificador de la tienda donde ocurrió.
 - RF-TDA-05.2: Los empleados con rol lider_tienda y barista solo acceden a datos de su tienda
   asignada. El sistema filtra automáticamente por tienda en todos los módulos operacionales.
+
+### RF-TDA-06: Auditoría de operaciones de gestión
+
+- RF-TDA-06.1: El sistema registra automáticamente `creado_por` y `creado_en` al crear una tienda.
+- RF-TDA-06.2: El sistema registra automáticamente `actualizado_por` y `actualizado_en` al editar,
+  inactivar o reactivar una tienda.
+- RF-TDA-06.3: Los campos de auditoría (`creado_por`, `actualizado_por`) almacenan el identificador
+  del administrador que ejecutó la operación.
+- RF-TDA-06.4: Los campos de auditoría son de solo lectura; no pueden ser modificados directamente
+  por ningún usuario.
+
+### RF-TDA-07: Retroalimentación visual al admin
+
+- RF-TDA-07.1: Tras cada operación exitosa (crear, editar, inactivar, reactivar), el sistema
+  muestra al admin un mensaje de confirmación que indica qué operación se completó y sobre
+  qué tienda.
+- RF-TDA-07.2: Tras cada operación fallida (nombre duplicado, código duplicado, estado
+  inválido), el sistema muestra un mensaje de error descriptivo. Los errores de campo
+  se resaltan en el formulario correspondiente.
 
 ---
 
@@ -172,6 +241,8 @@ comprobando que el listado las muestra todas con su estado correcto.
   duplicado en el momento de crear o editar.
 - **Aislamiento operativo**: Ningún empleado de tienda puede ver ni operar datos de una tienda
   distinta a la suya; el 100% de las operaciones se filtran por tienda.
+- **Trazabilidad de gestión**: El 100% de las operaciones de creación, edición, inactivación
+  y reactivación quedan registradas con el identificador del admin y el timestamp de la operación.
 
 ---
 
@@ -179,7 +250,7 @@ comprobando que el listado las muestra todas con su estado correcto.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Tienda` | nombre (único), dirección, ciudad, teléfono, activo |
+| `Tienda` | codigo (único, inmutable), nombre (único), dirección, ciudad, teléfono, activo, creado_por, creado_en, actualizado_por, actualizado_en |
 
 ---
 
@@ -187,9 +258,10 @@ comprobando que el listado las muestra todas con su estado correcto.
 
 ### Dependencias
 
-- **001-autenticacion**: El admin debe estar autenticado para gestionar tiendas. El identificador
-  de tienda (`tienda_id`) queda registrado en la sesión de lider_tienda y barista al momento
-  del login.
+- **001-autenticacion**: El admin debe estar autenticado para gestionar tiendas. Los endpoints
+  de tiendas requieren los claims `rol` (para RBAC) y `user_id` (para registrar `creado_por`
+  y `actualizado_por` en auditoría). El identificador de tienda (`tienda_id`) queda registrado
+  en la sesión de `lider_tienda` y `barista` al momento del login.
 - **003-empleados** (posterior): La tienda es prerequisito para asignar empleados. La edición
   de la tienda asignada a un empleado corresponde a esa feature.
 
@@ -199,4 +271,9 @@ comprobando que el listado las muestra todas con su estado correcto.
   a la misma marca.
 - El administrador puede reactivar una tienda inactiva sin restricciones adicionales.
 - No se maneja historial de cambios de nombre de tienda en esta versión; el nombre actual
-  es el único visible en reportes históricos.
+  es el único visible en reportes históricos. **Impacto cross-feature**: las features 009–014
+  que referencian tiendas por `tienda_id` mostrarán siempre el nombre vigente al momento de
+  consultar, no el nombre que tenía la tienda cuando ocurrió la operación histórica.
+- Los usuarios (admins) no se eliminan físicamente del sistema; solo se inactivan. Por tanto,
+  las FK de auditoría (`creado_por`, `actualizado_por`) en la tabla `tiendas` nunca quedan
+  huérfanas.
