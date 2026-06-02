@@ -64,6 +64,9 @@ Comando: `migrate -path ./db/migrations -database $DB_DSN down 2`
   `ResetContrasenaResponse`, `ListarEmpleadosParams` según contracts/api.md
 - [ ] T008 Crear `loopi-api-v2/middleware/solo_admin.go` que extrae claims JWT y verifica
   `rol == "admin"` retornando HTTP 403 `{error:"acceso_denegado"}` si no cumple;
+  al retornar HTTP 403 emitir log estructurado con `LogOperacion` (T045) con campos
+  `operacion:"acceso_denegado"`, `endpoint` (ruta del request), `user_id` (del JWT si
+  disponible), `motivo:"rol_insuficiente"` (RF-EMP-05-A.4);
   **verificar primero** que `autenticacion.ExtraerClaims()` (o equivalente) está exportado
   en el paquete de 001-autenticacion — si no lo está, crear wrapper local en
   `loopi-api-v2/internal/middleware/claims.go` antes de continuar
@@ -154,8 +157,11 @@ con nueva tienda → HTTP 200; intentar asignar tienda inactiva → HTTP 422.
   campos enviados; nunca actualizar el campo `usuario`
 - [ ] T020 [HU2] Implementar `EditarEmpleado(ctx, actorID, empleadoID int64, req EditarEmpleadoRequest) (*Empleado, error)`
   en `loopi-api-v2/internal/empleados/service.go` con: llamar `ObtenerTiendaActivaPorID` (T047)
-  si rol requiere tienda, limpiar `tienda_id` automáticamente si rol cambia a admin, registrar
-  audit log EDITAR con `campos_anteriores` y `campos_nuevos` (excluir `contrasena_hash`)
+  si rol requiere tienda, limpiar `tienda_id` automáticamente si rol cambia a admin;
+  si el campo `rol` cambia **desde** admin a otro rol, verificar
+  `ContarAdminsActivosExcluyendo(ctx, tx, empleadoID) > 0` dentro de la misma TX —
+  retornar `ErrUltimoAdminActivo` si falla (RF-EMP-02.6); registrar audit log EDITAR
+  con `campos_anteriores` y `campos_nuevos` (excluir `contrasena_hash`)
 - [ ] T021 [HU2] Implementar handler `PUT /api/v1/empleados/{id}` en
   `loopi-api-v2/internal/empleados/handler.go` con middleware `solo_admin`;
   retorna HTTP 200 con empleado actualizado (sin `contrasena_hash`);
