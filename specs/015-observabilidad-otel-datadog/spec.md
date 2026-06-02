@@ -184,40 +184,40 @@ archivos de configuración. Ningún resultado debe contener el valor real de la 
 
 ### Requisitos Funcionales
 
-**RF-OBS-01 — Paquete de observabilidad compartido**
+#### RF-OBS-01 — Paquete de observabilidad compartido
 
 El sistema DEBE proveer un paquete reutilizable (`internal/observability`) que inicialice
 el `TracerProvider` y el `MeterProvider` globales de OTel, configurados para exportar
 a Datadog via OTLP/HTTP. Este paquete DEBE ser el único lugar donde se configuran los
 providers; ningún feature lo hace por su cuenta.
 
-**RF-OBS-02 — Modo no-op en entornos sin configuración**
+#### RF-OBS-02 — Modo no-op en entornos sin configuración
 
 Cuando `OTEL_EXPORTER_OTLP_ENDPOINT` no está definida en el entorno, el paquete DEBE
 operar en modo no-op: los instrumentos retornan implementaciones vacías, no hay errores
 ni goroutines extra, y el arranque del servidor no se ve afectado.
 
-**RF-OBS-03 — Atributos de recurso estándar**
+#### RF-OBS-03 — Atributos de recurso estándar
 
 Cada traza y métrica exportada DEBE incluir los atributos de recurso:
 `service.name` (valor: `loopi-api`), `deployment.environment` (dev/staging/production)
 y `service.version` (valor: variable de entorno `APP_VERSION`).
 
-**RF-OBS-04 — Instrumentación automática de queries de BD**
+#### RF-OBS-04 — Instrumentación automática de queries de BD
 
 El driver de base de datos DEBE estar envuelto para generar spans automáticos por cada
 operación: `SELECT`, `INSERT`, `UPDATE`, `DELETE`. Cada span DEBE incluir los atributos
 `db.system`, `db.operation` y `db.sql.table`. Esta instrumentación NO requiere cambios
 en los repositorios existentes ni en los futuros.
 
-**RF-OBS-05 — Envío directo al intake OTLP de Datadog**
+#### RF-OBS-05 — Envío directo al intake OTLP de Datadog
 
 El paquete `internal/observability` DEBE exportar trazas y métricas directamente al
 intake OTLP de Datadog (`https://otlp.datadoghq.com`), sin agente intermediario. La
 `DD_API_KEY` DEBE incluirse en cada request como header HTTP `DD-API-KEY`, configurado
 mediante la variable de entorno `OTEL_EXPORTER_OTLP_HEADERS`.
 
-**RF-OBS-06 — Protección de la DD_API_KEY**
+#### RF-OBS-06 — Protección de la DD_API_KEY
 
 La `DD_API_KEY` NUNCA DEBE aparecer en texto plano en ningún archivo del repositorio
 (incluyendo `app.yaml`, `app.prod.yaml`, archivos de CI/CD o código fuente). En stage y
@@ -225,31 +225,31 @@ producción se lee desde GCP Secret Manager y se inyecta como variable de entorn
 momento del deploy. En entorno local se define en un archivo `.env` excluido del
 repositorio por `.gitignore`.
 
-**RF-OBS-07 — Credenciales en Secret Manager**
+#### RF-OBS-07 — Credenciales en Secret Manager
 
 La `DD_API_KEY` DEBE almacenarse en GCP Secret Manager. No debe aparecer en texto plano
 en ningún archivo del repositorio, incluyendo `app.yaml`, `app.prod.yaml` y archivos
 de CI/CD. App Engine la lee desde Secret Manager al arrancar.
 
-**RF-OBS-08 — Logs en GCP Cloud Logging exclusivamente**
+#### RF-OBS-08 — Logs en GCP Cloud Logging exclusivamente
 
 Los logs del backend DEBEN emitirse a stdout en formato JSON estructurado. GCP Cloud
 Logging los captura automáticamente. No se configura ningún reenvío de logs a Datadog:
 Datadog se usa exclusivamente para APM (trazas) y métricas.
 
-**RF-OBS-09 — Overhead máximo tolerable**
+#### RF-OBS-09 — Overhead máximo tolerable
 
 El overhead introducido por la instrumentación OTel (spans + métricas) NO DEBE superar
 5 ms adicionales por request en el percentil 99, medido en stage bajo carga representativa.
 
-**RF-OBS-10 — Temporalidad delta para métricas**
+#### RF-OBS-10 — Temporalidad delta para métricas
 
 El exporter de métricas DEBE configurarse con `WithTemporalitySelector` retornando
 `metricdata.DeltaTemporality` para todos los tipos de instrumento. El intake OTLP de
 Datadog rechaza con HTTP 400 cualquier payload que contenga histogramas acumulativos o
 sumas monotónicas acumulativas (`AGGREGATION_TEMPORALITY_CUMULATIVE`).
 
-**RF-OBS-11 — Omitir exports de métricas vacíos**
+#### RF-OBS-11 — Omitir exports de métricas vacíos
 
 El `PeriodicReader` exporta cada 15 s incluso si no hay métricas registradas en el
 intervalo. El paquete DEBE envolver el exporter con un guard que omita la llamada HTTP

@@ -9,7 +9,7 @@
 **Decisión**: Agregar cinco paquetes nuevos al `go.mod`; versiones alineadas a `v1.43.0`
 ya presente en el módulo:
 
-```
+```text
 go.opentelemetry.io/otel/sdk                                    v1.43.0
 go.opentelemetry.io/otel/sdk/metric                             v1.43.0
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0
@@ -201,6 +201,7 @@ Esto es el patrón estándar del SDK OTel Go y evita acoplamiento al paquete `ob
 `DD-API-KEY` como header HTTP, sin Datadog Agent intermediario.
 
 **Rationale**:
+
 - `datadog/agent:7` en Cloud Run no funciona para OTLP ingestion: la arquitectura
   multi-proceso del agente (Core Agent + Trace Agent) es incompatible con el entorno
   sandboxed de Cloud Run (ver Decisión 7 descartada).

@@ -76,6 +76,7 @@ gcloud run services describe dd-agent \
 Repetir con `--project=loopi-prod-497600` y `DD_HOSTNAME=loopi-api-agent-prod` para prod.
 
 **Nota**: Otorgar acceso al Secret Manager al SA de Cloud Run antes del deploy:
+
 ```bash
 PROJECT_NUMBER=$(gcloud projects describe loopi-dev-497600 --format='value(projectNumber)')
 gcloud secrets add-iam-policy-binding DD_API_KEY \
