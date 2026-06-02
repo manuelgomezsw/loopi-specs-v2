@@ -9,6 +9,11 @@
 > G2 (T010 columnas explícitas), G3 (T047 VerificarTiendaActiva), G4 (T049 integración 001),
 > G5 (notas inmutabilidad en migraciones), I1 (T028 depende T023), I2 (T008 verificar interfaz),
 > D1 (rollback order), A1 (ruta concreta T040).
+>
+> **Revisión post-análisis** (2026-06-02): Correcciones aplicadas por `/speckit-analyze` (cobertura tests y monitoreo):
+> C1 (T050 tests frontend Angular — flujos P1), G1 (T043 ampliado con happy-paths, middleware y
+> unicidad de contraseña), G2 (T052 OTel SDK setup + T053 spans handlers críticos),
+> I1 (plan.md Principio VI actualizado a PARCIAL), U1 (T049 entregable concreto clarificado).
 
 ## Formato: `[ID] [P?] [HU?] Descripción con ruta exacta`
 
@@ -303,19 +308,63 @@ con 001-autenticacion.
   (400/403/404/409/422/500) según contracts/api.md en
   `loopi-api-v2/internal/empleados/handler.go`
 - [ ] T043 [P] Escribir tests unitarios en `loopi-api-v2/internal/empleados/service_test.go`
-  usando mocks: `TestCrearEmpleadoBaristaSinTienda` (→ error tienda_requerida),
+  y `loopi-api-v2/middleware/solo_admin_test.go` usando mocks —
+  casos negativos: `TestCrearEmpleadoBaristaSinTienda` (→ error tienda_requerida),
   `TestCrearEmpleadoUsuarioDuplicado` (→ error usuario_duplicado),
   `TestInactivarUltimoAdmin` (→ ErrUltimoAdminActivo),
   `TestResetContrasenaGeneraHashDistinto` (dos resets → hashes distintos),
   `TestEditarEmpleadoTiendaInactiva` (→ error tienda_no_existe),
-  `TestCambiarContrasenaMinimo4Chars` (→ HTTP 400 con 3 chars)
-- [ ] T049 Verificar integración RF-EMP-04.6 con 001-autenticacion: confirmar que el
-  middleware de sesión de 001-autenticacion lee el flag `requiere_cambio_contrasena`
-  (del JWT o de la BD) y retorna HTTP 403 en todos los endpoints excepto
-  `POST /api/v1/empleados/{id}/contrasena/cambiar`; documentar el punto de integración
-  en `specs/003-gestion-empleados/quickstart.md`
+  `TestCambiarContrasenaMinimo4Chars` (→ error con 3 chars);
+  casos positivos: `TestCrearEmpleadoExitoso` (barista + tienda → empleado activo, audit log CREAR,
+  contrasena_hash nunca expuesto), `TestEditarEmpleadoExitoso` (cambio de rol → audit log EDITAR
+  con campos_anteriores/campos_nuevos), `TestReactivarEmpleadoExitoso` (inactivo → activo,
+  credenciales conservadas intactas), `TestListarEmpleadosConFiltros` (búsqueda + paginación →
+  total correcto, sin contrasena_hash en ningún objeto);
+  middleware: `TestSoloAdminBloquea403SinJWT` (request sin token → HTTP 403),
+  `TestSoloAdminPermiteAdminValido` (JWT con rol=admin → pasa al handler);
+  generador: `TestGenerarContrasenaTempUnicidad` (10 llamadas consecutivas → 10 valores distintos,
+  longitud ≥ 12 chars)
+- [ ] T049 Verificar integración RF-EMP-04.6 con 001-autenticacion: revisar el código del
+  middleware de sesión de 001-autenticacion y confirmar que lee el flag
+  `requiere_cambio_contrasena` (del JWT o de la BD) y retorna HTTP 403 en todos los
+  endpoints excepto `POST /api/v1/empleados/{id}/contrasena/cambiar`;
+  **entregable concreto — uno de los dos caminos**:
+  (a) si el bloqueo **ya está implementado**: documentar el punto de integración en
+  `specs/003-gestion-empleados/quickstart.md` con curl de ejemplo que reproduzca el HTTP 403
+  y el HTTP 200 al cambiar la contraseña;
+  (b) si el bloqueo **no está implementado**: registrar issue de deuda técnica en el backlog
+  referenciando RF-EMP-04.6, añadir nota `⚠️ PENDIENTE: bloqueo por requiere_cambio_contrasena
+  no implementado en 001-autenticacion` en `quickstart.md` y no cerrar esta tarea hasta que
+  el issue sea asignado
 - [ ] T044 Ejecutar smoke tests del `quickstart.md` e incluir el escenario de
   cambio de contraseña con validación de mínimo 4 chars
+- [ ] T050 [P] Crear tests unitarios frontend en
+  `loopi-web-v2/src/app/features/empleados/pages/lista-empleados/lista-empleados.component.spec.ts`
+  y `formulario-empleado/formulario-empleado.component.spec.ts` — cubriendo flujos P1
+  (Constitución §Stack Técnico, CI gate `ng test`):
+  `lista-empleados`: renderiza tabla con empleados cargados, muestra empty state cuando
+  no hay resultados, emite búsqueda con debounce 300 ms, cambia página conservando filtros;
+  `formulario-empleado` (modo crear): envía `POST` exitoso y muestra modal contraseña temporal,
+  muestra error de campo en HTTP 409 (usuario duplicado) y HTTP 422 (tienda requerida/inactiva),
+  oculta selector de tienda cuando rol=admin;
+  `formulario-empleado` (modo edición): pre-carga datos del empleado, deshabilita campo `usuario`,
+  confirma inactivar/reactivar con diálogo y maneja respuesta `ultimo_admin_activo`,
+  muestra modal contraseña temporal tras reset exitoso
+- [ ] T052 Inicializar OTel SDK en `loopi-api-v2/cmd/api/main.go` (o el archivo de arranque
+  del servidor): configurar `TracerProvider` con exporter Datadog usando
+  `gopkg.in/DataDog/dd-trace-go.v1/ddtrace/opentelemetry` (o `go.opentelemetry.io/otel` con
+  `datadog-go` exporter según versión del proyecto); registrar el provider global con
+  `otel.SetTracerProvider`; configurar `MeterProvider` para métricas de latencia y tasa de
+  error; leer configuración de Datadog (`DD_SERVICE`, `DD_ENV`, `DD_VERSION`) desde variables
+  de entorno — **nunca hardcodear** (Constitución §Ambientes); añadir dependencia al `go.mod`
+  ⚠️ **T053 depende de esta tarea** — debe completarse antes de instrumentar handlers
+- [ ] T053 [P] Agregar spans OTel en los tres handlers más críticos para seguridad de acceso
+  en `loopi-api-v2/internal/empleados/handler.go`: `CrearEmpleado` (span con atributos
+  `empleado.rol`, `empleado.tienda_id`, `operacion:"crear_empleado"`), `ResetearContrasena`
+  (span con `empleado.id`, `operacion:"reset_contrasena"`), `CambiarEstado` (span con
+  `empleado.id`, `estado_nuevo`, `operacion:"cambiar_estado_empleado"`); incluir
+  `span.RecordError(err)` y `span.SetStatus(codes.Error, ...)` en los caminos de error;
+  verificar que las trazas aparecen en Datadog APM con `operacion` como nombre de operación
 
 ---
 
@@ -343,6 +392,7 @@ con 001-autenticacion.
 - T020 → depende de T047 (`ObtenerTiendaActivaPorID`)
 - T015, T021, T026, T031, T037 → dependen de T045 (helper logging)
 - Todos los handlers → dependen de T046 (router skeleton previo)
+- T053 → depende de T052 (OTel `TracerProvider` registrado antes de instrumentar handlers)
 
 ### Oportunidades de Paralelismo
 
@@ -405,4 +455,7 @@ Secuencial (después de T006):
 - Verificación atómica del último admin (RF-EMP-03.5) — TX en T025
 - bcrypt cost: `BcryptCostProd` en producción, `BcryptCostTests` en tests (T005)
 - Logging estructurado desde Fase 2 (T045) — Constitución Principio VI
+- OTel SDK en T052, spans en T053 — completar antes de primer deploy (Constitución Principio VI)
+- Tests backend en T043: 6 casos negativos + 4 happy-paths + 2 middleware + 1 unicidad generador
+- Tests frontend en T050: flujos P1 en `lista-empleados` y `formulario-empleado` (CI gate `ng test`)
 - Router skeleton en Fase 2 (T046) — los checkpoints de HU1–HU5 requieren endpoints accesibles
