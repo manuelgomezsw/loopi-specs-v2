@@ -350,6 +350,29 @@ verificando que las operaciones fallan tras ese tiempo.
 
 ---
 
+## Observabilidad
+
+### Trazas (Spans OTel)
+
+| Operación | Nombre del Span | Atributos Obligatorios |
+|---|---|---|
+| Proceso de login | `auth.login` | `auth.result` (`success` \| `invalid_credentials` \| `account_inactive` \| `account_locked`), `http.route` |
+
+### Métricas
+
+| Nombre | Tipo | Unidad | Descripción | Etiquetas |
+|---|---|---|---|---|
+| `auth.login.duration` | Histograma | ms | Duración total del proceso de login | `result` |
+| `auth.login.result` | Contador | — | Conteo de intentos de login por resultado | `result` |
+| `auth.blacklist.check.duration` | Histograma | ms | Latencia de la consulta a `tokens_revocados` en el middleware JWT | — |
+
+**Valores de la etiqueta `result`**: `success`, `invalid_credentials`, `account_inactive`, `account_locked`.
+
+**Nota de cardinalidad**: `user_id` nunca se incluye como etiqueta de métrica (alta cardinalidad).
+El `user_id` va como atributo del span `auth.login`, no como etiqueta de métrica.
+
+---
+
 ## Clarificaciones
 
 ### Sesión 2026-05-23

@@ -78,29 +78,15 @@ requiere configurar `WithInsecure()` o certificados para la comunicación intern
 
 ---
 
-## Decisión 4 — Seguridad del agente: ingress interno vs IAM tokens
+## Decisión 4 — Seguridad del exporter OTLP (descartada en su forma original)
 
-**Decisión**: Cloud Run con `--ingress=internal` (sin `--no-allow-unauthenticated`).
+**Decisión original**: Cloud Run con `--ingress=internal` para restringir el acceso al
+agente Datadog a tráfico interno del proyecto GCP.
 
-**Cómo funciona**:
-
-- `--ingress=internal` restringe el acceso al servicio Cloud Run al tráfico proveniente
-  del mismo proyecto GCP (App Engine Standard incluido) y descarta todo tráfico de internet.
-- App Engine Standard puede llamar a servicios Cloud Run internos del mismo proyecto
-  usando la URL `.run.app` directamente, sin headers de autenticación adicionales.
-- El exporter OTLP HTTP envía la petición directamente sin necesidad de tokens IAM.
-
-**Por qué no `--no-allow-unauthenticated`**:
-
-- Requeriría que el exporter OTLP incluyera un `Authorization: Bearer <ID_TOKEN>` en cada
-  petición. El SDK OTel soporta headers custom (`otlptracehttp.WithHeaders()`), pero los
-  tokens de identidad de GCP expiran cada hora y requieren lógica de refresco.
-- La gestión de tokens en el exporter añade complejidad sin beneficio real: el ingress
-  interno ya garantiza que solo tráfico interno GCP llega al agente.
-
-**Alternativa descartada**: `--ingress=all` + `--no-allow-unauthenticated` + token refresh.
-Más seguro en teoría pero innecesariamente complejo para tráfico interno entre servicios
-del mismo proyecto.
+**Motivo del descarte**: Con la adopción del intake OTLP directo a Datadog (ver Decisión
+10), ya no existe un agente en Cloud Run que proteger. La seguridad del exporter ahora
+recae en la `DD_API_KEY` que viaja como header `DD-API-KEY` en cada request OTLP. Ver
+RF-OBS-06 en la spec para los requisitos de protección de esa clave.
 
 ---
 
@@ -139,46 +125,38 @@ el comportamiento no-op con `OTEL_EXPORTER_OTLP_ENDPOINT=""`.
 
 ---
 
-## Decisión 7 — Imagen del Datadog Agent
+## Decisión 7 — Imagen del Datadog Agent (descartada)
 
-**Decisión**: `datadog/agent:7` (imagen oficial en Docker Hub; Cloud Run la descarga directamente sin configuración adicional).
+**Decisión original**: `datadog/agent:7` en Cloud Run como receptor OTLP intermediario.
 
-Variables de entorno del agente en Cloud Run:
+**Motivo del descarte**: El `datadog/agent:7` ejecuta dos procesos separados dentro del
+mismo contenedor — Core Agent y Trace Agent — que se comunican via gRPC interno en el
+puerto 5001. En Cloud Run, el Trace Agent no puede establecer esa conexión (logs reiterados
+de `connection refused` y `DeadlineExceeded` en `:5001`) porque el entorno sandboxed
+interfiere con la comunicación inter-proceso del agente.
 
-| Variable | Valor | Propósito |
-|---|---|---|
-| `DD_API_KEY` | desde Secret Manager | Autenticación con Datadog SaaS |
-| `DD_SITE` | `datadoghq.com` | Site US (ajustar si se usa EU) |
-| `DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT` | `0.0.0.0:4318` | Habilitar OTLP/HTTP |
-| `DD_APM_ENABLED` | `true` | Habilitar APM |
-| `DD_HOSTNAME` | `loopi-api-agent-<ENV>` | Identidad del agente en Datadog |
-| `DD_LOG_LEVEL` | `warn` | Reducir ruido en logs del agente |
-| `DD_DOGSTATSD_NON_LOCAL_TRAFFIC` | `false` | Sin DogStatsD (no se usa) |
-| `DD_PROCESS_AGENT_ENABLED` | `false` | Deshabilitar proceso agent (no aplica en Cloud Run) |
-| `DD_LOGS_ENABLED` | `false` | Sin recolección de logs (solo trazas y métricas) |
-| `DD_ENABLE_METADATA_COLLECTION` | `false` | Evitar crasheo por ausencia de metadata de host |
+Consecuencia: el receptor OTLP HTTP arranca en el puerto 4318 (el TCP probe de Cloud Run
+pasa), pero el path `/v1/traces` devuelve HTTP 404 porque el pipeline de trazas completo
+nunca se inicializa sin la conexión Core↔Trace.
 
-**Rationale**: `gcr.io/datadoghq/agent:7` no existe como imagen pública accesible desde Cloud Run
-(verificado en producción — error PERMISSION_DENIED al hacer pull). Cloud Run soporta Docker Hub
-directamente con `datadog/agent:7`. El tag `:7` recibe actualizaciones automáticas de patch.
-Para producción, se puede fijar a `:7.x.y` para builds reproducibles.
-
-**Prerrequisito de IAM**: el SA de Cloud Run (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`)
-necesita `roles/secretmanager.secretAccessor` sobre el secret `DD_API_KEY` antes del deploy.
+Ver **Decisión 10** para la alternativa adoptada.
 
 ---
 
 ## Decisión 8 — Configuración de `app.yaml`
 
-**Variables a agregar** (dev):
+**Variables a agregar** (dev local — `.env` excluido de git):
 
-```yaml
-env_variables:
-  ENV: dev
-  GCP_PROJECT: loopi-dev-497600
-  APP_VERSION: "1.0.0"
-  OTEL_SERVICE_NAME: "loopi-api"
-  OTEL_EXPORTER_OTLP_ENDPOINT: ""   # vacío en dev local → modo no-op
+```bash
+ENV=dev
+GCP_PROJECT=loopi-dev-497600
+APP_VERSION=1.0.0
+OTEL_SERVICE_NAME=loopi-api
+OTEL_EXPORTER_OTLP_ENDPOINT=   # vacío → modo no-op (sin envío a Datadog)
+OTEL_EXPORTER_OTLP_HEADERS=    # vacío en modo no-op
+# Para validar instrumentación desde dev, definir ambas:
+# OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.datadoghq.com
+# OTEL_EXPORTER_OTLP_HEADERS=DD-API-KEY=<clave-desde-secret-manager>
 ```
 
 **Variables a agregar** (prod en `app.prod.yaml`):
@@ -189,13 +167,13 @@ env_variables:
   GCP_PROJECT: loopi-prod-497600
   APP_VERSION: "1.0.0"
   OTEL_SERVICE_NAME: "loopi-api"
-  OTEL_EXPORTER_OTLP_ENDPOINT: "https://dd-agent-<HASH>-uc.a.run.app"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.datadoghq.com"
+  # OTEL_EXPORTER_OTLP_HEADERS se inyecta desde Secret Manager; nunca en texto plano.
+  # Valor esperado en runtime: "DD-API-KEY=<valor>"
 ```
 
-**Nota**: El endpoint del agente en Cloud Run se obtiene tras el primer deploy con
-`gcloud run services describe dd-agent --format='value(status.url)'`.
-La URL interna de Cloud Run (`.run.app`) es accesible desde App Engine Standard
-cuando el servicio tiene `--ingress=internal`.
+**Nota**: La `DD_API_KEY` nunca aparece en el repositorio. Se almacena en Secret Manager
+y se inyecta en la variable `OTEL_EXPORTER_OTLP_HEADERS` durante el deploy de App Engine.
 
 ---
 
@@ -214,3 +192,59 @@ Garantiza que los buffers del exporter se vacíen antes de que el proceso termin
 **No se exporta ningún tracer ni meter**: los features usan `otel.Tracer(scope)` y
 `otel.Meter(scope)` del paquete global, que apuntan al provider configurado por `Setup()`.
 Esto es el patrón estándar del SDK OTel Go y evita acoplamiento al paquete `observability`.
+
+---
+
+## Decisión 10 — Intake OTLP directo a Datadog vs agente intermediario
+
+**Decisión**: Enviar trazas y métricas directamente a `https://otlp.datadoghq.com` con
+`DD-API-KEY` como header HTTP, sin Datadog Agent intermediario.
+
+**Rationale**:
+- `datadog/agent:7` en Cloud Run no funciona para OTLP ingestion: la arquitectura
+  multi-proceso del agente (Core Agent + Trace Agent) es incompatible con el entorno
+  sandboxed de Cloud Run (ver Decisión 7 descartada).
+- Datadog soporta OTLP/HTTP nativo en su intake público desde la versión 7.35+ del
+  protocolo. No requiere componente intermediario.
+- Elimina el servicio Cloud Run del agente: menos infraestructura, sin costos de cómputo
+  adicionales y sin complejidad de IAM entre App Engine y Cloud Run.
+
+**Implicación de seguridad**: la `DD_API_KEY` viaja como header `DD-API-KEY` en cada
+request OTLP. En stage y producción se inyecta desde Secret Manager como variable de
+entorno en el momento del deploy; nunca aparece en archivos del repositorio.
+
+**Alternativa descartada**: Datadog Agent slim para contenedores serverless
+(`datadog/agent:7-serverless`). Requiere investigación adicional sobre compatibilidad con
+Cloud Run y no ofrece ventajas sobre el intake directo para este caso de uso.
+
+---
+
+## Decisión 11 — Temporalidad delta para el exporter de métricas
+
+**Decisión**: Configurar `otlpmetrichttp.WithTemporalitySelector` para retornar
+`metricdata.DeltaTemporality` en todos los tipos de instrumento.
+
+**Rationale**: El SDK OTel Go usa temporalidad `cumulative` por defecto para contadores
+e histogramas. El intake OTLP de Datadog rechaza con HTTP 400 cualquier payload que
+contenga `AGGREGATION_TEMPORALITY_CUMULATIVE` en histogramas o sumas monotónicas.
+
+**Implicación**: Los contadores se resetean a cero en cada export; el SDK no acumula
+estado entre intervalos. Datadog recibe los deltas y reconstruye los acumulativos
+internamente para sus dashboards y monitores.
+
+---
+
+## Decisión 12 — Wrapper para omitir exports de métricas vacíos
+
+**Decisión**: Envolver el `otlpmetrichttp.Exporter` con `skipEmptyExporter`, un tipo que
+implementa `metric.Exporter` retornando `nil` sin hacer el HTTP call cuando
+`ResourceMetrics.ScopeMetrics` está vacío.
+
+**Rationale**: El `PeriodicReader` del SDK OTel Go llama a `Export()` cada 15 s
+independientemente de si hay datos registrados. Si ningún instrumento ha registrado
+mediciones en ese intervalo, el payload enviado al intake es vacío y Datadog responde
+con HTTP 400 `Payload is empty`. El wrapper elimina ese error estructural sin suprimir
+exports con datos reales.
+
+**Alternativa considerada**: Incrementar el intervalo del `PeriodicReader`. No resuelve
+el problema: un intervalo mayor reduce la frecuencia del error pero no lo elimina.

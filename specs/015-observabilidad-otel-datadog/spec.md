@@ -66,7 +66,7 @@ Entrega valor completo de la fundación de forma aislada.
    configurado, **Cuando** el backend arranca, **Entonces** no hay errores relacionados
    con OTel y la aplicación funciona con normalidad (modo no-op silencioso).
 
-3. **Dado** que el Datadog Agent en Cloud Run no está disponible temporalmente,
+3. **Dado** que el intake OTLP de Datadog no está disponible temporalmente,
    **Cuando** el backend intenta exportar trazas, **Entonces** el backend no falla ni
    degrada su rendimiento: el exporter descarta silenciosamente los datos no enviados.
 
@@ -137,45 +137,43 @@ Explorer con las etiquetas correctas.
 
 ---
 
-### Historia 4 — Acceso seguro al agente desde App Engine (Prioridad: P3)
+### Historia 4 — Protección de la DD_API_KEY (Prioridad: P3)
 
-El equipo de seguridad revisa la configuración del agente Datadog en Cloud Run y confirma
-que el servicio no es accesible públicamente: solo el service account de App Engine tiene
-permiso para invocarlo. La API Key de Datadog no está en ningún archivo de configuración
-del repositorio.
+El equipo de seguridad revisa las configuraciones de App Engine y confirma que la
+`DD_API_KEY` no aparece en texto plano en ningún archivo del repositorio: en stage y
+producción se lee desde GCP Secret Manager; en entorno local el desarrollador la inyecta
+como variable de entorno en su sesión (archivo `.env` excluido por `.gitignore`).
 
-**Por qué esta prioridad**: Una API Key de Datadog expuesta permite a terceros enviar
-datos arbitrarios a la cuenta y agotar la cuota. Un agente expuesto públicamente amplía
-la superficie de ataque.
+**Por qué esta prioridad**: La `DD_API_KEY` viaja como header HTTP en cada request OTLP.
+Si queda expuesta en el repositorio, un tercero puede enviar datos arbitrarios a la cuenta
+Datadog y agotar la cuota.
 
-**Prueba independiente**: Intentar llamar al endpoint del agente en Cloud Run sin
-autenticación IAM debe retornar 403. Verificar en GCP IAM que solo el service account
-de App Engine tiene `roles/run.invoker`.
+**Prueba independiente**: Ejecutar `git log -S 'DD-API-KEY'` y buscar en todos los
+archivos de configuración. Ningún resultado debe contener el valor real de la clave.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el agente está desplegado en Cloud Run sin acceso público,
-   **Cuando** cualquier origen externo intenta llamar al endpoint OTLP del agente,
-   **Entonces** recibe una respuesta de acceso denegado (HTTP 403).
+1. **Dado** que el backend está desplegado en stage o producción,
+   **Cuando** un desarrollador revisa `app.yaml`, `app.prod.yaml` y los archivos de CI/CD,
+   **Entonces** no encuentra la `DD_API_KEY` en texto plano en ningún archivo del
+   repositorio.
 
-2. **Dado** que `DD_API_KEY` está almacenada en GCP Secret Manager,
-   **Cuando** un desarrollador revisa el repositorio (incluyendo `app.yaml` y
-   `app.prod.yaml`), **Entonces** no encuentra la clave de API en texto plano en ningún
-   archivo.
+2. **Dado** que un desarrollador configura su entorno local para enviar trazas a Datadog,
+   **Cuando** define `OTEL_EXPORTER_OTLP_HEADERS=DD-API-KEY=<valor>` en su `.env`,
+   **Entonces** ese archivo está listado en `.gitignore` y nunca se commitea.
 
 ---
 
 ### Casos Límite
 
-- Si el agente Datadog en Cloud Run tiene un cold start en el primer request del día,
-  las primeras trazas del período se pierden. Mitigación: configurar `--min-instances=1`
-  en Cloud Run para eliminar cold starts.
-- Si se rota la `DD_API_KEY` en Secret Manager sin actualizar la variable de entorno del
-  agente en Cloud Run, el agente rechaza el envío hasta que se redespliega. Los logs en
-  GCP no se ven afectados.
-- En entorno local, si un desarrollador configura `OTEL_EXPORTER_OTLP_ENDPOINT` apuntando
-  a un agente inexistente, los errores de conexión deben ser silenciosos (no crashear el
-  proceso ni llenar los logs de errores).
+- Si se rota la `DD_API_KEY` en Secret Manager sin actualizar la variable de entorno de
+  App Engine, el intake de Datadog rechaza los envíos con HTTP 401 hasta que se redeploya
+  la aplicación. Los logs en GCP no se ven afectados.
+- En entorno local, si `OTEL_EXPORTER_OTLP_ENDPOINT` no está configurado, el backend
+  opera en modo no-op silencioso sin errores (RF-OBS-02).
+- El intake OTLP de Datadog rechaza payloads vacíos con HTTP 400. El paquete
+  `internal/observability` omite el export cuando no hay métricas registradas en el
+  intervalo (RF-OBS-11).
 - Si dos features definen métricas con el mismo nombre pero unidades distintas, el segundo
   registro sobreescribe la definición del primero en el MeterProvider global. La convención
   de nomenclatura previene esto.
@@ -212,25 +210,26 @@ operación: `SELECT`, `INSERT`, `UPDATE`, `DELETE`. Cada span DEBE incluir los a
 `db.system`, `db.operation` y `db.sql.table`. Esta instrumentación NO requiere cambios
 en los repositorios existentes ni en los futuros.
 
-**RF-OBS-05 — Agente Datadog como receptor OTLP**
+**RF-OBS-05 — Envío directo al intake OTLP de Datadog**
 
-DEBE existir un servicio Datadog Agent desplegado en Cloud Run con el receptor OTLP
-habilitado en el protocolo HTTP (puerto 4318). Este agente DEBE recibir trazas y métricas
-de todos los features de Loopi v2 y reenviarlos a Datadog SaaS.
+El paquete `internal/observability` DEBE exportar trazas y métricas directamente al
+intake OTLP de Datadog (`https://otlp.datadoghq.com`), sin agente intermediario. La
+`DD_API_KEY` DEBE incluirse en cada request como header HTTP `DD-API-KEY`, configurado
+mediante la variable de entorno `OTEL_EXPORTER_OTLP_HEADERS`.
 
-**RF-OBS-06 — Acceso interno al agente (sin acceso público)**
+**RF-OBS-06 — Protección de la DD_API_KEY**
 
-El agente en Cloud Run DEBE estar configurado con `--ingress=internal`, de forma que
-solo el tráfico proveniente del mismo proyecto GCP (App Engine Standard incluido) pueda
-alcanzarlo. El tráfico de internet DEBE ser descartado por la capa de red de Cloud Run
-antes de llegar al agente. No se requieren tokens IAM en el exporter OTLP: el aislamiento
-lo garantiza la restricción de red, no la autenticación de llamada.
+La `DD_API_KEY` NUNCA DEBE aparecer en texto plano en ningún archivo del repositorio
+(incluyendo `app.yaml`, `app.prod.yaml`, archivos de CI/CD o código fuente). En stage y
+producción se lee desde GCP Secret Manager y se inyecta como variable de entorno en el
+momento del deploy. En entorno local se define en un archivo `.env` excluido del
+repositorio por `.gitignore`.
 
 **RF-OBS-07 — Credenciales en Secret Manager**
 
 La `DD_API_KEY` DEBE almacenarse en GCP Secret Manager. No debe aparecer en texto plano
 en ningún archivo del repositorio, incluyendo `app.yaml`, `app.prod.yaml` y archivos
-de CI/CD. El agente en Cloud Run la lee desde Secret Manager al arrancar.
+de CI/CD. App Engine la lee desde Secret Manager al arrancar.
 
 **RF-OBS-08 — Logs en GCP Cloud Logging exclusivamente**
 
@@ -243,6 +242,20 @@ Datadog se usa exclusivamente para APM (trazas) y métricas.
 El overhead introducido por la instrumentación OTel (spans + métricas) NO DEBE superar
 5 ms adicionales por request en el percentil 99, medido en stage bajo carga representativa.
 
+**RF-OBS-10 — Temporalidad delta para métricas**
+
+El exporter de métricas DEBE configurarse con `WithTemporalitySelector` retornando
+`metricdata.DeltaTemporality` para todos los tipos de instrumento. El intake OTLP de
+Datadog rechaza con HTTP 400 cualquier payload que contenga histogramas acumulativos o
+sumas monotónicas acumulativas (`AGGREGATION_TEMPORALITY_CUMULATIVE`).
+
+**RF-OBS-11 — Omitir exports de métricas vacíos**
+
+El `PeriodicReader` exporta cada 15 s incluso si no hay métricas registradas en el
+intervalo. El paquete DEBE envolver el exporter con un guard que omita la llamada HTTP
+si `ResourceMetrics.ScopeMetrics` está vacío. El intake de Datadog rechaza payloads
+vacíos con HTTP 400.
+
 > **Convención de métricas y spans para features**: las reglas de nomenclatura, cardinalidad
 > de etiquetas y la plantilla de la sección `## Observabilidad` que cada feature debe incluir
 > en su `spec.md` están definidas en la **Constitución §VI** y en
@@ -252,17 +265,17 @@ El overhead introducido por la instrumentación OTel (spans + métricas) NO DEBE
 
 - **Paquete `internal/observability`**: Módulo Go compartido que inicializa y gestiona
   el ciclo de vida de los providers OTel globales. Es el único componente que conoce
-  el endpoint del agente y las credenciales de configuración.
+  el endpoint del intake y las credenciales de configuración.
 
-- **Datadog Agent (Cloud Run)**: Servicio intermediario que recibe datos OTLP del backend
-  y los reenvía a Datadog SaaS. Actúa como receptor OTLP, enriquecedor de metadata y
-  buffer ante inestabilidad de red.
+- **Datadog OTLP Intake** (`https://otlp.datadoghq.com`): Endpoint público de Datadog
+  que acepta trazas y métricas en formato OTLP/HTTP directamente, sin agente intermediario.
+  Requiere `DD-API-KEY` como header HTTP en cada request.
 
 - **Driver BD instrumentado**: Reemplazo transparente del driver MySQL estándar que
   genera spans OTel automáticos por cada operación de base de datos.
 
-- **Secret `DD_API_KEY`**: Credencial en GCP Secret Manager. Accesible solo por el
-  service account del agente en Cloud Run y el service account de App Engine.
+- **Secret `DD_API_KEY`**: Credencial en GCP Secret Manager. Accesible por el service
+  account de App Engine para inyectarla como variable de entorno en el momento del deploy.
 
 ---
 
@@ -289,8 +302,8 @@ El overhead introducido por la instrumentación OTel (spans + métricas) NO DEBE
 - **SC-OBS-06**: **Ninguna credencial de Datadog** aparece en texto plano en el
   repositorio: ni en `app.yaml`, ni en `app.prod.yaml`, ni en archivos de CI/CD.
 
-- **SC-OBS-07**: El agente Datadog en Cloud Run devuelve **HTTP 403** ante cualquier
-  llamada desde un origen no autorizado (sin el service account de App Engine).
+- **SC-OBS-07**: La `DD_API_KEY` **no aparece en texto plano** en ningún archivo del
+  repositorio (verificable con `git log -S 'DD-API-KEY'` sin resultados con el valor real).
 
 - **SC-OBS-08**: Los features futuros pueden declarar sus métricas en su `spec.md`
   siguiendo la convención definida en esta spec y **sin necesidad de aprobar una nueva
@@ -300,11 +313,11 @@ El overhead introducido por la instrumentación OTel (spans + métricas) NO DEBE
 
 ## Supuestos
 
-- El proyecto despliega en **GCP App Engine Standard** (sin soporte de sidecars); el
-  agente Datadog corre como servicio independiente en Cloud Run en la misma región.
-- El Datadog site es `datadoghq.com` (US); si se cambia al site EU, los endpoints del
-  agente cambian y debe actualizarse la configuración del agente.
-- Cloud Run está habilitado en los proyectos GCP de stage y producción.
+- El proyecto despliega en **GCP App Engine Standard**. El backend envía trazas y métricas
+  directamente al intake OTLP de Datadog (`https://otlp.datadoghq.com`) sin agente
+  intermediario; no se requiere Cloud Run para observabilidad.
+- El Datadog site es `datadoghq.com` (US); si se cambia al site EU, el endpoint cambia a
+  `https://otlp.datadoghq.eu` y debe actualizarse `OTEL_EXPORTER_OTLP_ENDPOINT`.
 - El equipo tiene permisos de Owner o Editor en GCP para crear service accounts y
   configurar IAM.
 - La instrumentación de autenticación parcialmente implementada en `internal/auth/`
