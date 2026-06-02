@@ -350,7 +350,7 @@ con 001-autenticacion.
   `formulario-empleado` (modo edición): pre-carga datos del empleado, deshabilita campo `usuario`,
   confirma inactivar/reactivar con diálogo y maneja respuesta `ultimo_admin_activo`,
   muestra modal contraseña temporal tras reset exitoso
-- [ ] T052 Inicializar OTel SDK en `loopi-api-v2/cmd/api/main.go` (o el archivo de arranque
+- [ ] T052 [MEJORA] Inicializar OTel SDK en `loopi-api-v2/cmd/api/main.go` (o el archivo de arranque
   del servidor): configurar `TracerProvider` con exporter Datadog usando
   `gopkg.in/DataDog/dd-trace-go.v1/ddtrace/opentelemetry` (o `go.opentelemetry.io/otel` con
   `datadog-go` exporter según versión del proyecto); registrar el provider global con
@@ -358,7 +358,7 @@ con 001-autenticacion.
   error; leer configuración de Datadog (`DD_SERVICE`, `DD_ENV`, `DD_VERSION`) desde variables
   de entorno — **nunca hardcodear** (Constitución §Ambientes); añadir dependencia al `go.mod`
   ⚠️ **T053 depende de esta tarea** — debe completarse antes de instrumentar handlers
-- [ ] T053 [P] Agregar spans OTel en los tres handlers más críticos para seguridad de acceso
+- [ ] T053 [P] [MEJORA] Agregar spans OTel en los tres handlers más críticos para seguridad de acceso
   en `loopi-api-v2/internal/empleados/handler.go`: `CrearEmpleado` (span con atributos
   `empleado.rol`, `empleado.tienda_id`, `operacion:"crear_empleado"`), `ResetearContrasena`
   (span con `empleado.id`, `operacion:"reset_contrasena"`), `CambiarEstado` (span con
@@ -455,7 +455,7 @@ Secuencial (después de T006):
 - Verificación atómica del último admin (RF-EMP-03.5) — TX en T025
 - bcrypt cost: `BcryptCostProd` en producción, `BcryptCostTests` en tests (T005)
 - Logging estructurado desde Fase 2 (T045) — Constitución Principio VI
-- OTel SDK en T052, spans en T053 — completar antes de primer deploy (Constitución Principio VI)
+- OTel SDK en T052 y T053 — mejoras opcionales; Principio VI se cumple con T045+T041 (logs JSON → Datadog vía GCP); OTel MUST solo aplica a endpoints críticos listados en constitución (auth, inventario, stock, pedidos, ventas)
 - Tests backend en T043: 6 casos negativos + 4 happy-paths + 2 middleware + 1 unicidad generador
 - Tests frontend en T050: flujos P1 en `lista-empleados` y `formulario-empleado` (CI gate `ng test`)
 - Router skeleton en Fase 2 (T046) — los checkpoints de HU1–HU5 requieren endpoints accesibles
