@@ -200,6 +200,11 @@ estados, validando que el listado los muestra correctamente filtrados.
   las sesiones activas no se interrumpen hasta su expiración natural. La ventana máxima
   con permisos obsoletos equivale al TTL de sesión definido en RF-AUTH-01.3 de
   001-autenticacion.
+- RF-EMP-02.6: Un admin puede editar su propio perfil, incluyendo su propio rol. Si el
+  intento de cambio de rol resultaría en que el sistema quede sin ningún administrador
+  activo (es decir, es el único admin activo), el sistema rechaza la operación con el
+  mensaje: "No es posible cambiar el rol del último administrador activo." La verificación
+  es atómica (misma garantía que RF-EMP-03.5).
 
 ### RF-EMP-03: Inactivación y reactivación
 
@@ -246,6 +251,12 @@ estados, validando que el listado los muestra correctamente filtrados.
   `created_at` (timestamp UTC, no modificable). El campo `detalle` nunca incluye
   contraseñas ni hashes de contraseña, independientemente de la acción registrada.
 - RF-EMP-05-A.3: Los registros del audit log no pueden editarse ni eliminarse.
+- RF-EMP-05-A.4: Los intentos de acceso denegado a los endpoints de empleados quedan
+  registrados en el log estructurado JSON (vía `LogOperacion`) con los campos:
+  `operacion:"acceso_denegado"`, `endpoint`, `user_id` (si el token JWT es válido pero
+  el rol no cumple) y `motivo` (`rol_insuficiente` para HTTP 403 por RBAC). Estos eventos
+  **no** se insertan en `log_auditoria_empleados`; ese registro está reservado para
+  operaciones de escritura exitosas sobre empleados.
 
 ### RF-EMP-05: Listado y consulta
 

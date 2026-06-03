@@ -3,12 +3,21 @@
 **Entrada**: Documentos de diseño desde `/specs/003-gestion-empleados/`
 **Prerrequisitos**: plan.md ✅ · spec.md ✅ · research.md ✅ · data-model.md ✅ · contracts/api.md ✅
 **Repos**: `loopi-api-v2` (Go backend) · `loopi-web-v2` (Angular frontend)
+**Implementado**: 2026-06-02 — 52/52 tareas completadas · `go test ./... ✅` · `ng build ✅`
+**T049 cerrado** (camino A): auth migrado a leer `empleados`; `JWTMiddleware` bloquea HTTP 403 si
+`requiere_cambio_contrasena=true`; migración 005 agrega `bloqueado_hasta`/`intentos_fallidos` a
+`empleados`; documentado en `quickstart.md §6`.
 
 > **Revisión post-análisis** (2026-05-24): Correcciones aplicadas por `/speckit-analyze`:
 > C1 (logs → Fase 2), G1 (T048 cambio contraseña), O1 (T046 router → Fase 2),
 > G2 (T010 columnas explícitas), G3 (T047 VerificarTiendaActiva), G4 (T049 integración 001),
 > G5 (notas inmutabilidad en migraciones), I1 (T028 depende T023), I2 (T008 verificar interfaz),
 > D1 (rollback order), A1 (ruta concreta T040).
+>
+> **Revisión post-análisis** (2026-06-02): Correcciones aplicadas por `/speckit-analyze` (cobertura tests y monitoreo):
+> C1 (T050 tests frontend Angular — flujos P1), G1 (T043 ampliado con happy-paths, middleware y
+> unicidad de contraseña), G2 (T052 OTel SDK setup + T053 spans handlers críticos),
+> I1 (plan.md Principio VI actualizado a PARCIAL), U1 (T049 entregable concreto clarificado).
 
 ## Formato: `[ID] [P?] [HU?] Descripción con ruta exacta`
 
@@ -22,15 +31,15 @@
 
 **Propósito**: Crear las tablas `empleados` y `log_auditoria_empleados` en MySQL.
 
-- [ ] T001 Crear migración `NNNN_crear_tabla_empleados.up.sql` con DDL completo (columnas, índices,
+- [x] T001 Crear migración `NNNN_crear_tabla_empleados.up.sql` con DDL completo (columnas, índices,
   FK a tiendas) según data-model.md en `loopi-api-v2/db/migrations/`
-- [ ] T002 Crear migración `NNNN_crear_tabla_empleados.down.sql` con `DROP TABLE IF EXISTS empleados`
+- [x] T002 Crear migración `NNNN_crear_tabla_empleados.down.sql` con `DROP TABLE IF EXISTS empleados`
   en `loopi-api-v2/db/migrations/`
-- [ ] T003 [P] Crear migración `NNNN+1_crear_tabla_log_auditoria_empleados.up.sql` con DDL completo
+- [x] T003 [P] Crear migración `NNNN+1_crear_tabla_log_auditoria_empleados.up.sql` con DDL completo
   (columnas JSON, FKs a empleados) según data-model.md en `loopi-api-v2/db/migrations/`;
   añadir comentario SQL `-- INMUTABLE: no conceder UPDATE/DELETE al usuario de la aplicación`
   (RF-EMP-05-A.3)
-- [ ] T004 [P] Crear migración `NNNN+1_crear_tabla_log_auditoria_empleados.down.sql` con
+- [x] T004 [P] Crear migración `NNNN+1_crear_tabla_log_auditoria_empleados.down.sql` con
   `DROP TABLE IF EXISTS log_auditoria_empleados` en `loopi-api-v2/db/migrations/`
 
 **Punto de control**: Ejecutar `migrate -path ./db/migrations -database $DB_DSN up 2` y verificar
@@ -48,43 +57,46 @@ Comando: `migrate -path ./db/migrations -database $DB_DSN down 2`
 
 ⚠️ **CRÍTICO**: Ninguna historia de usuario puede comenzar hasta completar esta fase.
 
-- [ ] T005 Crear `loopi-api-v2/internal/config/hash.go` con constantes `BcryptCostProd = 12`
+- [x] T005 Crear `loopi-api-v2/internal/config/hash.go` con constantes `BcryptCostProd = 12`
   y `BcryptCostTests = 4` (según RD-07 en research.md)
-- [ ] T006 [P] Crear `loopi-api-v2/internal/empleados/model.go` con structs Go: `Empleado`,
+- [x] T006 [P] Crear `loopi-api-v2/internal/empleados/model.go` con structs Go: `Empleado`,
   `CrearEmpleadoRequest`, `EditarEmpleadoRequest`, `CambiarEstadoRequest`,
   `ListarEmpleadosParams`, `ListarEmpleadosResponse`, `CrearEmpleadoResponse`,
   `ResetContrasenaResponse` — todos los campos según contracts/api.md
-- [ ] T007 [P] Crear `loopi-web-v2/src/app/features/empleados/models/empleado.model.ts` con
+- [x] T007 [P] Crear `loopi-web-v2/src/app/features/empleados/models/empleado.model.ts` con
   interfaces TypeScript: `Empleado`, `ListaEmpleadosResponse`, `CrearEmpleadoResponse`,
   `ResetContrasenaResponse`, `ListarEmpleadosParams` según contracts/api.md
-- [ ] T008 Crear `loopi-api-v2/middleware/solo_admin.go` que extrae claims JWT y verifica
+- [x] T008 Crear `loopi-api-v2/middleware/solo_admin.go` que extrae claims JWT y verifica
   `rol == "admin"` retornando HTTP 403 `{error:"acceso_denegado"}` si no cumple;
+  al retornar HTTP 403 emitir log estructurado con `LogOperacion` (T045) con campos
+  `operacion:"acceso_denegado"`, `endpoint` (ruta del request), `user_id` (del JWT si
+  disponible), `motivo:"rol_insuficiente"` (RF-EMP-05-A.4);
   **verificar primero** que `autenticacion.ExtraerClaims()` (o equivalente) está exportado
   en el paquete de 001-autenticacion — si no lo está, crear wrapper local en
   `loopi-api-v2/internal/middleware/claims.go` antes de continuar
-- [ ] T009 Crear `loopi-api-v2/internal/auditoria/empleados_log.go` con función
+- [x] T009 Crear `loopi-api-v2/internal/auditoria/empleados_log.go` con función
   `RegistrarLog(ctx, tx *sql.Tx, actorID, empleadoID int64, accion string, detalle map[string]any) error`
   que inserta en `log_auditoria_empleados`; el campo `detalle` nunca debe incluir
   contraseñas ni hashes
-- [ ] T010 Crear `loopi-api-v2/internal/empleados/repository.go` con struct `Repository`,
+- [x] T010 Crear `loopi-api-v2/internal/empleados/repository.go` con struct `Repository`,
   constructor `NewRepository(db *sql.DB)` y función base `ObtenerPorID(ctx, id) (*Empleado, error)`
   que retorna `ErrNoEncontrado` si no existe; el SELECT debe usar columnas explícitas
   (id, nombre, apellido, usuario, rol, tienda_id, activo, requiere_cambio_contrasena,
   creado_en, actualizado_en) — **nunca incluir `contrasena_hash`** (RF-EMP-05.6)
-- [ ] T011 [P] Crear `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
+- [x] T011 [P] Crear `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
   como skeleton con `HttpClient` inyectado y la constante `private readonly base = '/api/v1/empleados'`
-- [ ] T045 [P] Crear helper de logging estructurado JSON en
+- [x] T045 [P] Crear helper de logging estructurado JSON en
   `loopi-api-v2/internal/middleware/logger.go` con función
   `LogOperacion(ctx, userID, rol, tiendaID int64, operacion string, extras map[string]any)`
   que emite JSON a stdout con los campos: `user_id`, `rol`, `tienda_id`, `operacion`,
   `timestamp`; campos adicionales via `extras` (ej. `empleado_id`, `duracion_ms`).
   **Constitución Principio VI**: los endpoints son críticos y deben ser monitoreables
   desde el primer deploy — este helper debe estar disponible antes de cualquier handler
-- [ ] T046 Registrar skeleton del router en `loopi-api-v2/cmd/api/main.go`
+- [x] T046 Registrar skeleton del router en `loopi-api-v2/cmd/api/main.go`
   (o `loopi-api-v2/internal/router/router.go` según estructura del proyecto) con las
   6 rutas `/api/v1/empleados` + middleware `solo_admin` apuntando a handlers stub
   `http.NotFound`; los stubs se reemplazan con implementaciones reales en cada fase
-- [ ] T047 Agregar función `ObtenerTiendaActivaPorID(ctx context.Context, id int64) error`
+- [x] T047 Agregar función `ObtenerTiendaActivaPorID(ctx context.Context, id int64) error`
   en `loopi-api-v2/internal/empleados/repository.go` que consulta la tabla `tiendas`
   y retorna `ErrTiendaNoExiste` si no existe o `ErrTiendaInactiva` si `activo = 0`;
   requerida por T014 (crear) y T020 (editar) para cumplir RF-EMP-01.2 y RF-EMP-02.3
@@ -102,30 +114,30 @@ temporal y el empleado puede autenticarse de inmediato.
 **Prueba Independiente**: `POST /api/v1/empleados` con rol barista + tienda_id válido → HTTP 201
 con `contrasena_temporal`; repetir sin tienda_id → HTTP 422; repetir con usuario duplicado → HTTP 409.
 
-- [ ] T012 [P] [HU1] Agregar funciones `InsertarEmpleado(ctx, tx, emp) (int64, error)` y
+- [x] T012 [P] [HU1] Agregar funciones `InsertarEmpleado(ctx, tx, emp) (int64, error)` y
   `ExistePorUsuario(ctx, usuario) (bool, error)` en `loopi-api-v2/internal/empleados/repository.go`
-- [ ] T013 [P] [HU1] Agregar función `generarContrasenaTemp() (string, error)` usando `crypto/rand`
+- [x] T013 [P] [HU1] Agregar función `generarContrasenaTemp() (string, error)` usando `crypto/rand`
   (9 bytes → base64 URL-safe = 12 chars) en `loopi-api-v2/internal/empleados/service.go`
   (según RD-01 en research.md)
-- [ ] T014 [HU1] Implementar `CrearEmpleado(ctx, actorID int64, req CrearEmpleadoRequest) (*CrearEmpleadoResponse, error)`
+- [x] T014 [HU1] Implementar `CrearEmpleado(ctx, actorID int64, req CrearEmpleadoRequest) (*CrearEmpleadoResponse, error)`
   en `loopi-api-v2/internal/empleados/service.go` con: validar campos obligatorios,
   llamar `ObtenerTiendaActivaPorID` (T047) para barista/lider_tienda, rechazar tienda para admin,
   verificar usuario único con `ExistePorUsuario`, generar contraseña temporal, hashear con
   bcrypt cost `BcryptCostProd`, insertar en TX, registrar audit log CREAR (sin contraseña en detalle)
-- [ ] T015 [HU1] Implementar handler `POST /api/v1/empleados` en
+- [x] T015 [HU1] Implementar handler `POST /api/v1/empleados` en
   `loopi-api-v2/internal/empleados/handler.go` con middleware `solo_admin`;
   responde HTTP 201 con `CrearEmpleadoResponse` incluyendo `contrasena_temporal`;
   **incluir `LogOperacion` (T045)** con campos `operacion:"crear_empleado"`, `empleado_id`,
   `duracion_ms`; reemplazar stub T046 con esta implementación
-- [ ] T016 [P] [HU1] Agregar método `crear(data: CrearEmpleadoRequest): Observable<CrearEmpleadoResponse>`
+- [x] T016 [P] [HU1] Agregar método `crear(data: CrearEmpleadoRequest): Observable<CrearEmpleadoResponse>`
   al servicio `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
-- [ ] T017 [HU1] Crear componente standalone
+- [x] T017 [HU1] Crear componente standalone
   `loopi-web-v2/src/app/features/empleados/pages/formulario-empleado/formulario-empleado.component.ts`
   (modo crear): formulario reactivo con campos nombre, apellido, usuario, rol, tienda_id
   (visible solo si rol ≠ admin), tipo_documento, numero_documento, telefono, email,
   fecha_nacimiento; manejar errores 409 (usuario duplicado) y 422 (tienda requerida/inactiva)
   resaltando el campo afectado
-- [ ] T018 [HU1] Añadir modal de un solo uso que muestra `contrasena_temporal` tras creación
+- [x] T018 [HU1] Añadir modal de un solo uso que muestra `contrasena_temporal` tras creación
   exitosa (no cierra hasta confirmar copia) en
   `loopi-web-v2/src/app/features/empleados/pages/formulario-empleado/formulario-empleado.component.ts`;
   añadir ruta `/empleados/nuevo` en
@@ -144,22 +156,25 @@ los cambios aplican en la próxima sesión.
 **Prueba Independiente**: `PUT /api/v1/empleados/{id}` cambiando rol de barista a lider_tienda
 con nueva tienda → HTTP 200; intentar asignar tienda inactiva → HTTP 422.
 
-- [ ] T019 [P] [HU2] Agregar función `ActualizarEmpleado(ctx, tx, id int64, campos map[string]any) error`
+- [x] T019 [P] [HU2] Agregar función `ActualizarEmpleado(ctx, tx, id int64, campos map[string]any) error`
   en `loopi-api-v2/internal/empleados/repository.go`; construir UPDATE dinámico solo con
   campos enviados; nunca actualizar el campo `usuario`
-- [ ] T020 [HU2] Implementar `EditarEmpleado(ctx, actorID, empleadoID int64, req EditarEmpleadoRequest) (*Empleado, error)`
+- [x] T020 [HU2] Implementar `EditarEmpleado(ctx, actorID, empleadoID int64, req EditarEmpleadoRequest) (*Empleado, error)`
   en `loopi-api-v2/internal/empleados/service.go` con: llamar `ObtenerTiendaActivaPorID` (T047)
-  si rol requiere tienda, limpiar `tienda_id` automáticamente si rol cambia a admin, registrar
-  audit log EDITAR con `campos_anteriores` y `campos_nuevos` (excluir `contrasena_hash`)
-- [ ] T021 [HU2] Implementar handler `PUT /api/v1/empleados/{id}` en
+  si rol requiere tienda, limpiar `tienda_id` automáticamente si rol cambia a admin;
+  si el campo `rol` cambia **desde** admin a otro rol, verificar
+  `ContarAdminsActivosExcluyendo(ctx, tx, empleadoID) > 0` dentro de la misma TX —
+  retornar `ErrUltimoAdminActivo` si falla (RF-EMP-02.6); registrar audit log EDITAR
+  con `campos_anteriores` y `campos_nuevos` (excluir `contrasena_hash`)
+- [x] T021 [HU2] Implementar handler `PUT /api/v1/empleados/{id}` en
   `loopi-api-v2/internal/empleados/handler.go` con middleware `solo_admin`;
   retorna HTTP 200 con empleado actualizado (sin `contrasena_hash`);
   **incluir `LogOperacion` (T045)** con `operacion:"editar_empleado"`, `empleado_id`, `duracion_ms`;
   reemplazar stub T046
-- [ ] T022 [P] [HU2] Agregar métodos `editar(id: number, data: EditarEmpleadoRequest): Observable<Empleado>`
+- [x] T022 [P] [HU2] Agregar métodos `editar(id: number, data: EditarEmpleadoRequest): Observable<Empleado>`
   y `obtener(id: number): Observable<Empleado>` al servicio
   `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
-- [ ] T023 [HU2] Extender
+- [x] T023 [HU2] Extender
   `loopi-web-v2/src/app/features/empleados/pages/formulario-empleado/formulario-empleado.component.ts`
   con modo edición: pre-cargar datos desde `GET /{id}`, deshabilitar campo `usuario`,
   mostrar botón "Guardar cambios"; añadir ruta `/empleados/:id/editar` en
@@ -179,24 +194,24 @@ el sistema impide inactivar al último admin activo.
 **Prueba Independiente**: `PATCH /api/v1/empleados/{id}/estado` con `{activo:false}` → HTTP 200;
 intentar en el único admin → HTTP 422 con `ultimo_admin_activo`.
 
-- [ ] T024 [P] [HU3] Agregar funciones `ActualizarActivo(ctx, tx, id int64, activo bool) error`
+- [x] T024 [P] [HU3] Agregar funciones `ActualizarActivo(ctx, tx, id int64, activo bool) error`
   y `ContarAdminsActivosExcluyendo(ctx, tx, id int64) (int, error)` en
   `loopi-api-v2/internal/empleados/repository.go`; `ContarAdminsActivosExcluyendo` ejecuta
   dentro de la TX para garantizar atomicidad (RD-04 en research.md)
-- [ ] T025 [HU3] Implementar `CambiarEstado(ctx, actorID, empleadoID int64, activo bool) error`
+- [x] T025 [HU3] Implementar `CambiarEstado(ctx, actorID, empleadoID int64, activo bool) error`
   en `loopi-api-v2/internal/empleados/service.go`: abrir TX, si `activo=false` y rol=admin
   verificar `ContarAdminsActivosExcluyendo > 0` (retornar `ErrUltimoAdminActivo` si falla),
   llamar `ActualizarActivo`, registrar audit log INACTIVAR o REACTIVAR con
   `{estado_anterior, estado_nuevo}`, commit TX
-- [ ] T026 [HU3] Implementar handler `PATCH /api/v1/empleados/{id}/estado` en
+- [x] T026 [HU3] Implementar handler `PATCH /api/v1/empleados/{id}/estado` en
   `loopi-api-v2/internal/empleados/handler.go` con middleware `solo_admin`;
   mapear `ErrUltimoAdminActivo` → HTTP 422;
   **incluir `LogOperacion` (T045)** con `operacion:"cambiar_estado_empleado"`, `empleado_id`,
   `duracion_ms`; reemplazar stub T046
-- [ ] T027 [P] [HU3] Agregar método
+- [x] T027 [P] [HU3] Agregar método
   `cambiarEstado(id: number, activo: boolean): Observable<{id: number; activo: boolean}>`
   al servicio `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
-- [ ] T028 [HU3] Agregar botón "Inactivar" / "Reactivar" en
+- [x] T028 [HU3] Agregar botón "Inactivar" / "Reactivar" en
   `loopi-web-v2/src/app/features/empleados/pages/formulario-empleado/formulario-empleado.component.ts`
   (modo edición) con diálogo de confirmación; mostrar mensaje específico cuando el servidor
   retorna `ultimo_admin_activo`
@@ -216,27 +231,27 @@ las tiendas.
 → HTTP 200 con `{empleados:[...], total:N, page:1, limit:20}`; campo `contrasena_hash`
 ausente en todos los objetos de la respuesta.
 
-- [ ] T029 [P] [HU5] Agregar función `ListarEmpleados(ctx, p ListarEmpleadosParams) ([]Empleado, int, error)`
+- [x] T029 [P] [HU5] Agregar función `ListarEmpleados(ctx, p ListarEmpleadosParams) ([]Empleado, int, error)`
   en `loopi-api-v2/internal/empleados/repository.go` con query `SQL_CALC_FOUND_ROWS` +
   `LOWER(CONCAT(nombre,' ',apellido)) LIKE` + filtros `tienda_id`/`activo` + `LIMIT/OFFSET`
   (según RD-05 en research.md); columnas explícitas — **nunca incluir `contrasena_hash`**
   en el SELECT (RF-EMP-05.6)
-- [ ] T030 [HU5] Implementar `ListarEmpleados` y `ObtenerEmpleado` en
+- [x] T030 [HU5] Implementar `ListarEmpleados` y `ObtenerEmpleado` en
   `loopi-api-v2/internal/empleados/service.go` como wrappers del repository con validación
   de parámetros (limit máx 100, page ≥ 1)
-- [ ] T031 [HU5] Implementar handlers `GET /api/v1/empleados` y `GET /api/v1/empleados/{id}`
+- [x] T031 [HU5] Implementar handlers `GET /api/v1/empleados` y `GET /api/v1/empleados/{id}`
   en `loopi-api-v2/internal/empleados/handler.go` con middleware `solo_admin`;
   mapear query params a `ListarEmpleadosParams`;
   **incluir `LogOperacion` (T045)** con `operacion:"listar_empleados"` / `"obtener_empleado"`,
   `duracion_ms`; reemplazar stubs T046
-- [ ] T032 [P] [HU5] Agregar método `listar(params: ListarEmpleadosParams): Observable<ListaEmpleadosResponse>`
+- [x] T032 [P] [HU5] Agregar método `listar(params: ListarEmpleadosParams): Observable<ListaEmpleadosResponse>`
   al servicio `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
-- [ ] T033 [HU5] Crear componente standalone
+- [x] T033 [HU5] Crear componente standalone
   `loopi-web-v2/src/app/features/empleados/pages/lista-empleados/lista-empleados.component.ts`
   con: tabla de empleados (nombre, apellido, usuario, rol, tienda, estado), campo de búsqueda
   (signal + debounce 300ms), selector de tienda, toggle activo/inactivo, paginación
   (botones Anterior/Siguiente + total), navegación a editar al hacer clic en fila
-- [ ] T034 [HU5] Añadir ruta `/empleados` (lista) en
+- [x] T034 [HU5] Añadir ruta `/empleados` (lista) en
   `loopi-web-v2/src/app/features/empleados/empleados.routes.ts` y registrar la feature
   como lazy route en `loopi-web-v2/src/app/app.routes.ts`
 
@@ -255,26 +270,26 @@ que debe cambiar en su primer login; el empleado también puede cambiar su propi
 RF-EMP-04.2); `POST /api/v1/empleados/{id}/contrasena/cambiar` con contraseña de 3 chars →
 HTTP 400 (mínimo 4 chars, RF-EMP-04.5).
 
-- [ ] T035 [P] [HU4] Agregar función `ActualizarContrasena(ctx, id int64, hash string) error`
+- [x] T035 [P] [HU4] Agregar función `ActualizarContrasena(ctx, id int64, hash string) error`
   que actualiza `contrasena_hash` y pone `requiere_cambio_contrasena = 1` en
   `loopi-api-v2/internal/empleados/repository.go`
-- [ ] T036 [HU4] Implementar `ResetearContrasena(ctx, actorID, empleadoID int64) (string, error)`
+- [x] T036 [HU4] Implementar `ResetearContrasena(ctx, actorID, empleadoID int64) (string, error)`
   en `loopi-api-v2/internal/empleados/service.go`: generar contraseña temporal con
   `generarContrasenaTemp()`, hashear con bcrypt cost `BcryptCostProd`, llamar
   `ActualizarContrasena`, registrar audit log RESET_CONTRASENA con `{motivo:"reset_admin"}`
   (sin contraseña en detalle, RF-EMP-05-A.2)
-- [ ] T037 [HU4] Implementar handler `POST /api/v1/empleados/{id}/contrasena` en
+- [x] T037 [HU4] Implementar handler `POST /api/v1/empleados/{id}/contrasena` en
   `loopi-api-v2/internal/empleados/handler.go` con middleware `solo_admin`;
   retorna HTTP 200 con `{contrasena_temporal}`;
   **incluir `LogOperacion` (T045)** con `operacion:"reset_contrasena"`, `empleado_id`,
   `duracion_ms`; reemplazar stub T046
-- [ ] T038 [P] [HU4] Agregar método `resetearContrasena(id: number): Observable<ResetContrasenaResponse>`
+- [x] T038 [P] [HU4] Agregar método `resetearContrasena(id: number): Observable<ResetContrasenaResponse>`
   al servicio `loopi-web-v2/src/app/features/empleados/services/empleados.service.ts`
-- [ ] T039 [HU4] Agregar botón "Resetear contraseña" en
+- [x] T039 [HU4] Agregar botón "Resetear contraseña" en
   `loopi-web-v2/src/app/features/empleados/pages/formulario-empleado/formulario-empleado.component.ts`
   (modo edición) con diálogo de confirmación; mostrar `contrasena_temporal` en modal de un
   solo uso igual que en creación (HU1)
-- [ ] T048 [HU4] Implementar endpoint `POST /api/v1/empleados/{id}/contrasena/cambiar`
+- [x] T048 [HU4] Implementar endpoint `POST /api/v1/empleados/{id}/contrasena/cambiar`
   en `loopi-api-v2/internal/empleados/handler.go` (accesible sin middleware `solo_admin`
   pero requiere token válido del propio empleado): valida que `nueva_contrasena` tiene
   mínimo 4 caracteres (RF-EMP-04.5) retornando HTTP 400 si no cumple, hashea con bcrypt
@@ -291,31 +306,75 @@ una vez; cambio rechaza menos de 4 chars; flag `requiere_cambio_contrasena` pasa
 **Propósito**: Observabilidad completa, normalización de errores, tests y coordinación
 con 001-autenticacion.
 
-- [ ] T040 Verificar que las 6 rutas del router principal están correctamente conectadas
+- [x] T040 Verificar que las 6 rutas del router principal están correctamente conectadas
   a los handlers reales (no stubs) en `loopi-api-v2/cmd/api/main.go`
   (o el archivo equivalente según estructura del proyecto); confirmar que el middleware
   `solo_admin` está aplicado en todas excepto en T048 (`/contrasena/cambiar`)
-- [ ] T041 [P] Audit de observabilidad: verificar que **todos** los handlers de empleados
+- [x] T041 [P] Audit de observabilidad: verificar que **todos** los handlers de empleados
   usan `LogOperacion` (T045) con los campos `user_id`, `rol`, `tienda_id`, `operacion`,
   `empleado_id` (cuando aplica), `duracion_ms`; corregir cualquier handler que los omita
-- [ ] T042 [P] Validar que todos los errores del handler usan el formato
+- [x] T042 [P] Validar que todos los errores del handler usan el formato
   `{error, mensaje, campo, detalles}` con códigos HTTP correctos
   (400/403/404/409/422/500) según contracts/api.md en
   `loopi-api-v2/internal/empleados/handler.go`
-- [ ] T043 [P] Escribir tests unitarios en `loopi-api-v2/internal/empleados/service_test.go`
-  usando mocks: `TestCrearEmpleadoBaristaSinTienda` (→ error tienda_requerida),
+- [x] T043 [P] Escribir tests unitarios en `loopi-api-v2/internal/empleados/service_test.go`
+  y `loopi-api-v2/middleware/solo_admin_test.go` usando mocks —
+  casos negativos: `TestCrearEmpleadoBaristaSinTienda` (→ error tienda_requerida),
   `TestCrearEmpleadoUsuarioDuplicado` (→ error usuario_duplicado),
   `TestInactivarUltimoAdmin` (→ ErrUltimoAdminActivo),
   `TestResetContrasenaGeneraHashDistinto` (dos resets → hashes distintos),
   `TestEditarEmpleadoTiendaInactiva` (→ error tienda_no_existe),
-  `TestCambiarContrasenaMinimo4Chars` (→ HTTP 400 con 3 chars)
-- [ ] T049 Verificar integración RF-EMP-04.6 con 001-autenticacion: confirmar que el
-  middleware de sesión de 001-autenticacion lee el flag `requiere_cambio_contrasena`
-  (del JWT o de la BD) y retorna HTTP 403 en todos los endpoints excepto
-  `POST /api/v1/empleados/{id}/contrasena/cambiar`; documentar el punto de integración
-  en `specs/003-gestion-empleados/quickstart.md`
-- [ ] T044 Ejecutar smoke tests del `quickstart.md` e incluir el escenario de
+  `TestCambiarContrasenaMinimo4Chars` (→ error con 3 chars);
+  casos positivos: `TestCrearEmpleadoExitoso` (barista + tienda → empleado activo, audit log CREAR,
+  contrasena_hash nunca expuesto), `TestEditarEmpleadoExitoso` (cambio de rol → audit log EDITAR
+  con campos_anteriores/campos_nuevos), `TestReactivarEmpleadoExitoso` (inactivo → activo,
+  credenciales conservadas intactas), `TestListarEmpleadosConFiltros` (búsqueda + paginación →
+  total correcto, sin contrasena_hash en ningún objeto);
+  middleware: `TestSoloAdminBloquea403SinJWT` (request sin token → HTTP 403),
+  `TestSoloAdminPermiteAdminValido` (JWT con rol=admin → pasa al handler);
+  generador: `TestGenerarContrasenaTempUnicidad` (10 llamadas consecutivas → 10 valores distintos,
+  longitud ≥ 12 chars)
+- [x] T049 Verificar integración RF-EMP-04.6 con 001-autenticacion: revisar el código del
+  middleware de sesión de 001-autenticacion y confirmar que lee el flag
+  `requiere_cambio_contrasena` (del JWT o de la BD) y retorna HTTP 403 en todos los
+  endpoints excepto `POST /api/v1/empleados/{id}/contrasena/cambiar`;
+  **entregable concreto — uno de los dos caminos**:
+  (a) si el bloqueo **ya está implementado**: documentar el punto de integración en
+  `specs/003-gestion-empleados/quickstart.md` con curl de ejemplo que reproduzca el HTTP 403
+  y el HTTP 200 al cambiar la contraseña;
+  (b) si el bloqueo **no está implementado**: registrar issue de deuda técnica en el backlog
+  referenciando RF-EMP-04.6, añadir nota `⚠️ PENDIENTE: bloqueo por requiere_cambio_contrasena
+  no implementado en 001-autenticacion` en `quickstart.md` y no cerrar esta tarea hasta que
+  el issue sea asignado
+- [x] T044 Ejecutar smoke tests del `quickstart.md` e incluir el escenario de
   cambio de contraseña con validación de mínimo 4 chars
+- [x] T050 [P] Crear tests unitarios frontend en
+  `loopi-web-v2/src/app/features/empleados/pages/lista-empleados/lista-empleados.component.spec.ts`
+  y `formulario-empleado/formulario-empleado.component.spec.ts` — cubriendo flujos P1
+  (Constitución §Stack Técnico, CI gate `ng test`):
+  `lista-empleados`: renderiza tabla con empleados cargados, muestra empty state cuando
+  no hay resultados, emite búsqueda con debounce 300 ms, cambia página conservando filtros;
+  `formulario-empleado` (modo crear): envía `POST` exitoso y muestra modal contraseña temporal,
+  muestra error de campo en HTTP 409 (usuario duplicado) y HTTP 422 (tienda requerida/inactiva),
+  oculta selector de tienda cuando rol=admin;
+  `formulario-empleado` (modo edición): pre-carga datos del empleado, deshabilita campo `usuario`,
+  confirma inactivar/reactivar con diálogo y maneja respuesta `ultimo_admin_activo`,
+  muestra modal contraseña temporal tras reset exitoso
+- [x] T052 [MEJORA] Inicializar OTel SDK en `loopi-api-v2/cmd/api/main.go` (o el archivo de arranque
+  del servidor): configurar `TracerProvider` con exporter Datadog usando
+  `gopkg.in/DataDog/dd-trace-go.v1/ddtrace/opentelemetry` (o `go.opentelemetry.io/otel` con
+  `datadog-go` exporter según versión del proyecto); registrar el provider global con
+  `otel.SetTracerProvider`; configurar `MeterProvider` para métricas de latencia y tasa de
+  error; leer configuración de Datadog (`DD_SERVICE`, `DD_ENV`, `DD_VERSION`) desde variables
+  de entorno — **nunca hardcodear** (Constitución §Ambientes); añadir dependencia al `go.mod`
+  ⚠️ **T053 depende de esta tarea** — debe completarse antes de instrumentar handlers
+- [x] T053 [P] [MEJORA] Agregar spans OTel en los tres handlers más críticos para seguridad de acceso
+  en `loopi-api-v2/internal/empleados/handler.go`: `CrearEmpleado` (span con atributos
+  `empleado.rol`, `empleado.tienda_id`, `operacion:"crear_empleado"`), `ResetearContrasena`
+  (span con `empleado.id`, `operacion:"reset_contrasena"`), `CambiarEstado` (span con
+  `empleado.id`, `estado_nuevo`, `operacion:"cambiar_estado_empleado"`); incluir
+  `span.RecordError(err)` y `span.SetStatus(codes.Error, ...)` en los caminos de error;
+  verificar que las trazas aparecen en Datadog APM con `operacion` como nombre de operación
 
 ---
 
@@ -343,6 +402,7 @@ con 001-autenticacion.
 - T020 → depende de T047 (`ObtenerTiendaActivaPorID`)
 - T015, T021, T026, T031, T037 → dependen de T045 (helper logging)
 - Todos los handlers → dependen de T046 (router skeleton previo)
+- T053 → depende de T052 (OTel `TracerProvider` registrado antes de instrumentar handlers)
 
 ### Oportunidades de Paralelismo
 
@@ -405,4 +465,7 @@ Secuencial (después de T006):
 - Verificación atómica del último admin (RF-EMP-03.5) — TX en T025
 - bcrypt cost: `BcryptCostProd` en producción, `BcryptCostTests` en tests (T005)
 - Logging estructurado desde Fase 2 (T045) — Constitución Principio VI
+- OTel SDK en T052 y T053 — mejoras opcionales; Principio VI se cumple con T045+T041 (logs JSON → Datadog vía GCP); OTel MUST solo aplica a endpoints críticos listados en constitución (auth, inventario, stock, pedidos, ventas)
+- Tests backend en T043: 6 casos negativos + 4 happy-paths + 2 middleware + 1 unicidad generador
+- Tests frontend en T050: flujos P1 en `lista-empleados` y `formulario-empleado` (CI gate `ng test`)
 - Router skeleton en Fase 2 (T046) — los checkpoints de HU1–HU5 requieren endpoints accesibles

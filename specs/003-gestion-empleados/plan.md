@@ -47,7 +47,7 @@ API REST no definida en spec — usar target sistémico del proyecto como refere
 | **III. RBAC** | ✅ PASS | Solo `admin` accede a todos los endpoints; middleware `solo_admin` en cada ruta; validación en backend es vinculante |
 | **IV. Trazabilidad** | ✅ PASS | `log_auditoria_empleados` inmutable cubre CREAR, EDITAR, INACTIVAR, REACTIVAR, RESET_CONTRASENA |
 | **V. Prevención de Pérdidas** | ✅ PASS | Audit log visible para admin; RF-EMP-03.5 impide lockout de último admin; sin edición silenciosa |
-| **VI. Observabilidad** | ✅ PASS | Logs JSON estructurados con `user_id`, `rol`, `tienda_id`, timestamp, operación; audit log como trazabilidad operacional |
+| **VI. Observabilidad** | ✅ PASS | Logs JSON estructurados (T045) con `user_id`, `rol`, `tienda_id`, `operacion`, `duracion_ms` → stdout → GCP Cloud Logging → Datadog vía integración nativa; T041 audita todos los handlers. OTel SDK con trazas y métricas (T052/T053) se incluye como mejora opcional — la constitución exige OTel solo para endpoints explícitamente críticos (auth, inventario, stock, pedidos, ventas); empleados no está en esa lista |
 
 **Resultado**: Sin violaciones. No se requiere Registro de Complejidad.
 
