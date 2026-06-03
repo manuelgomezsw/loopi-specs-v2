@@ -4,6 +4,9 @@
 **Prerrequisitos**: plan.md ✅ · spec.md ✅ · research.md ✅ · data-model.md ✅ · contracts/api.md ✅
 **Repos**: `loopi-api-v2` (Go backend) · `loopi-web-v2` (Angular frontend)
 **Implementado**: 2026-06-02 — 52/52 tareas completadas · `go test ./... ✅` · `ng build ✅`
+**T049 cerrado** (camino A): auth migrado a leer `empleados`; `JWTMiddleware` bloquea HTTP 403 si
+`requiere_cambio_contrasena=true`; migración 005 agrega `bloqueado_hasta`/`intentos_fallidos` a
+`empleados`; documentado en `quickstart.md §6`.
 
 > **Revisión post-análisis** (2026-05-24): Correcciones aplicadas por `/speckit-analyze`:
 > C1 (logs → Fase 2), G1 (T048 cambio contraseña), O1 (T046 router → Fase 2),
