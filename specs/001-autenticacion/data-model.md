@@ -38,14 +38,14 @@ en estado estable. La tabla es casi siempre pequeña.
 
 ---
 
-## Columnas nuevas en `usuarios` *(cross-feature — tabla propietaria: `004-empleados`)*
+## Columnas nuevas en `empleados` *(cross-feature — tabla propietaria: `003-gestion-empleados`)*
 
-La tabla `usuarios` requiere dos columnas para el mecanismo de bloqueo por intentos
-fallidos. Esta migración es parte de `001-autenticacion` pero debe coordinarse con
-`004-empleados`.
+La tabla `empleados` requiere dos columnas para el mecanismo de bloqueo por intentos
+fallidos. Esta migración es parte de `001-autenticacion` pero aplica sobre la tabla
+creada por `003-gestion-empleados`.
 
 ```sql
-ALTER TABLE usuarios
+ALTER TABLE empleados
     ADD COLUMN intentos_fallidos  INT      NOT NULL DEFAULT 0    AFTER activo,
     ADD COLUMN bloqueado_hasta    DATETIME     NULL DEFAULT NULL  AFTER intentos_fallidos;
 ```
@@ -108,20 +108,20 @@ CREATE TABLE tokens_revocados (
     INDEX idx_tokens_revocados_expira_en (expira_en)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE usuarios
+ALTER TABLE empleados
     ADD COLUMN intentos_fallidos  INT          NOT NULL DEFAULT 0    AFTER activo,
     ADD COLUMN bloqueado_hasta    DATETIME         NULL DEFAULT NULL  AFTER intentos_fallidos;
 
 -- +migrate Down
 
-ALTER TABLE usuarios
+ALTER TABLE empleados
     DROP COLUMN bloqueado_hasta,
     DROP COLUMN intentos_fallidos;
 
 DROP TABLE IF EXISTS tokens_revocados;
 ```
 
-**Nota de rollback**: el `DOWN` elimina columnas de `usuarios` y la tabla
+**Nota de rollback**: el `DOWN` elimina columnas de `empleados` y la tabla
 `tokens_revocados`. Al ejecutar `DOWN` en prod se pierden registros de bloqueo
 activos; es aceptable ya que el impacto es temporal (usuarios bloqueados quedan
 desbloqueados).
