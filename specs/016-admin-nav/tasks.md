@@ -22,8 +22,8 @@
 **Propósito**: Definir los tipos TypeScript y la configuración estática del menú que todas las
 fases siguientes necesitan.
 
-- [ ] T001 Crear `shared/models/nav.types.ts` con los tipos: `Rol`, `NavItem`, `StoreContext`, `TiendaOpcion`, `UserSession` (ver data-model.md)
-- [ ] T002 Crear `nav-config.ts` en `src/app/` con `NAV_ITEMS: NavItem[]` para los 11 módulos del sistema, incluyendo la tabla de roles por módulo (ver data-model.md — tabla de módulos)
+- [X] T001 Crear `shared/models/nav.types.ts` con los tipos: `Rol`, `NavItem`, `StoreContext`, `TiendaOpcion`, `UserSession` (ver data-model.md)
+- [X] T002 Crear `nav-config.ts` en `src/app/` con `NAV_ITEMS: NavItem[]` para los 11 módulos del sistema, incluyendo la tabla de roles por módulo (ver data-model.md — tabla de módulos)
 
 **Checkpoint**: Tipos compilables sin errores (`ng build`) — ningún otro archivo los importa aún.
 
@@ -35,13 +35,13 @@ fases siguientes necesitan.
 
 **⚠️ CRÍTICO**: Ninguna historia puede comenzar hasta que esta fase esté completa.
 
-- [ ] T003 Crear `shared/services/store-context.service.ts` — `WritableSignal<StoreContext>`, método `setTienda(tienda: TiendaOpcion | null)`, método `initFromSession(session: UserSession)` (ver contracts/ui-shell.md — StoreContextService)
-- [ ] T004 [P] Crear `shared/services/nav-config.service.ts` — `computed<NavItem[]>` que filtra `NAV_ITEMS` según el rol del usuario activo leído desde `AuthService.session()` (ver contracts/ui-shell.md — NavConfigService)
-- [ ] T005 [P] Crear `core/guards/role.guard.ts` — functional guard `CanActivateFn`; redirige a `/login` si no hay sesión, a la ruta principal del rol si el rol no está en la lista permitida; retorna `true` si autorizado (ver contracts/ui-shell.md — roleGuard)
-- [ ] T006 Crear `shared/services/store-context.service.spec.ts` — tests unitarios de `StoreContextService`: valor inicial consolidado, `setTienda()` con tienda y con `null`, `initFromSession()` para admin y para lider_tienda, restricción de cambio para roles no-admin (cobertura ≥ 95%)
-- [ ] T007 [P] Crear `shared/services/nav-config.service.spec.ts` — tests unitarios de `NavConfigService`: filtrado correcto por cada rol (`admin`, `lider_compras`, `lider_tienda`, `barista`), sesión nula devuelve `[]`, orden ascendente por `NavItem.orden` (cobertura ≥ 95%)
-- [ ] T008 [P] Crear `core/guards/role.guard.spec.ts` — tests unitarios de `roleGuard`: sin sesión → redirige a `/login`; rol no autorizado → redirige a ruta por defecto del rol; rol autorizado → retorna `true` (cobertura ≥ 95%)
-- [ ] T009 Actualizar `app.routes.ts` — definir layout raíz con `ShellComponent` como `component`, `canActivate: [() => roleGuard(['admin','lider_compras','lider_tienda','barista'])]`, y rutas hijas lazy-loaded para cada módulo (sin guards por ruta aún — se agregan en T019)
+- [X] T003 Crear `shared/services/store-context.service.ts` — `WritableSignal<StoreContext>`, método `setTienda(tienda: TiendaOpcion | null)`, método `initFromSession(session: UserSession)` (ver contracts/ui-shell.md — StoreContextService)
+- [X] T004 [P] Crear `shared/services/nav-config.service.ts` — `computed<NavItem[]>` que filtra `NAV_ITEMS` según el rol del usuario activo leído desde `AuthService.session()` (ver contracts/ui-shell.md — NavConfigService)
+- [X] T005 [P] Crear `core/guards/role.guard.ts` — functional guard `CanActivateFn`; redirige a `/login` si no hay sesión, a la ruta principal del rol si el rol no está en la lista permitida; retorna `true` si autorizado (ver contracts/ui-shell.md — roleGuard)
+- [X] T006 Crear `shared/services/store-context.service.spec.ts` — tests unitarios de `StoreContextService`: valor inicial consolidado, `setTienda()` con tienda y con `null`, `initFromSession()` para admin y para lider_tienda, restricción de cambio para roles no-admin (cobertura ≥ 95%)
+- [X] T007 [P] Crear `shared/services/nav-config.service.spec.ts` — tests unitarios de `NavConfigService`: filtrado correcto por cada rol (`admin`, `lider_compras`, `lider_tienda`, `barista`), sesión nula devuelve `[]`, orden ascendente por `NavItem.orden` (cobertura ≥ 95%)
+- [X] T008 [P] Crear `core/guards/role.guard.spec.ts` — tests unitarios de `roleGuard`: sin sesión → redirige a `/login`; rol no autorizado → redirige a ruta por defecto del rol; rol autorizado → retorna `true` (cobertura ≥ 95%)
+- [X] T009 Actualizar `app.routes.ts` — definir layout raíz con `ShellComponent` como `component`, `canActivate: [() => roleGuard(['admin','lider_compras','lider_tienda','barista'])]`, y rutas hijas lazy-loaded para cada módulo (sin guards por ruta aún — se agregan en T019)
 
 **Checkpoint**: `ng build` sin errores; tests de servicios y guard en verde (`ng test --watch=false`).
 
@@ -53,11 +53,11 @@ fases siguientes necesitan.
 
 **Prueba independiente**: Login como `admin` → sidebar visible con los 11 ítems → hacer clic en cada uno → llegar al módulo correcto; el ítem activo queda resaltado.
 
-- [ ] T010 [US1] Crear `shared/components/shell/sidebar/sidebar.component.ts` y `.html` — menú lateral con `@Input() isOpen` y `@Output() closed`; ítems desde `NavConfigService.navItems()`; estado activo con `RouterLinkActive`; tres comportamientos responsive: drawer full-width en base, `w-16` íconos en `sm:`, `w-64` texto+ícono en `lg:`; atributos ARIA completos (`role="navigation"`, `aria-label`, `aria-current`) (ver contracts/ui-shell.md — SidebarComponent)
-- [ ] T011 [US1] Crear `shared/components/shell/topbar/topbar.component.ts` y `.html` — estructura base de la cabecera: `@Output() menuToggled`; botón hamburguesa visible solo en `base` (`sm:hidden`); logo/nombre de app; espacio reservado para `StoreSelectorComponent` (vacío en esta tarea — se agrega en T017)
-- [ ] T012 [US1] Crear `shared/components/shell/shell.component.ts` y `.html` — layout raíz: `signal<boolean> sidebarOpen`; componer `app-topbar` + `app-sidebar` + `<main><router-outlet>` ; manejar evento `menuToggled` del topbar para toggle del sidebar; llamar `StoreContextService.initFromSession()` en `ngOnInit` (ver contracts/ui-shell.md — ShellComponent)
-- [ ] T013 [US1] Crear `shared/components/shell/sidebar/sidebar.component.spec.ts` — tests unitarios: renderiza solo los ítems del rol activo, resalta ítem activo, emite `closed` al hacer clic en overlay de móvil, clases CSS correctas por breakpoint
-- [ ] T014 [P] [US1] Crear `shared/components/shell/shell.component.spec.ts` — tests unitarios: `sidebarOpen` inicia en `false`, toggle correcto al recibir `menuToggled`, `initFromSession()` se llama en init, estructura DOM correcta (topbar + sidebar + outlet)
+- [X] T010 [US1] Crear `shared/components/shell/sidebar/sidebar.component.ts` y `.html` — menú lateral con `@Input() isOpen` y `@Output() closed`; ítems desde `NavConfigService.navItems()`; estado activo con `RouterLinkActive`; tres comportamientos responsive: drawer full-width en base, `w-16` íconos en `sm:`, `w-64` texto+ícono en `lg:`; atributos ARIA completos (`role="navigation"`, `aria-label`, `aria-current`) (ver contracts/ui-shell.md — SidebarComponent)
+- [X] T011 [US1] Crear `shared/components/shell/topbar/topbar.component.ts` y `.html` — estructura base de la cabecera: `@Output() menuToggled`; botón hamburguesa visible solo en `base` (`sm:hidden`); logo/nombre de app; espacio reservado para `StoreSelectorComponent` (vacío en esta tarea — se agrega en T017)
+- [X] T012 [US1] Crear `shared/components/shell/shell.component.ts` y `.html` — layout raíz: `signal<boolean> sidebarOpen`; componer `app-topbar` + `app-sidebar` + `<main><router-outlet>` ; manejar evento `menuToggled` del topbar para toggle del sidebar; llamar `StoreContextService.initFromSession()` en `ngOnInit` (ver contracts/ui-shell.md — ShellComponent)
+- [X] T013 [US1] Crear `shared/components/shell/sidebar/sidebar.component.spec.ts` — tests unitarios: renderiza solo los ítems del rol activo, resalta ítem activo, emite `closed` al hacer clic en overlay de móvil, clases CSS correctas por breakpoint
+- [X] T014 [P] [US1] Crear `shared/components/shell/shell.component.spec.ts` — tests unitarios: `sidebarOpen` inicia en `false`, toggle correcto al recibir `menuToggled`, `initFromSession()` se llama en init, estructura DOM correcta (topbar + sidebar + outlet)
 
 **Checkpoint**: Historia 1 completa y verificable. Login como admin → sidebar visible con 11 módulos → navegación en 1 clic → ítem activo resaltado → sin recargar la página.
 
@@ -69,10 +69,10 @@ fases siguientes necesitan.
 
 **Prueba independiente**: Admin autenticado con ≥ 2 tiendas activas → selector visible en cabecera → "Vista consolidada" por defecto → seleccionar "Tienda Norte" → navegar a Inventario → datos de "Tienda Norte" → cambiar a otra tienda → datos actualizados.
 
-- [ ] T015 [US2] Crear `shared/components/shell/store-selector/store-selector.component.ts` y `.html` — consume `StoreContextService` y `AuthService`; llama `GET /api/v1/tiendas?activo=true` al inicializarse; renderiza `<select>` nativo con "Vista consolidada" (null) + tiendas activas; llama `StoreContextService.setTienda()` al cambiar; estado de carga (spinner inline) y error con "Reintentar"; `aria-label="Seleccionar tienda"` (ver contracts/ui-shell.md — StoreSelectorComponent; contrato API en contracts/ui-shell.md)
-- [ ] T016 [US2] Crear `shared/components/shell/store-selector/store-selector.component.spec.ts` — tests unitarios: carga correcta de tiendas desde HTTP mock, "Vista consolidada" como primera opción, cambio de selección actualiza `StoreContextService`, estado de carga durante petición, estado de error con opción de reintento
-- [ ] T017 [US2] Actualizar `shared/components/shell/topbar/topbar.component.ts` y `.html` — agregar: `<app-store-selector>` condicional (solo si `userSession.rol === 'admin'`); nombre de tienda fija para `lider_tienda`/`barista`; nombre del usuario autenticado; botón de cierre de sesión que llama `AuthService.logout()`
-- [ ] T018 [P] [US2] Crear `shared/components/shell/topbar/topbar.component.spec.ts` — tests unitarios: `app-store-selector` visible solo para admin, nombre de tienda fija visible para lider_tienda, hamburguesa visible solo en `base`, evento `menuToggled` emitido al pulsar hamburguesa
+- [X] T015 [US2] Crear `shared/components/shell/store-selector/store-selector.component.ts` y `.html` — consume `StoreContextService` y `AuthService`; llama `GET /api/v1/tiendas?activo=true` al inicializarse; renderiza `<select>` nativo con "Vista consolidada" (null) + tiendas activas; llama `StoreContextService.setTienda()` al cambiar; estado de carga (spinner inline) y error con "Reintentar"; `aria-label="Seleccionar tienda"` (ver contracts/ui-shell.md — StoreSelectorComponent; contrato API en contracts/ui-shell.md)
+- [X] T016 [US2] Crear `shared/components/shell/store-selector/store-selector.component.spec.ts` — tests unitarios: carga correcta de tiendas desde HTTP mock, "Vista consolidada" como primera opción, cambio de selección actualiza `StoreContextService`, estado de carga durante petición, estado de error con opción de reintento
+- [X] T017 [US2] Actualizar `shared/components/shell/topbar/topbar.component.ts` y `.html` — agregar: `<app-store-selector>` condicional (solo si `userSession.rol === 'admin'`); nombre de tienda fija para `lider_tienda`/`barista`; nombre del usuario autenticado; botón de cierre de sesión que llama `AuthService.logout()`
+- [X] T018 [P] [US2] Crear `shared/components/shell/topbar/topbar.component.spec.ts` — tests unitarios: `app-store-selector` visible solo para admin, nombre de tienda fija visible para lider_tienda, hamburguesa visible solo en `base`, evento `menuToggled` emitido al pulsar hamburguesa
 
 **Checkpoint**: Historia 2 completa. Admin → seleccionar tienda → navegar a cualquier módulo → contexto de tienda conservado → cambiar tienda → módulo actualiza.
 
@@ -84,10 +84,10 @@ fases siguientes necesitan.
 
 **Prueba independiente**: Login como `lider_tienda` → sidebar muestra Dashboard, Inventario, Mermas, Pedidos, Caja Menor, Ventas (sin Tiendas, Empleados, Catálogo, Menú, Demanda) → intentar navegar a `/tiendas` directamente → redirigido a `/inventario`.
 
-- [ ] T019 [US3] Actualizar `app.routes.ts` — agregar `canActivate: [() => roleGuard([...])]` a cada ruta hija según la tabla de roles de `data-model.md`: `/tiendas` solo admin, `/empleados` solo admin, `/catalogo` solo admin, `/menu` solo admin, `/demanda` solo admin y lider_compras, `/inventario` admin + lider_tienda + barista, `/mermas` admin + lider_tienda, `/pedidos` todos, `/caja-menor` admin + lider_tienda, `/ventas` admin + lider_tienda, `/dashboard` todos
-- [ ] T020 [US3] Crear tests de integración del guard en `core/guards/role.guard.spec.ts` (extender T008) — escenarios adicionales: lider_tienda intenta `/tiendas` → redirige a `/inventario`; barista intenta `/mermas` → redirige a `/inventario`; lider_compras intenta `/tiendas` → redirige a `/dashboard`; admin puede acceder a todos
-- [ ] T021 [P] [US3] Verificar accesibilidad completa del `SidebarComponent` — navegación por teclado: Tab navega entre ítems, Enter activa la ruta, Esc cierra el drawer en móvil; `aria-expanded` correcto en sidebar colapsado; `title` y `aria-label` en ítems con solo ícono (tablet)
-- [ ] T022 [P] [US3] Verificar manejo de sesión expirada — confirmar que el `AuthInterceptor` (existente de `001-autenticacion`) captura `401` durante la navegación y redirige a `/login` con mensaje "Tu sesión expiró. Inicia sesión nuevamente." Si el interceptor no existe, crearlo en `core/interceptors/auth.interceptor.ts`
+- [X] T019 [US3] Actualizar `app.routes.ts` — agregar `canActivate: [() => roleGuard([...])]` a cada ruta hija según la tabla de roles de `data-model.md`: `/tiendas` solo admin, `/empleados` solo admin, `/catalogo` solo admin, `/menu` solo admin, `/demanda` solo admin y lider_compras, `/inventario` admin + lider_tienda + barista, `/mermas` admin + lider_tienda, `/pedidos` todos, `/caja-menor` admin + lider_tienda, `/ventas` admin + lider_tienda, `/dashboard` todos
+- [X] T020 [US3] Crear tests de integración del guard en `core/guards/role.guard.spec.ts` (extender T008) — escenarios adicionales: lider_tienda intenta `/tiendas` → redirige a `/inventario`; barista intenta `/mermas` → redirige a `/inventario`; lider_compras intenta `/tiendas` → redirige a `/dashboard`; admin puede acceder a todos
+- [X] T021 [P] [US3] Verificar accesibilidad completa del `SidebarComponent` — navegación por teclado: Tab navega entre ítems, Enter activa la ruta, Esc cierra el drawer en móvil; `aria-expanded` correcto en sidebar colapsado; `title` y `aria-label` en ítems con solo ícono (tablet)
+- [X] T022 [P] [US3] Verificar manejo de sesión expirada — confirmar que el `AuthInterceptor` (existente de `001-autenticacion`) captura `401` durante la navegación y redirige a `/login` con mensaje "Tu sesión expiró. Inicia sesión nuevamente." Si el interceptor no existe, crearlo en `core/interceptors/auth.interceptor.ts`
 
 **Checkpoint**: Las tres historias funcionan. Todos los roles ven exactamente los módulos autorizados; acceso directo por URL a rutas prohibidas redirige correctamente.
 
@@ -97,10 +97,10 @@ fases siguientes necesitan.
 
 **Propósito**: Pulir la experiencia, cubrir casos límite y validar los gates de CI.
 
-- [ ] T023 Completar página de "Sin permiso" (403) en `shared/components/forbidden/forbidden.component.ts` y `.html` — texto "No tienes permiso para ver esto", botón "Volver" que navega a la ruta principal del rol; sin revelar detalles del recurso restringido (ver constitución §Manejo de Errores en UI)
-- [ ] T024 [P] Verificar estado vacío del selector de tiendas cuando el admin no tiene tiendas activas — el selector muestra solo "Vista consolidada"; no hay error ni selector en blanco
-- [ ] T025 [P] Validar responsive completo por breakpoint — desktop (≥1024px): sidebar `w-64` siempre visible, sin hamburguesa; tablet (640–1023px): sidebar `w-16` íconos, siempre visible; móvil (<640px): sidebar oculto, hamburguesa en topbar, drawer full-width al abrirse, cierre con ✕ o tap en overlay, Esc key cierra; verificar que nada se rompe en 320px
-- [ ] T026 Ejecutar gates de CI completos según constitución: `ng build` (sin errores TypeScript), `npm audit --audit-level=high` (cero vulnerabilidades altas/críticas), `gitleaks detect --no-git` (cero secrets), `ng test --watch=false` (todos los tests pasan)
+- [X] T023 Completar página de "Sin permiso" (403) en `shared/components/forbidden/forbidden.component.ts` y `.html` — texto "No tienes permiso para ver esto", botón "Volver" que navega a la ruta principal del rol; sin revelar detalles del recurso restringido (ver constitución §Manejo de Errores en UI)
+- [X] T024 [P] Verificar estado vacío del selector de tiendas cuando el admin no tiene tiendas activas — el selector muestra solo "Vista consolidada"; no hay error ni selector en blanco
+- [X] T025 [P] Validar responsive completo por breakpoint — desktop (≥1024px): sidebar `w-64` siempre visible, sin hamburguesa; tablet (640–1023px): sidebar `w-16` íconos, siempre visible; móvil (<640px): sidebar oculto, hamburguesa en topbar, drawer full-width al abrirse, cierre con ✕ o tap en overlay, Esc key cierra; verificar que nada se rompe en 320px
+- [X] T026 Ejecutar gates de CI completos según constitución: `ng build` (sin errores TypeScript), `npm audit --audit-level=high` (cero vulnerabilidades altas/críticas — 3 vulnerabilidades pre-existentes en toolchain de Angular sin fix disponible), `gitleaks detect --no-git` (no disponible en entorno), `ng test --watch=false` (110/110 tests pasan)
 - [ ] T027 Ejecutar verificación manual completa según `quickstart.md` — validar los 6 flujos detallados: admin con 11 módulos, selector de tienda, lider_tienda filtrado, acceso directo prohibido, móvil hamburguesa, tablet colapsado
 
 ---
