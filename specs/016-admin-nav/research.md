@@ -12,6 +12,7 @@
 **Justificación**: La constitución exige Angular con signals. Un `WritableSignal` expuesto como `computed()` de solo lectura al resto de la app es la solución idiomática en Angular 17+: reactivo, sin boilerplate de NgRx, sin dependencias externas. El contexto de tienda es un estado de navegación (no de servidor), por lo que no requiere caché ni persistencia entre sesiones.
 
 **Alternativas descartadas**:
+
 - NgRx Store: overhead injustificado para un solo valor de contexto.
 - BehaviorSubject (RxJS): válido pero redundante cuando signals ya cubre el caso.
 - localStorage para contexto: innecesario; si el usuario recarga, el contexto se puede restaurar desde el JWT o iniciarse en "consolidado".
@@ -25,6 +26,7 @@
 **Justificación**: Angular 15+ recomienda functional guards sobre guards basados en clases. El patrón `canActivate: [() => roleGuard(['admin', 'lider_tienda'])]` es composable y testeable sin instanciar clases. El guard lee el claim `rol` del JWT almacenado en `localStorage` y compara contra `route.data['roles']`. Si el rol no está autorizado, redirige a la ruta principal del usuario (no a 403 genérico).
 
 **Alternativas descartadas**:
+
 - Guards basados en clase (`implements CanActivate`): patrón deprecated en Angular 15+.
 - Validar permisos solo en el menú (frontend-only): insuficiente — la constitución exige validación en carga de ruta.
 
@@ -43,6 +45,7 @@
 El toggle hamburguesa (solo visible en base) actualiza el signal. En `md:` y `lg:` el sidebar es siempre visible (no hay toggle). El `TopbarComponent` en móvil incluye el botón hamburguesa y emite el evento de apertura al `ShellComponent` padre.
 
 **Alternativas descartadas**:
+
 - CDK Overlay de Angular Material: introduce dependencia de componentes externos (prohibido por constitución).
 - Dos componentes separados (MobileSidebar + DesktopSidebar): duplica lógica de ítems de menú y estado activo.
 
@@ -57,6 +60,7 @@ El toggle hamburguesa (solo visible en base) actualiza el signal. En `md:` y `lg
 **Claims necesarios**: `rol`, `tienda_id` (solo para `lider_tienda`/`barista`), `sub` (user_id), `exp`.
 
 **Alternativas descartadas**:
+
 - `jwt-decode` npm: dependencia innecesaria para un decode simple.
 - Llamada al backend para obtener perfil en cada carga: latencia innecesaria; el JWT ya contiene los claims.
 
@@ -83,6 +87,7 @@ El toggle hamburguesa (solo visible en base) actualiza el signal. En `md:` y `lg
 | Demanda | `/demanda` | ✓ | ✓ | — | — |
 
 **Alternativas descartadas**:
+
 - Configuración del menú desde el backend (API): añade latencia en carga inicial sin beneficio real; los roles son estáticos y están en el JWT.
 - Permisos granulares por acción en el menú: complejidad innecesaria; el menú navega a módulos, los permisos granulares se aplican dentro de cada módulo.
 
@@ -97,5 +102,6 @@ El toggle hamburguesa (solo visible en base) actualiza el signal. En `md:` y `lg
 **Justificación**: La lista de tiendas activas es relativamente estática (≤ 20 tiendas). Cargarla una vez al montar el selector es eficiente. Si una tienda se inactiva durante la sesión, el efecto es mínimo (el módulo activo mostrará "sin datos" o el backend rechazará la tienda_id con 403/404).
 
 **Alternativas descartadas**:
+
 - Recargar lista en cada cambio de módulo: innecesario para datos tan estáticos.
 - Hardcodear tiendas: inviable; el número de tiendas es dinámico.

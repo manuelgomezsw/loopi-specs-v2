@@ -34,6 +34,7 @@ interface UserSession {
 ```
 
 **Reglas**:
+
 - `tienda_id` es `null` para `admin` y `lider_compras`; es un entero positivo para `lider_tienda` y `barista`.
 - Si el JWT está ausente, expirado o malformado, `AuthService` retorna `null`.
 
@@ -55,6 +56,7 @@ interface NavItem {
 ```
 
 **Reglas**:
+
 - Cada módulo del sistema tiene exactamente un `NavItem`.
 - `roles` nunca está vacío; todo ítem es visible para al menos un rol.
 - El `NavConfigService` filtra por `roles.includes(userSession.rol)` para construir el menú renderizado.
@@ -76,6 +78,7 @@ const CONSOLIDATED: StoreContext = { tienda_id: null, nombre: null };
 ```
 
 **Reglas**:
+
 - Solo visible y mutable para el rol `admin`.
 - Para `lider_tienda` y `barista`, el contexto está fijo en `{ tienda_id: session.tienda_id, nombre: <nombre de su tienda> }` y no puede cambiar.
 - El `StoreContextService` expone el contexto como `Signal<StoreContext>` (solo lectura) y un método `setTienda(tienda: TiendaOpcion | null)` restringido al rol `admin`.
@@ -95,6 +98,7 @@ interface TiendaOpcion {
 ```
 
 **Reglas**:
+
 - Solo se cargan tiendas con `activo = true`.
 - El selector siempre incluye la opción "Vista consolidada" (`tienda_id: null`) al inicio de la lista.
 

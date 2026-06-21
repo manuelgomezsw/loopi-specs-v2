@@ -23,6 +23,7 @@ Ninguna — el shell obtiene su estado desde `AuthService` y `StoreContextServic
 Ninguna.
 
 **Responsabilidades**:
+
 - Renderizar `SidebarComponent` y `TopbarComponent`.
 - Mantener el signal `sidebarOpen: WritableSignal<boolean>` para el toggle en móvil.
 - Exponer `<router-outlet>` para el contenido del módulo activo.
@@ -30,7 +31,7 @@ Ninguna.
 
 **Layout DOM**:
 
-```
+```text
 app-shell
 ├── app-topbar          (cabecera; incluye botón hamburguesa en móvil)
 ├── app-sidebar         (menú lateral; adapta presentación por breakpoint)
@@ -71,6 +72,7 @@ Menú lateral responsive con ítems filtrados por rol.
 **Estado activo**: detectado comparando `router.url` con `navItem.route` en cada ítem.
 
 **Accesibilidad**:
+
 - `<nav role="navigation" aria-label="Menú principal">`
 - Cada ítem: `<a [routerLink]="item.route" [attr.aria-current]="isActive ? 'page' : null">`
 - En versión colapsada (solo ícono): `title` y `aria-label` con el nombre del módulo.
@@ -96,6 +98,7 @@ Cabecera de la aplicación con selector de tienda y datos de sesión.
 ```
 
 **Contenido**:
+
 - Botón hamburguesa (visible solo en `< 640px`)
 - Logo / nombre de la aplicación
 - `StoreSelectorComponent` (visible solo si `userSession.rol === 'admin'`)
@@ -112,6 +115,7 @@ Dropdown para que el admin seleccione el contexto de tienda.
 **No tiene inputs ni outputs**: consume `StoreContextService` y `AuthService` directamente vía `inject()`.
 
 **Comportamiento**:
+
 1. Al inicializarse: llama `GET /api/v1/tiendas?activo=true`. Muestra spinner inline durante la carga (ver constitución §Estados de Carga).
 2. Renderiza un `<select>` nativo (accesible por teclado) con opciones:
    - "Vista consolidada" (valor: `null`)
@@ -121,7 +125,7 @@ Dropdown para que el admin seleccione el contexto de tienda.
 
 **Contrato con el backend**:
 
-```
+```http
 GET /api/v1/tiendas?activo=true
 Authorization: Bearer {jwt}
 
@@ -134,7 +138,7 @@ Response 200:
 }
 ```
 
-*(Endpoint ya definido en feature 002-gestion-tiendas. No se crea endpoint nuevo.)*
+Endpoint ya definido en feature 002-gestion-tiendas. No se crea endpoint nuevo.
 
 ---
 
@@ -158,6 +162,7 @@ class StoreContextService {
 ```
 
 **Reglas**:
+
 - `setTienda` solo tiene efecto si el usuario activo tiene rol `admin`. Para cualquier otro rol, la llamada es ignorada silenciosamente.
 - `initFromSession` se llama en el `ShellComponent.ngOnInit()` para fijar el contexto de tienda para `lider_tienda` y `barista`.
 
@@ -192,5 +197,6 @@ function roleGuard(allowedRoles: Rol[]): boolean | UrlTree {
 ```
 
 **Comportamiento en acceso denegado**:
+
 - Sin sesión → `/login`
 - Rol insuficiente → ruta principal del rol (ej. `/inventario` para `lider_tienda`, `/dashboard` para `lider_compras`)

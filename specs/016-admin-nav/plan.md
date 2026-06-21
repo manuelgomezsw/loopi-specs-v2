@@ -157,7 +157,7 @@ Ver [research.md](research.md) para el detalle completo. Decisiones principales:
 
 **Flujo de inicialización**:
 
-```
+```text
 Login exitoso (001-autenticacion)
   → AuthService.session() != null
   → ShellComponent.ngOnInit()

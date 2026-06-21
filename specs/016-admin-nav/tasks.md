@@ -5,6 +5,7 @@
 **Repositorio afectado**: `loopi-web` (frontend-only; sin cambios en `loopi-api`)
 
 **Historias de usuario**:
+
 - US1 (P1): Admin accede a cualquier módulo desde el menú lateral
 - US2 (P1): Admin selecciona tienda desde selector global
 - US3 (P2): Lider de tienda y barista ven menú filtrado por rol
@@ -119,16 +120,19 @@ fases siguientes necesitan.
 ### Dependencias dentro de cada historia
 
 **US1**:
+
 - T010 (Sidebar) y T011 (Topbar base) → paralelo entre sí
 - T012 (Shell) → depende de T010 y T011
 - T013 y T014 (tests) → paralelo, pueden escribirse antes de T010-T012 si se hace TDD
 
 **US2**:
+
 - T015 (StoreSelectorComponent) independiente de T017 (TopbarComponent update)
 - T017 → depende de T015 (necesita el componente para incluirlo)
 - T016 y T018 (tests) → paralelo con sus respectivas implementaciones
 
 **US3**:
+
 - T019 (guards en rutas) independiente de T020 (tests de integración)
 - T021 y T022 → paralelo entre sí
 
@@ -138,7 +142,7 @@ fases siguientes necesitan.
 
 ### Ejemplo: Fase 2 (Foundational)
 
-```
+```text
 # Pueden ejecutarse en paralelo:
 T004 NavConfigService        (archivo distinto de T003 StoreContextService)
 T005 roleGuard               (archivo distinto)
@@ -148,7 +152,7 @@ T008 tests roleGuard         (una vez T005 listo)
 
 ### Ejemplo: Fase 3 (US1)
 
-```
+```text
 # Paralelo inicial:
 T010 SidebarComponent
 T011 TopbarComponent base
@@ -163,7 +167,7 @@ T014 tests Shell
 
 ### Ejemplo: Fases 3 y 4 en paralelo (2 desarrolladores)
 
-```
+```text
 Dev A → Fase 3 (US1): T010 → T011 → T012 → T013+T014
 Dev B → Fase 4 (US2): T015 → T016 → T017 → T018
 ```
