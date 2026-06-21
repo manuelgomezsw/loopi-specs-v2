@@ -11,7 +11,7 @@ trazas y métricas llegan correctamente.
 
 - `gcloud` CLI autenticado con permisos Owner/Editor en el proyecto GCP
 - Una cuenta de Datadog con API Key disponible (Organization Settings → API Keys)
-- Cloud Run API habilitada: `gcloud services enable run.googleapis.com`
+- Secret `DD_API_KEY` creado en GCP Secret Manager (Paso 1)
 
 ---
 
@@ -23,7 +23,7 @@ echo -n "YOUR_DD_API_KEY" | \
   gcloud secrets create DD_API_KEY \
     --data-file=- \
     --replication-policy=automatic \
-    --project=loopi-stage-XXXXXX
+    --project=loopi-dev-497600
 
 # Repetir para producción
 echo -n "YOUR_DD_API_KEY" | \
@@ -36,90 +36,67 @@ echo -n "YOUR_DD_API_KEY" | \
 Verificar:
 
 ```bash
-gcloud secrets versions access latest --secret=DD_API_KEY --project=loopi-stage-XXXXXX
+gcloud secrets versions access latest --secret=DD_API_KEY --project=loopi-dev-497600
 ```
+
+> **Arquitectura**: el backend envía trazas y métricas **directamente** al intake OTLP de
+> Datadog (`https://otlp.datadoghq.com`), sin agente intermediario. El Datadog Agent en
+> Cloud Run fue descartado por incompatibilidad con el entorno sandboxed (Core Agent +
+> Trace Agent no pueden comunicarse vía gRPC interno). Ver research.md Decisiones 7 y 10.
 
 ---
 
-## Paso 2 — Desplegar Datadog Agent en Cloud Run
+## Paso 2 — Inyectar `DD_API_KEY` en el deploy de App Engine
+
+`OTEL_EXPORTER_OTLP_HEADERS` nunca aparece en texto plano en el repositorio. Se inyecta
+en tiempo de deploy leyendo el valor desde Secret Manager:
 
 ```bash
-# Stage
-gcloud run deploy dd-agent \
-  --image=datadog/agent:7 \
-  --region=us-central1 \
-  --port=4318 \
-  --ingress=internal \
-  --min-instances=1 \
-  --max-instances=1 \
-  --memory=512Mi \
-  --cpu=1 \
-  --set-secrets="DD_API_KEY=DD_API_KEY:latest" \
-  --set-env-vars="DD_SITE=datadoghq.com" \
-  --set-env-vars="DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT=0.0.0.0:4318" \
-  --set-env-vars="DD_APM_ENABLED=true" \
-  --set-env-vars="DD_HOSTNAME=loopi-api-agent-stage" \
-  --set-env-vars="DD_LOG_LEVEL=warn" \
-  --set-env-vars="DD_DOGSTATSD_NON_LOCAL_TRAFFIC=false" \
-  --set-env-vars="DD_PROCESS_AGENT_ENABLED=false" \
-  --set-env-vars="DD_LOGS_ENABLED=false" \
-  --set-env-vars="DD_ENABLE_METADATA_COLLECTION=false" \
-  --project=loopi-dev-497600
+# Leer la clave desde Secret Manager
+DD_API_KEY=$(gcloud secrets versions access latest \
+  --secret=DD_API_KEY \
+  --project=loopi-dev-497600)
 
-# Obtener URL interna del agente (guardar este valor para app.stage.yaml)
-gcloud run services describe dd-agent \
-  --region=us-central1 \
-  --project=loopi-dev-497600 \
-  --format='value(status.url)'
+# Agregar temporalmente en app.stage.yaml (NO commitear este valor):
+#   OTEL_EXPORTER_OTLP_HEADERS: "DD-API-KEY=<valor-de-DD_API_KEY>"
+# Luego desplegar y restaurar el archivo:
+gcloud app deploy app.stage.yaml --project=loopi-dev-497600
+git checkout app.stage.yaml   # restaurar sin el valor hardcodeado
 ```
 
-Repetir con `--project=loopi-prod-497600` y `DD_HOSTNAME=loopi-api-agent-prod` para prod.
+Para prod, repetir con `--project=loopi-prod-497600` y `app.prod.yaml`.
 
-**Nota**: Otorgar acceso al Secret Manager al SA de Cloud Run antes del deploy:
-
-```bash
-PROJECT_NUMBER=$(gcloud projects describe loopi-dev-497600 --format='value(projectNumber)')
-gcloud secrets add-iam-policy-binding DD_API_KEY \
-  --project=loopi-dev-497600 \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
-```
-
-**Nota**: `--min-instances=1` es obligatorio para evitar cold starts que descartarían las
-primeras trazas del día. Con `--max-instances=1` el agente es un singleton por ambiente.
-
-`--ingress=internal` restringe el acceso al tráfico del mismo proyecto GCP (App Engine
-incluido) sin requerir tokens IAM en el exporter OTLP. No se usa `--no-allow-unauthenticated`
-porque obligaría al SDK OTel a adjuntar un `Authorization: Bearer` en cada petición, lo que
-requiere lógica de refresco de tokens no soportada nativamente por el exporter OTLP/HTTP.
+**Nota**: App Engine Standard no tiene equivalente al `--set-secrets` de Cloud Run. La
+inyección manual antes del deploy es el mecanismo más directo; en CI/CD se automatiza
+leyendo el secret en un step previo al `gcloud app deploy`.
 
 ---
 
-## Paso 3 — Dar acceso al Secret al service account del agente
-
-El agente en Cloud Run necesita leer `DD_API_KEY` de Secret Manager (ya configurado con
-`--set-secrets` arriba, que gestiona este permiso automáticamente). Sin embargo, verificar:
-
-```bash
-# Verificar que Cloud Run puede acceder al secret
-gcloud secrets get-iam-policy DD_API_KEY --project=loopi-stage-XXXXXX
-# Debe aparecer: serviceAccount:<PROJECT_NUMBER>-compute@developer.gserviceaccount.com
-```
-
----
-
-## Paso 4 — Actualizar `app.yaml` (stage/dev) y `app.prod.yaml`
+## Paso 3 — Actualizar `app.yaml` (dev local), `app.stage.yaml` y `app.prod.yaml`
 
 Agregar al bloque `env_variables` de cada archivo:
 
 ```yaml
-# app.yaml (dev/stage — OTEL_EXPORTER_OTLP_ENDPOINT vacío = modo no-op en dev local)
+# app.yaml (dev local — endpoint vacío = modo no-op, sin envío a Datadog)
 env_variables:
   ENV: dev
   GCP_PROJECT: loopi-dev-497600
   APP_VERSION: "1.0.0"
   OTEL_SERVICE_NAME: "loopi-api"
   OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  OTEL_EXPORTER_OTLP_HEADERS: ""
+```
+
+```yaml
+# app.stage.yaml (stage — intake OTLP directo a Datadog)
+env_variables:
+  ENV: stage
+  GCP_PROJECT: loopi-dev-497600
+  APP_VERSION: "1.0.0"
+  OTEL_SERVICE_NAME: "loopi-api"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.datadoghq.com"
+  # OTEL_EXPORTER_OTLP_HEADERS se inyecta desde Secret Manager antes del deploy (Paso 2)
+  # Valor en runtime: "DD-API-KEY=<valor>"
 ```
 
 ```yaml
@@ -129,14 +106,14 @@ env_variables:
   GCP_PROJECT: loopi-prod-497600
   APP_VERSION: "1.0.0"
   OTEL_SERVICE_NAME: "loopi-api"
-  OTEL_EXPORTER_OTLP_ENDPOINT: "https://dd-agent-<HASH>-uc.a.run.app"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.datadoghq.com"
+  # OTEL_EXPORTER_OTLP_HEADERS se inyecta desde Secret Manager antes del deploy (Paso 2)
+  # Valor en runtime: "DD-API-KEY=<valor>"
 ```
-
-Reemplazar `<HASH>` con la URL obtenida en el Paso 2.
 
 ---
 
-## Paso 5 — Agregar dependencias Go
+## Paso 4 — Agregar dependencias Go
 
 ```bash
 cd loopi-api-v2
@@ -153,7 +130,7 @@ go mod tidy
 
 ---
 
-## Paso 6 — Crear `internal/observability/setup.go`
+## Paso 5 — Crear `internal/observability/setup.go`
 
 ```go
 package observability
@@ -250,7 +227,7 @@ func deploymentEnv() string {
 
 ---
 
-## Paso 7 — Modificar `cmd/api/main.go`
+## Paso 6 — Modificar `cmd/api/main.go`
 
 Agregar al inicio de `main()`, antes de abrir la conexión a BD:
 
@@ -291,9 +268,9 @@ func main() {
 
 ---
 
-## Paso 8 — Verificar en Datadog APM
+## Paso 7 — Verificar en Datadog APM
 
-1. Desplegar en stage: `gcloud app deploy app.yaml --project=loopi-stage-XXXXXX`
+1. Inyectar `DD_API_KEY` y desplegar en stage (Paso 2): `gcloud app deploy app.stage.yaml --project=loopi-dev-497600`
 2. Ejecutar un login: `curl -X POST https://api.stage.loopi.com/api/v1/auth/login ...`
 3. En Datadog → **APM → Services**: buscar `loopi-api`
 4. En Datadog → **APM → Traces**: filtrar por `service:loopi-api env:staging`
