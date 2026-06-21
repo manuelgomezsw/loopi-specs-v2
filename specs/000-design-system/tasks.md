@@ -47,9 +47,9 @@
 
 - [X] T004 [US1] Verificar compilación de desarrollo: ejecutar `ng build` en `loopi-web-v2/` y confirmar 0 errores SCSS; anotar el tamaño aproximado de `styles.css` (verificación definitiva de SC-006 ≤ 50 KB se hace en T015 con build de producción)
 
-- [ ] T005 [P] [US1] Verificar viewport 320 px: abrir `/login` en DevTools con ancho 320 px y confirmar ausencia de scroll horizontal y todos los elementos visibles sin zoom (SC-003) — verificación manual en PR
+- [x] T005 [P] [US1] Verificar viewport 320 px: abrir `/login` en DevTools con ancho 320 px y confirmar ausencia de scroll horizontal y todos los elementos visibles sin zoom (SC-003) — verificación manual en PR
 
-- [ ] T006 [P] [US1] Verificar viewport 1280 px desktop: abrir `/login` en ancho 1280 px y confirmar que el card aparece centrado y el layout es coherente con la identidad de marca — verificación manual en PR
+- [x] T006 [P] [US1] Verificar viewport 1280 px desktop: abrir `/login` en ancho 1280 px y confirmar que el card aparece centrado y el layout es coherente con la identidad de marca — verificación manual en PR
 
 **Checkpoint**: User Story 1 completa. La pantalla de login refleja la identidad de marca Loopi con el design system sin CSS manual.
 
@@ -65,7 +65,7 @@
 
 - [X] T007 [US2] Verificar contraste WCAG 2.1 AA — análisis calculado con fórmula WCAG 2.1 exacta: `btn-primary` (blanco sobre primary-700 `#9c5630`) → **5.5:1 ✅**; `btn-secondary` (primary-700 sobre blanco) → **5.5:1 ✅**; `input-field` placeholder (`text-gray-500` sobre blanco) → **4.8:1 ✅**. Se corrigió primary-600→primary-700 (primary-600 daba 4.03:1, por debajo del umbral de 4.5:1). Verificación visual con axe DevTools pendiente en PR.
 
-- [ ] T008 [US2] Verificar navegación por teclado en `/login` — verificación manual en PR: presionar Tab desde el inicio de la página y confirmar: (1) campo "Usuario" recibe foco con ring visible `ring-2 ring-primary-500`, (2) Tab avanza a campo "Contraseña" con mismo ring, (3) Tab avanza al botón "Ingresar" con ring visible; confirmar que `aria-describedby` y `aria-invalid` en los inputs siguen funcionando post-migración (SC-004)
+- [x] T008 [US2] Verificar navegación por teclado en `/login` — verificación manual en PR: presionar Tab desde el inicio de la página y confirmar: (1) campo "Usuario" recibe foco con ring visible `ring-2 ring-primary-500`, (2) Tab avanza a campo "Contraseña" con mismo ring, (3) Tab avanza al botón "Ingresar" con ring visible; confirmar que `aria-describedby` y `aria-invalid` en los inputs siguen funcionando post-migración (SC-004)
 
 **Checkpoint**: User Story 2 completa. Contraste WCAG 2.1 AA verificado y navegación por teclado funcional.
 
@@ -95,13 +95,13 @@
 
 ### Implementación US4
 
-- [ ] T011 [US4] Verificar estado hover de `btn-primary` — verificación manual en PR (forzar :hover en DevTools): en DevTools forzar `:hover` sobre el botón "Ingresar" y confirmar cambio de fondo de `primary-600` (#b86b3d) a `primary-700` (#9c5630) (transición ≤ 150 ms — clase `duration-200`) (SC-004)
+- [x] T011 [US4] Verificar estado hover de `btn-primary` — verificación manual en PR (forzar :hover en DevTools): en DevTools forzar `:hover` sobre el botón "Ingresar" y confirmar cambio de fondo de `primary-600` (#b86b3d) a `primary-700` (#9c5630) (transición ≤ 150 ms — clase `duration-200`) (SC-004)
 
-- [ ] T012 [US4] Verificar estado loading/disabled — verificación manual en PR: en `login.component.spec.ts` ya existe el test `cargando=true → botón deshabilitado`; ejecutar `npm test` y confirmar que el test pasa; verificar visualmente que `opacity-50` y `cursor-not-allowed` se aplican al botón con `[disabled]`
+- [x] T012 [US4] Verificar estado loading/disabled — verificación manual en PR: en `login.component.spec.ts` ya existe el test `cargando=true → botón deshabilitado`; ejecutar `npm test` y confirmar que el test pasa; verificar visualmente que `opacity-50` y `cursor-not-allowed` se aplican al botón con `[disabled]`
 
-- [ ] T013 [US4] Verificar estado de error en `input-field` — verificación manual en PR: en DevTools añadir manualmente `class="input-field border-red-500"` a un input y confirmar borde rojo visible; agregar `<p class="mt-1 text-sm text-red-600">Error de prueba</p>` y confirmar texto de error debajo del campo (FR-005 / SC-004)
+- [x] T013 [US4] Verificar estado de error en `input-field` — verificación manual en PR: en DevTools añadir manualmente `class="input-field border-red-500"` a un input y confirmar borde rojo visible; agregar `<p class="mt-1 text-sm text-red-600">Error de prueba</p>` y confirmar texto de error debajo del campo (FR-005 / SC-004)
 
-- [ ] T018 [P] [US4] Verificar hover/disabled de `btn-secondary` — verificación manual en PR: en DevTools forzar `:hover` sobre un `btn-secondary` y confirmar fondo `primary-50` visible; agregar `[disabled]` y confirmar `opacity-50` y `cursor-not-allowed` (FR-004 / SC-004)
+- [x] T018 [P] [US4] Verificar hover/disabled de `btn-secondary` — verificación manual en PR: en DevTools forzar `:hover` sobre un `btn-secondary` y confirmar fondo `primary-50` visible; agregar `[disabled]` y confirmar `opacity-50` y `cursor-not-allowed` (FR-004 / SC-004)
 
 **Checkpoint**: User Story 4 completa. Los 5 estados de interacción son verificables visualmente en btn-primary, btn-secondary e input-field.
 
@@ -117,7 +117,7 @@
 
 - [X] T016 [P] Ejecutar `npm run lint` en `loopi-web-v2/` y confirmar 0 errores — el nuevo template no debe introducir violaciones de `@angular-eslint`
 
-- [ ] T017 [P] Verificar carga de fuente Inter (SC-005) — verificación manual en PR (DevTools → Network): abrir la app en DevTools → Network → filtrar por "inter"; confirmar que el archivo `.woff2` se carga desde `localhost` (no desde `fonts.gstatic.com` ni CDN externo); ejecutar Lighthouse y anotar el CLS — debe ser 0 (Inter Variable incluye `font-display: swap` por defecto)
+- [x] T017 [P] Verificar carga de fuente Inter (SC-005) — verificación manual en PR (DevTools → Network): abrir la app en DevTools → Network → filtrar por "inter"; confirmar que el archivo `.woff2` se carga desde `localhost` (no desde `fonts.gstatic.com` ni CDN externo); ejecutar Lighthouse y anotar el CLS — debe ser 0 (Inter Variable incluye `font-display: swap` por defecto)
 
 ---
 
