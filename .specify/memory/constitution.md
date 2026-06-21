@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0 → 1.6.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -19,6 +19,9 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.6.0 — estrategia de testing backend Go: técnica por capa (httptest/mock/sqlmock/t.Setenv),
                 thresholds (≥ 95% lógica, ≥ 90% infraestructura, ≥ 70% OTel), gate CI,
                 qué cubrir obligatoriamente en service y middleware (MINOR).
+        1.8.0 — §Diseño de Interfaz: nueva subsección "Convenciones de Botones de Acción":
+                prefijo '+ ' obligatorio en botones de creación en vistas de lista;
+                títulos de formulario sin prefijo (MINOR).
         1.7.0 — §VI Monitoreo Preventivo ampliado: logs exclusivamente en GCP Cloud Logging
                 (Datadog no recibe logs), reglas de cardinalidad de métricas (tienda_id ✅ / user_id ❌),
                 convención de nomenclatura de métricas y referencia a spec 015 (MINOR).
@@ -347,6 +350,15 @@ caso excepcional.
 - **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
   solo cuando el llenado automático sea perjudicial para el flujo.
 
+### Convenciones de Botones de Acción
+
+- **Botón de creación (acción primaria de lista)**: lleva el prefijo `+ ` antes del texto.
+  Ejemplos correctos: `+ Nueva tienda`, `+ Nuevo empleado`, `+ Nuevo pedido`.
+- **Título de formulario**: NO lleva `+ `. Es un encabezado de página (`<h1>`), no un botón.
+  Ejemplos correctos: `Nueva tienda`, `Editar empleado`.
+- El prefijo `+ ` aplica solo a los botones/enlaces de acción primaria en vistas de lista.
+  No aplica a acciones secundarias (Editar, Inactivar, Reactivar, Cancelar).
+
 ### Feedback de Acciones
 
 - **Éxito (guardar, crear, actualizar)**: toast verde, esquina superior derecha, auto-cierre
@@ -623,4 +635,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.7.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-26
+**Version**: 1.8.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-06-21
