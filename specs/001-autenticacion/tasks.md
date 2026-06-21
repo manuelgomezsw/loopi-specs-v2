@@ -133,7 +133,7 @@ de forma independiente.
 
 - [X] T027 [P] Escribir tests de handler en `loopi-api/internal/auth/handler_test.go` con mocks del servicio y repositorio (política de constitución): cubrir login exitoso (cada rol), credenciales incorrectas, cuenta bloqueada (423), logout exitoso, logout con CSRF inválido (403), /me con token válido, /me con token revocado (401)
 - [X] T028 [P] Escribir tests de componente Angular en `loopi-web/src/app/auth/login/login.component.spec.ts`: formulario deshabilitado durante request, mensaje de error en 401, mensaje de bloqueo en 423
-- [ ] T029 Ejecutar la validación completa del flujo según `quickstart.md §5`: login → 200 + cookies, `/me` → 200 con rol, logout → 204, `/me` → 401; verificar que la cookie `jwt` no es visible en las DevTools y confirmar revocación real en `tokens_revocados`
+- [x] T029 Ejecutar la validación completa del flujo según `quickstart.md §5`: login → 200 + cookies, `/me` → 200 con rol, logout → 204, `/me` → 401; verificar que la cookie `jwt` no es visible en las DevTools y confirmar revocación real en `tokens_revocados`
 
 ---
 
