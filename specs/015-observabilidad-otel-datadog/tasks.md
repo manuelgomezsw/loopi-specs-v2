@@ -54,8 +54,8 @@ que aparece un trace `service:loopi-api` con `env:staging` en menos de 30 segund
 - [x] T012 [P] [US1] Actualizar `loopi-api-v2/app.prod.yaml`: agregar `APP_VERSION: "1.0.0"`, `OTEL_SERVICE_NAME: "loopi-api"`, `OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.datadoghq.com"` al bloque `env_variables` (`OTEL_EXPORTER_OTLP_HEADERS` se inyecta desde Secret Manager en el deploy)
 - [x] T013 [P] [US1] Crear `loopi-api-v2/app.stage.yaml` copiando la estructura de `app.yaml` y asignando `OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.datadoghq.com"` para que el deploy en stage exporte trazas reales (`OTEL_EXPORTER_OTLP_HEADERS` se inyecta desde Secret Manager en el deploy)
 - [x] T014 [US1] Verificar modo no-op localmente: ejecutar `go run ./cmd/api/` sin `OTEL_EXPORTER_OTLP_ENDPOINT` configurada y confirmar que stderr no contiene líneas con `otel`, `error` o `panic` en los primeros 5 s de arranque
-- [ ] T015 [US1] Inyectar `DD_API_KEY` desde Secret Manager y desplegar en stage (ver quickstart.md §Paso 2); ejecutar `POST /api/v1/auth/login`
-- [ ] T016 [US1] Verificar en Datadog APM → Traces: span `auth.login` con atributos `service.name=loopi-api`, `deployment.environment=staging`, `auth.result=success` visible en menos de 30 s
+- [x] T015 [US1] Inyectar `DD_API_KEY` desde Secret Manager y desplegar en stage (ver quickstart.md §Paso 2); ejecutar `POST /api/v1/auth/login`
+- [x] T016 [US1] Verificar en Datadog APM → Traces: span `auth.login` con atributos `service.name=loopi-api`, `deployment.environment=staging`, `auth.result=success` visible en menos de 30 s
 
 **Checkpoint**: US1 completo — trazas visibles en Datadog APM para cualquier request al backend
 
@@ -70,8 +70,8 @@ en el trace HTTP, con `db.system`, `db.operation` y `db.sql.table`.
 Datadog APM que el trace muestra spans hijos con `db.system:mysql`.
 
 - [x] T017 [US2] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `sql.Open("mysql", dsn)` por `otelsql.Open("mysql", dsn, otelsql.WithAttributes(semconv.DBSystemMySQL), otelsql.WithSpanOptions(otelsql.SpanOptions{Ping: false}))` (código completo en quickstart.md §Paso 6)
-- [ ] T018 [US2] Desplegar en stage y ejecutar `POST /api/v1/auth/login`
-- [ ] T019 [US2] Verificar en Datadog APM: el trace de `auth.login` muestra spans hijos con `db.system:mysql`, `db.operation:SELECT` y `db.sql.table` para cada query de `tokens_revocados` y `usuarios`
+- [x] T018 [US2] Desplegar en stage y ejecutar `POST /api/v1/auth/login`
+- [x] T019 [US2] Verificar en Datadog APM: el trace de `auth.login` muestra spans hijos con `db.system:mysql`, `db.operation:SELECT` y `db.sql.table` para cada query de `tokens_revocados` y `usuarios`
 
 **Checkpoint**: US2 completo — latencia de cada query de BD visible como span hijo en Datadog APM
 
@@ -87,9 +87,9 @@ se conectan al `MeterProvider` real y aparecen en Datadog Metrics Explorer.
 histograma y contador en Datadog Metrics Explorer, filtrados por `resultado` y `env`.
 
 - [x] T020 [US3] Modificar `loopi-api-v2/cmd/api/main.go`: reemplazar `auth.NewHandler(authSvc, authRepo)` por `auth.NewHandlerWithMetrics(authSvc, authRepo, m)` donde `m, err := auth.NewMetrics()` se llama después de `observability.Setup()` (el `MeterProvider` global ya está configurado en ese punto)
-- [ ] T021 [US3] Desplegar en stage y ejecutar: 1 login exitoso, 1 login con credenciales inválidas, 1 logout
-- [ ] T022 [US3] Verificar en Datadog Metrics Explorer: histograma `auth.login.duration` con percentiles p50/p90/p99 visibles, unidad `ms`
-- [ ] T023 [US3] Verificar en Datadog Metrics Explorer: contador `auth.login.result` con etiqueta `result` diferenciando `success` e `invalid_credentials`
+- [x] T021 [US3] Desplegar en stage y ejecutar: 1 login exitoso, 1 login con credenciales inválidas, 1 logout
+- [x] T022 [US3] Verificar en Datadog Metrics Explorer: histograma `auth.login.duration` con percentiles p50/p90/p99 visibles, unidad `ms`
+- [x] T023 [US3] Verificar en Datadog Metrics Explorer: contador `auth.login.result` con etiqueta `result` diferenciando `success` e `invalid_credentials`
 
 **Checkpoint**: US3 completo — métricas de autenticación visibles y filtrables en Datadog
 
@@ -103,8 +103,8 @@ del agente en Cloud Run; el único vector es la exposición accidental de la cla
 
 **Prueba independiente**: `gitleaks` no detecta secrets; `grep` en los `app*.yaml` no muestra el valor real.
 
-- [ ] T025 [P] [US4] Verificar que no hay secrets en el repositorio: ejecutar `gitleaks detect --no-git` en `loopi-api-v2` y confirmar que la clave real de `DD_API_KEY` no aparece en ningún resultado
-- [ ] T026 [P] [US4] Verificar que `app.yaml`, `app.stage.yaml` y `app.prod.yaml` no contienen el valor real de `DD_API_KEY` ni de `OTEL_EXPORTER_OTLP_HEADERS`: `grep -r "DD-API-KEY\|DD_API_KEY" loopi-api-v2/app*.yaml` no debe mostrar ningún valor hardcodeado
+- [x] T025 [P] [US4] Verificar que no hay secrets en el repositorio: ejecutar `gitleaks detect --no-git` en `loopi-api-v2` y confirmar que la clave real de `DD_API_KEY` no aparece en ningún resultado
+- [x] T026 [P] [US4] Verificar que `app.yaml`, `app.stage.yaml` y `app.prod.yaml` no contienen el valor real de `DD_API_KEY` ni de `OTEL_EXPORTER_OTLP_HEADERS`: `grep -r "DD-API-KEY\|DD_API_KEY" loopi-api-v2/app*.yaml` no debe mostrar ningún valor hardcodeado
 
 **Checkpoint**: US4 completo — credenciales solo en Secret Manager, nunca en texto plano en el repositorio
 
