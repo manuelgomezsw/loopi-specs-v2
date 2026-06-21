@@ -33,4 +33,4 @@
 
 - La sección de Observabilidad se omite intencionalmente: esta feature es un shell de UI/navegación sin endpoints de backend críticos propios. Los módulos que ya exponen endpoints críticos mantienen su propia instrumentación.
 - La feature depende de `001-autenticacion` para token de sesión con `rol` y `tienda_id`.
-- Alcance acotado a web (escritorio/tablet); soporte móvil nativo fuera de v1.
+- Responsive cubre los tres breakpoints: Desktop (≥1024px), Tablet (600–1023px) y Móvil (<600px), en ese orden de prioridad. No incluye app nativa.

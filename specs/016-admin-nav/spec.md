@@ -120,7 +120,9 @@ lateral solo muestra los módulos permitidos y que no aparece el selector de tie
 - ¿Qué ocurre si el admin no tiene tiendas activas? → El selector de tienda muestra solo "Vista consolidada".
 - ¿Qué ocurre si la sesión expira mientras el usuario navega? → El sistema redirige al login conservando la ruta destino para retomar tras re-autenticarse.
 - ¿Qué ocurre si un usuario con rol desconocido o corrupto llega al shell? → El sistema cierra sesión y muestra un mensaje de error.
-- ¿Qué ocurre en pantallas de ancho reducido (tablet/móvil)? → El menú lateral se contrae a íconos o se convierte en menú tipo hamburguesa.
+- ¿Qué ocurre en pantallas de escritorio? → El menú lateral está siempre visible y expandido con nombre e ícono de cada módulo.
+- ¿Qué ocurre en tablet? → El menú lateral se contrae a íconos (sin texto) para maximizar el área de contenido; un toque lo expande.
+- ¿Qué ocurre en móvil? → El menú lateral se oculta completamente y se accede mediante un botón de menú tipo hamburguesa en la cabecera.
 
 ---
 
@@ -146,7 +148,12 @@ lateral solo muestra los módulos permitidos y que no aparece el selector de tie
 
 - **FR-009**: El sistema DEBE impedir el acceso a módulos no autorizados por rol, tanto desde la interfaz (ocultando opciones) como validando en la carga de cada ruta protegida.
 
-- **FR-010**: El menú lateral DEBE ser funcional en pantallas de escritorio y tablet, adaptando su presentación al ancho disponible.
+- **FR-010**: El shell de administración DEBE ser completamente funcional en los tres breakpoints, en orden de prioridad:
+  - **Desktop** (≥ 1024 px): menú lateral siempre visible y expandido (nombre + ícono).
+  - **Tablet** (600–1023 px): menú lateral colapsado a íconos; un toque lo expande en capa sobre el contenido.
+  - **Móvil** (< 600 px): menú oculto por defecto; accesible mediante botón hamburguesa en la cabecera; al abrirse ocupa el ancho completo de la pantalla.
+
+- **FR-011**: El selector global de tienda (solo rol `admin`) DEBE ser accesible y usable en los tres breakpoints, adaptando su presentación al espacio disponible en cabecera o menú móvil.
 
 ### Entidades Clave
 
@@ -174,13 +181,15 @@ lateral solo muestra los módulos permitidos y que no aparece el selector de tie
 
 - **SC-006**: La tasa de completación de tareas de navegación entre módulos es ≥ 95% en la primera interacción (sin requerir ayuda ni conocimiento previo de URLs).
 
+- **SC-007**: El menú de navegación es funcional y usable en escritorio, tablet y móvil; ningún módulo queda inaccesible en ninguno de los tres breakpoints.
+
 ---
 
 ## Supuestos
 
 - El módulo de autenticación (`001-autenticacion`) está implementado y el token de sesión incluye el `rol` del usuario y, para roles no-admin, el `tienda_id` asignado.
 - Los módulos existentes no requieren modificación de su lógica interna; la navegación se implementa como una capa de shell que los envuelve.
-- La interfaz es web (aplicación de escritorio/tablet en navegador) para esta versión; soporte móvil nativo está fuera de alcance.
+- La interfaz es web (navegador). El soporte responsive cubre **escritorio, tablet y móvil** en ese orden de prioridad. No se contempla app nativa para esta versión.
 - El catálogo de módulos del sistema está definido y es estable para esta versión (los 14 módulos documentados en la especificación funcional).
 - El listado de tiendas activas para el selector global proviene del mismo backend que gestiona el módulo de tiendas (`002-gestion-tiendas`).
 - La pantalla de login es la única pantalla que no muestra el shell de navegación.
