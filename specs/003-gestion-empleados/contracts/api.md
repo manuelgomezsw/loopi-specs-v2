@@ -69,6 +69,10 @@ Content-Type: application/json
 | 422 | `tienda_requerida` | `rol` requiere `tienda_id` pero no se proporcionó |
 | 422 | `tienda_no_existe` | `tienda_id` no corresponde a una tienda activa |
 | 422 | `tienda_no_permitida_para_admin` | `rol=admin` no admite `tienda_id` |
+| 422 | `tipo_documento_invalido` | `tipo_documento` tiene un valor fuera del conjunto permitido (CC, CE, NUIP, PE) |
+| 422 | `email_invalido` | `email` no tiene formato de dirección de correo válido |
+| 422 | `fecha_nacimiento_invalida` | `fecha_nacimiento` no tiene formato YYYY-MM-DD |
+| 422 | `edad_minima_requerida` | La fecha de nacimiento corresponde a una persona menor de 18 años |
 
 ---
 
@@ -201,6 +205,10 @@ Content-Type: application/json
 | 422 | `tienda_requerida` | Cambio a rol operativo sin `tienda_id` |
 | 422 | `tienda_no_existe` | `tienda_id` no corresponde a tienda activa |
 | 422 | `tienda_no_permitida_para_admin` | `rol=admin` no admite `tienda_id` |
+| 422 | `tipo_documento_invalido` | `tipo_documento` tiene un valor fuera del conjunto permitido (CC, CE, NUIP, PE) |
+| 422 | `email_invalido` | `email` no tiene formato de dirección de correo válido |
+| 422 | `fecha_nacimiento_invalida` | `fecha_nacimiento` no tiene formato YYYY-MM-DD |
+| 422 | `edad_minima_requerida` | La fecha de nacimiento corresponde a una persona menor de 18 años |
 
 ---
 

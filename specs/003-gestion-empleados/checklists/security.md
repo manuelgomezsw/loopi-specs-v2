@@ -11,20 +11,20 @@ control de acceso antes de abrir el PR (self-review del autor).
 
 ## Protección de Credenciales
 
-- [ ] CHK001 ¿El spec especifica que el mensaje de rechazo para empleado inactivo es
+- [x] CHK001 ¿El spec especifica que el mensaje de rechazo para empleado inactivo es
   **literalmente idéntico** (mismo texto exacto) al de credenciales incorrectas, de modo
   que no sea posible inferir el estado de la cuenta mediante diferencias en la respuesta?
   [Clarity, Spec RF-EMP-03.2]
 
-- [ ] CHK002 ¿El spec o los contratos de API establecen explícitamente que `contrasena_hash`
+- [x] CHK002 ¿El spec o los contratos de API establecen explícitamente que `contrasena_hash`
   **nunca** se incluye en ninguna respuesta de ningún endpoint, incluidos detalle y listado?
   [Gap — ausente en spec.md; cubierto solo en contracts/api.md]
 
-- [ ] CHK003 ¿Están definidos los requisitos de **complejidad y longitud mínima** para la
+- [x] CHK003 ¿Están definidos los requisitos de **complejidad y longitud mínima** para la
   contraseña que el empleado establece al reemplazar la temporal? Sin este requisito,
   contraseñas débiles quedan permitidas por omisión. [Gap]
 
-- [ ] CHK004 ¿El requisito RF-EMP-04.2 ("mostrar contraseña temporal una única vez") especifica
+- [x] CHK004 ¿El requisito RF-EMP-04.2 ("mostrar contraseña temporal una única vez") especifica
   el comportamiento ante **reintentos de red** del mismo request? Si el POST es retryable,
   ¿se puede exponer la contraseña en una segunda llamada? [Clarity, Spec RF-EMP-04.2]
 
@@ -32,16 +32,16 @@ control de acceso antes de abrir el PR (self-review del autor).
 
 ## Gestión de Sesiones y Cambios de Acceso
 
-- [ ] CHK005 ¿El spec define qué ocurre con las **sesiones activas** de un empleado cuando el
+- [x] CHK005 ¿El spec define qué ocurre con las **sesiones activas** de un empleado cuando el
   admin resetea su contraseña? ¿Las sesiones existentes se invalidan de inmediato o
   permanecen válidas hasta su expiración natural? [Gap — RF-EMP-04 no lo menciona]
 
-- [ ] CHK006 ¿El requisito RF-EMP-02.5 ("cambios de rol aplican en la próxima sesión") define
+- [x] CHK006 ¿El requisito RF-EMP-02.5 ("cambios de rol aplican en la próxima sesión") define
   la **ventana máxima de exposición** con permisos obsoletos? Sin un TTL de sesión explícito
   referenciado, un empleado podría operar con el rol anterior durante hasta 24 h. [Clarity,
   Spec RF-EMP-02.5]
 
-- [ ] CHK007 ¿El requisito RF-EMP-04.3 especifica **qué endpoints quedan bloqueados** mientras
+- [x] CHK007 ¿El requisito RF-EMP-04.3 especifica **qué endpoints quedan bloqueados** mientras
   `requiere_cambio_contrasena = 1`? ¿Solo los endpoints operacionales, o todos incluyendo
   el propio endpoint de cambio de contraseña? [Clarity, Spec RF-EMP-04.3]
 
@@ -49,11 +49,11 @@ control de acceso antes de abrir el PR (self-review del autor).
 
 ## Protección del Último Admin y Elevación de Privilegios
 
-- [ ] CHK008 ¿El requisito RF-EMP-03.5 describe la verificación del último admin como
+- [x] CHK008 ¿El requisito RF-EMP-03.5 describe la verificación del último admin como
   **atómica** (dentro de una transacción) para resistir condiciones de carrera concurrentes?
   O ¿deja el mecanismo de protección como detalle de implementación? [Clarity, Spec RF-EMP-03.5]
 
-- [ ] CHK009 ¿El spec define si un admin puede **editar su propio rol** o **inactivarse a sí
+- [x] CHK009 ¿El spec define si un admin puede **editar su propio rol** o **inactivarse a sí
   mismo** cuando existe al menos otro admin activo? El RF-EMP-03.5 protege el lockout total
   pero no aclara la auto-modificación. [Gap]
 
@@ -61,11 +61,11 @@ control de acceso antes de abrir el PR (self-review del autor).
 
 ## Audit Log e Integridad del Registro
 
-- [ ] CHK010 ¿El spec o el data model define explícitamente que el campo `detalle` del
+- [x] CHK010 ¿El spec o el data model define explícitamente que el campo `detalle` del
   `log_auditoria_empleados` **nunca contendrá contraseñas** (ni temporales ni hash), ya que
   los cambios de contraseña son uno de los eventos auditados? [Gap — RF-EMP-05-A no lo aclara]
 
-- [ ] CHK011 ¿Están definidos requisitos de auditoría para **accesos denegados** (403/401)
+- [x] CHK011 ¿Están definidos requisitos de auditoría para **accesos denegados** (403/401)
   a los endpoints de empleados? ¿Los intentos fallidos de acceso no autorizado deben
   quedar registrados? [Gap — el audit log cubre escrituras pero no rechazos de acceso]
 
@@ -73,11 +73,11 @@ control de acceso antes de abrir el PR (self-review del autor).
 
 ## Integridad de Datos y Casos Borde
 
-- [ ] CHK012 ¿El spec define qué ocurre con la **contraseña temporal** de un empleado si
+- [x] CHK012 ¿El spec define qué ocurre con la **contraseña temporal** de un empleado si
   es inactivado antes de usarla? Al reactivarlo, ¿sigue siendo válida o se requiere un
   nuevo reset? [Gap — RF-EMP-03.4 menciona que recupera rol y tienda, pero no la contraseña]
 
-- [ ] CHK013 ¿El spec especifica el comportamiento al intentar asignar una **tienda inactiva**
+- [x] CHK013 ¿El spec especifica el comportamiento al intentar asignar una **tienda inactiva**
   a un empleado en creación o edición? RF-EMP-01.2 menciona que la tienda debe existir y
   estar activa, pero el criterio de rechazo no está en los escenarios de aceptación. [Clarity,
   Spec RF-EMP-01.2 / RF-EMP-02.3]

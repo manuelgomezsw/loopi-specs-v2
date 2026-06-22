@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Valida todos los archivos .md antes de cada commit.
+# Activar una sola vez tras clonar: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+if ! command -v npx &>/dev/null; then
+  echo "⚠️  npx no encontrado — omitiendo markdownlint" >&2
+  exit 0
+fi
+
+echo "🔍 Ejecutando markdownlint-cli2..."
+if ! npx --yes markdownlint-cli2 "**/*.md" 2>&1; then
+  echo ""
+  echo "❌ markdownlint falló. Corrija los errores antes de commitear."
+  exit 1
+fi
+
+echo "✅ Markdown lint OK"

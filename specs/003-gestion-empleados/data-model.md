@@ -24,7 +24,12 @@ CREATE TABLE empleados (
                                'barista'
                              )                NOT NULL,
   tienda_id                  BIGINT UNSIGNED  NULL              COMMENT 'NULL solo para rol=admin',
-  tipo_documento             VARCHAR(30)      NULL,
+  tipo_documento             ENUM(
+                               'CC',
+                               'CE',
+                               'NUIP',
+                               'PE'
+                             )                NULL,
   numero_documento           VARCHAR(30)      NULL,
   telefono                   VARCHAR(20)      NULL,
   email                      VARCHAR(150)     NULL,
@@ -155,8 +160,31 @@ log_auditoria_empleados
 | `NNNN_crear_tabla_empleados.down.sql` | `DROP TABLE IF EXISTS empleados` |
 | `NNNN+1_crear_tabla_log_auditoria_empleados.up.sql` | Crea tabla `log_auditoria_empleados` con índices |
 | `NNNN+1_crear_tabla_log_auditoria_empleados.down.sql` | `DROP TABLE IF EXISTS log_auditoria_empleados` |
+| `NNNN+2_alter_empleados_tipo_documento_enum.up.sql` | Nullifica valores inválidos + cambia `tipo_documento` a `ENUM('CC','CE','NUIP','PE')` |
+| `NNNN+2_alter_empleados_tipo_documento_enum.down.sql` | Revierte `tipo_documento` a `VARCHAR(30) NULL` |
 
 > `NNNN` debe ser el número correlativo siguiente al último archivo de migración existente en el proyecto.
+
+### Contenido `NNNN+2_alter_empleados_tipo_documento_enum.up.sql`
+
+```sql
+-- Paso 1: nullificar valores que no pertenecen al nuevo ENUM
+UPDATE empleados
+SET tipo_documento = NULL
+WHERE tipo_documento IS NOT NULL
+  AND tipo_documento NOT IN ('CC', 'CE', 'NUIP', 'PE');
+
+-- Paso 2: cambiar columna a ENUM
+ALTER TABLE empleados
+  MODIFY COLUMN tipo_documento ENUM('CC', 'CE', 'NUIP', 'PE') NULL;
+```
+
+### Contenido `NNNN+2_alter_empleados_tipo_documento_enum.down.sql`
+
+```sql
+ALTER TABLE empleados
+  MODIFY COLUMN tipo_documento VARCHAR(30) NULL;
+```
 
 ---
 

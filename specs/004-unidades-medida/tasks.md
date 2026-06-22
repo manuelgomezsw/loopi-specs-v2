@@ -229,7 +229,7 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
   y refresca la lista; signal `cargandoInactivar` para deshabilitar botón durante acción
 - [X] T028 [P] Crear `loopi-web-v2/src/app/unidades-medida/unidades-medida-lista/unidades-medida-lista.component.html`
   (esqueleto con inactivación): encabezado con `<h1>` "Unidades de medida" y botón primario
-  `+ Nueva unidad de medida` (routerLink a `./nueva`) — el prefijo `+ ` es obligatorio según
+  "+ Nueva unidad de medida" (routerLink a `./nueva`) — el prefijo "+ " es obligatorio según
   Constitución §Botones de Acción (1.8.0); tabla responsive Tailwind CSS v4 con columnas
   código/nombre/tipo/factor/estado; botón "Inactivar" por fila (solo si `activo=true` y no es
   `unidad_base`); modal de confirmación destructiva: `<h2>` "¿Inactivar esta unidad?", texto de

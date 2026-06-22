@@ -24,9 +24,9 @@ CREATE TABLE tiendas (
   CONSTRAINT uq_tiendas_nombre  UNIQUE KEY (nombre),
 
   CONSTRAINT fk_tiendas_creado_por
-    FOREIGN KEY (creado_por) REFERENCES usuarios (id),
+    FOREIGN KEY (creado_por) REFERENCES empleados (id),
   CONSTRAINT fk_tiendas_actualizado_por
-    FOREIGN KEY (actualizado_por) REFERENCES usuarios (id),
+    FOREIGN KEY (actualizado_por) REFERENCES empleados (id),
 
   INDEX idx_tiendas_activo (activo)
 
@@ -46,9 +46,9 @@ CREATE TABLE tiendas (
 | `ciudad` | `VARCHAR(100)` | NO | — | Ciudad del local. |
 | `telefono` | `VARCHAR(20)` | NO | — | Teléfono de contacto. Almacenado como texto (incluye prefijos, extensiones). |
 | `activo` | `TINYINT(1)` | NO | `1` | `1` = tienda activa, `0` = tienda inactiva. No existe estado `eliminado`. |
-| `creado_por` | `BIGINT UNSIGNED` | NO | — | FK → `usuarios.id` del admin que creó la tienda. |
+| `creado_por` | `BIGINT UNSIGNED` | NO | — | FK → `empleados.id` del admin que creó la tienda. |
 | `creado_en` | `DATETIME` | NO | — | Timestamp de creación en zona horaria `America/Bogota`. |
-| `actualizado_por` | `BIGINT UNSIGNED` | NO | — | FK → `usuarios.id` del admin que realizó la última modificación. |
+| `actualizado_por` | `BIGINT UNSIGNED` | NO | — | FK → `empleados.id` del admin que realizó la última modificación. |
 | `actualizado_en` | `DATETIME` | NO | — | Timestamp de última modificación en zona horaria `America/Bogota`. |
 
 ## Índices y Restricciones
@@ -59,8 +59,8 @@ CREATE TABLE tiendas (
 | `uq_tiendas_codigo` | UNIQUE | `codigo` | Garantiza unicidad del código POS |
 | `uq_tiendas_nombre` | UNIQUE | `nombre` | Unicidad case-insensitive (hereda collation de tabla `utf8mb4_unicode_ci`) |
 | `idx_tiendas_activo` | INDEX | `activo` | Acelera el filtrado `WHERE activo = 1/0` |
-| `fk_tiendas_creado_por` | FK | `creado_por → usuarios.id` | Integridad referencial de auditoría |
-| `fk_tiendas_actualizado_por` | FK | `actualizado_por → usuarios.id` | Integridad referencial de auditoría |
+| `fk_tiendas_creado_por` | FK | `creado_por → empleados.id` | Integridad referencial de auditoría |
+| `fk_tiendas_actualizado_por` | FK | `actualizado_por → empleados.id` | Integridad referencial de auditoría |
 
 ## Transiciones de Estado
 
@@ -85,13 +85,13 @@ Estado inicial: activo = 1  (al crear)
 ## Relaciones con Otras Tablas
 
 ```text
-usuarios (001-autenticacion)
-  └── tiendas.creado_por     → usuarios.id  [FK, RESTRICT]
-  └── tiendas.actualizado_por → usuarios.id [FK, RESTRICT]
+empleados (003-gestion-empleados)
+  └── tiendas.creado_por      → empleados.id  [FK, RESTRICT]
+  └── tiendas.actualizado_por → empleados.id  [FK, RESTRICT]
 
 tiendas (esta feature)
   └── ... es referenciada por futuras features:
-       003-gestion-empleados  → usuarios.tienda_id
+       003-gestion-empleados  → empleados.tienda_id
        009-inventario-conteo  → conteos.tienda_id
        010-mermas             → mermas.tienda_id
        011-caja-menor         → compras.tienda_id
@@ -105,7 +105,7 @@ tiendas (esta feature)
 
 ```sql
 -- Migración 002: Crear tabla tiendas
--- Dependencia: migración 001 (tabla usuarios) debe estar aplicada
+-- Dependencia: tabla empleados debe existir (FK creado_por / actualizado_por)
 
 SET time_zone = 'America/Bogota';
 
@@ -128,9 +128,9 @@ CREATE TABLE IF NOT EXISTS tiendas (
   INDEX       idx_tiendas_activo (activo),
 
   CONSTRAINT fk_tiendas_creado_por
-    FOREIGN KEY (creado_por)      REFERENCES usuarios (id),
+    FOREIGN KEY (creado_por)      REFERENCES empleados (id),
   CONSTRAINT fk_tiendas_actualizado_por
-    FOREIGN KEY (actualizado_por) REFERENCES usuarios (id)
+    FOREIGN KEY (actualizado_por) REFERENCES empleados (id)
 
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4

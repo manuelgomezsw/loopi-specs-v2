@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `002-gestion-tiendas`
 **Creado**: 2026-05-18
-**Estado**: Borrador
+**Estado**: Cerrada
 **Referencia funcional**: [§2.3 Gestión de Tiendas](../loopi-v2-funcional/spec.md)
 
 ---
