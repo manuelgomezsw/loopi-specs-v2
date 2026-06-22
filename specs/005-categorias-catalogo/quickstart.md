@@ -53,7 +53,7 @@ JWT_SECRET=...
 Verificar que Ristretto inicializa sin errores en los logs:
 
 ```json
-{"level":"info","msg":"ristretto cache inicializado","modulo":"categorias","ttl_segundos":300}
+{"level":"info","msg":"ristretto cache inicializado","modulo":"categorias","ttl_segundos":86400}
 ```
 
 ---
@@ -152,7 +152,7 @@ curl -s http://localhost:8080/api/v1/categorias \
 # Esperado: 2 categorías, Lácteo con 2 subcategorías, Verdura con 1
 
 # Filtrar solo activos
-curl -s "http://localhost:8080/api/v1/categorias?activo=true" \
+curl -s "http://localhost:8080/api/v1/categorias?estado=activo" \
   -H "Authorization: Bearer $TOKEN" | jq '.total'
 # Esperado: 2
 ```
