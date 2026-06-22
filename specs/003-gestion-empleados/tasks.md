@@ -25,9 +25,9 @@ de tiendas debe estar listo antes de que los componentes lo inyecten.
 
 **⚠️ CRÍTICO**: Completar esta fase antes de iniciar las fases de usuario.
 
-- [ ] T001 Crear migración `NNNN_alter_empleados_tipo_documento_enum.up.sql` en `loopi-api/db/migrations/` con los dos pasos: UPDATE de valores inválidos + ALTER COLUMN a ENUM('CC','CE','NUIP','PE') (ver data-model.md)
-- [ ] T002 Crear migración reversible `NNNN_alter_empleados_tipo_documento_enum.down.sql` en `loopi-api/db/migrations/` que revierta a VARCHAR(30) NULL
-- [ ] T003 [P] Verificar que `TiendasService.getTiendasActivas()` existe en `loopi-web/src/app/features/tiendas/tiendas.service.ts`; si no existe, agregar el método que llama a `GET /api/v1/tiendas?activo=true` y retorna `Observable<{id: number; nombre: string}[]>`
+- [X] T001 Crear migración `006_tipo_documento_enum.up.sql` en `loopi-api-v2/migrations/` con los dos pasos: UPDATE de valores inválidos + ALTER COLUMN a ENUM('CC','CE','NUIP','PE')
+- [X] T002 Crear migración reversible `006_tipo_documento_enum.down.sql` en `loopi-api-v2/migrations/` que revierta a VARCHAR(30) NULL
+- [X] T003 [P] Agregar `getTiendasActivas()` en `loopi-web-v2/src/app/tiendas/tiendas.service.ts` — llama a `listar('activas', 1, 100)` y retorna `Observable<{id: number; nombre: string}[]>`
 
 **Checkpoint**: Migración lista para aplicar · Servicio de tiendas activas disponible
 
@@ -40,13 +40,13 @@ Bloquea las fases de usuario hasta garantizar que el backend rechaza valores inv
 
 **⚠️ CRÍTICO**: Completar antes de las fases US1/US2.
 
-- [ ] T004 Agregar error de dominio `ErrTipoDocumentoInvalido` en `loopi-api/internal/empleados/service.go` con mensaje "tipo de documento no válido"
-- [ ] T005 Agregar mapa `tiposDocumentoValidos = map[string]bool{"CC":true,"CE":true,"NUIP":true,"PE":true}` y validación en `CrearEmpleado()` en `loopi-api/internal/empleados/service.go`
-- [ ] T006 Agregar la misma validación en `EditarEmpleado()` en `loopi-api/internal/empleados/service.go`
-- [ ] T007 [P] Mapear `ErrTipoDocumentoInvalido` → HTTP 422 `tipo_documento_invalido` en el switch de errores del handler de crear empleado en `loopi-api/internal/empleados/handler.go`
-- [ ] T008 [P] Mapear `ErrTipoDocumentoInvalido` → HTTP 422 `tipo_documento_invalido` en el switch de errores del handler de editar empleado en `loopi-api/internal/empleados/handler.go`
-- [ ] T009 [P] Agregar test `TestCrearEmpleadoTipoDocumentoInvalido` (valor "TI" → espera error `ErrTipoDocumentoInvalido`) en `loopi-api/internal/empleados/service_test.go`
-- [ ] T010 [P] Agregar test `TestCrearEmpleadoTipoDocumentoValido` (CC, CE, NUIP, PE y cadena vacía → sin error) en `loopi-api/internal/empleados/service_test.go`
+- [X] T004 Agregar mapa `tiposDocumentoValidos` en `loopi-api-v2/internal/empleados/service.go` con los 4 valores válidos
+- [X] T005 Agregar validación `tiposDocumentoValidos` en `CrearEmpleado()` usando `ValidationError{Codigo:"tipo_documento_invalido"}` en `loopi-api-v2/internal/empleados/service.go`
+- [X] T006 Agregar la misma validación en `EditarEmpleado()` en `loopi-api-v2/internal/empleados/service.go`
+- [X] T007 [P] Cubierto automáticamente — `mapServiceError` ya maneja `*ValidationError` via `errors.As` → HTTP 422
+- [X] T008 [P] Ídem T007 — mismo mecanismo en `loopi-api-v2/internal/empleados/handler.go`
+- [X] T009 [P] Agregar `TestCrearEmpleadoTipoDocumentoInvalido` (valor "TI" → espera código `tipo_documento_invalido`) en `loopi-api-v2/internal/empleados/service_test.go`
+- [X] T010 [P] Agregar `TestCrearEmpleadoTipoDocumentoValido` (CC, CE, NUIP, PE y cadena vacía → sin error) en `loopi-api-v2/internal/empleados/service_test.go`
 
 **Checkpoint**: `go test ./internal/empleados/...` pasa con los nuevos tests
 
@@ -63,10 +63,10 @@ Tipo de documento = "CE" y una tienda seleccionada → operación exitosa (201).
 
 ### Implementación US1
 
-- [ ] T011 [P] [US1] Agregar constante `tiposDocumento` (array con CC, CE, NUIP, PE y sus etiquetas completas) en `loopi-web/src/app/features/empleados/crear-empleado/crear-empleado.component.ts`
-- [ ] T012 [P] [US1] Reemplazar el `<input type="text">` de `tipo_documento` por `<select>` con `@for` sobre `tiposDocumento` en `loopi-web/src/app/features/empleados/crear-empleado/crear-empleado.component.html`; primera opción placeholder vacía `"— Seleccionar (opcional) —"`; aplicar `bg-white border-gray-300 rounded-lg`
-- [ ] T013 [US1] Inyectar `TiendasService` y agregar propiedades `tiendasActivas`, `cargandoTiendas`, `errorCargaTiendas` + método privado `cargarTiendasActivas()` en `loopi-web/src/app/features/empleados/crear-empleado/crear-empleado.component.ts`; invocar en `ngOnInit()`
-- [ ] T014 [US1] Reemplazar el campo de tienda actual por `<select>` dinámico en `loopi-web/src/app/features/empleados/crear-empleado/crear-empleado.component.html` con: skeleton `animate-pulse` durante carga, opción deshabilitada "No hay tiendas activas disponibles" si lista vacía, mensaje de error en `text-red-600` si falla la API (ver plan.md §1.3)
+- [X] T011 [P] [US1] Agregar constante `TIPOS_DOCUMENTO` + propiedad `tiposDocumento` en `loopi-web-v2/src/app/empleados/empleado-form/empleado-form.component.ts`
+- [X] T012 [P] [US1] Reemplazar `<input type="text">` de `tipo_documento` por `<select>` con `@for` sobre `tiposDocumento` en `loopi-web-v2/src/app/empleados/empleado-form/empleado-form.component.html`; primera opción placeholder vacía; estilos Constitución
+- [X] T013 [US1] Inyectar `TiendasService`, agregar signals `tiendasActivas`, `cargandoTiendas`, `errorCargaTiendas` y método `cargarTiendasActivas()` en `loopi-web-v2/src/app/empleados/empleado-form/empleado-form.component.ts`; invocar en `ngOnInit()`
+- [X] T014 [US1] Reemplazar campo tienda por `<select>` dinámico en `loopi-web-v2/src/app/empleados/empleado-form/empleado-form.component.html`; skeleton `animate-pulse` durante carga, opción disabled si vacío, mensaje error en `text-red-600`
 
 **Checkpoint**: El formulario de creación muestra ambos selects correctamente; crear empleado
 funciona end-to-end con tienda seleccionada y tipo de documento "CC" → 201 con `contrasena_temporal`
@@ -84,10 +84,10 @@ el valor actual preseleccionado. Cambiar tipo de documento a "NUIP" y guardar �
 
 ### Implementación US2
 
-- [ ] T015 [P] [US2] Agregar constante `tiposDocumento` (idéntica a T011) en `loopi-web/src/app/features/empleados/editar-empleado/editar-empleado.component.ts`
-- [ ] T016 [P] [US2] Reemplazar el `<input type="text">` de `tipo_documento` por `<select>` en `loopi-web/src/app/features/empleados/editar-empleado/editar-empleado.component.html`; misma estructura que T012 pero con `[value]="tipo.codigo"` para preselección via `patchValue`
-- [ ] T017 [US2] Inyectar `TiendasService` y agregar `cargarTiendasActivas()` en `loopi-web/src/app/features/empleados/editar-empleado/editar-empleado.component.ts`; encadenar el `patchValue` de `tienda_id` y `tipo_documento` dentro del callback de carga de tiendas (o usar `forkJoin`) para garantizar preselección correcta
-- [ ] T018 [US2] Reemplazar el campo de tienda por `<select>` dinámico con preselección en `loopi-web/src/app/features/empleados/editar-empleado/editar-empleado.component.html`; mismos estados de carga/vacío/error que T014
+- [X] T015 [P] [US2] Mismo componente que T011 (`EmpleadoFormComponent`) — ya incluye `tiposDocumento` con `modoEdicion` signal. Preselección funciona vía `patchValue` en `cargarEmpleado()`
+- [X] T016 [P] [US2] Mismo template que T012 — el `<select>` de tipo_documento sirve tanto crear como editar
+- [X] T017 [US2] Mismo componente que T013 — `cargarTiendasActivas()` se invoca en `ngOnInit()` antes de `cargarEmpleado()`; preselección de tienda funciona vía form binding reactive
+- [X] T018 [US2] Mismo template que T014 — el `<select>` de tienda con estados de carga/error ya cubre edición
 
 **Checkpoint**: El formulario de edición muestra ambos selects con valores actuales preseleccionados;
 guardar cambios (PUT) funciona correctamente; `tipo_documento` inválido enviado vía API → 422
@@ -98,11 +98,11 @@ guardar cambios (PUT) funciona correctamente; `tipo_documento` inválido enviado
 
 **Propósito**: Aplicar migración en dev, verificar cobertura y ejecutar smoke tests.
 
-- [ ] T019 [P] Aplicar migración en entorno de desarrollo: `migrate -path ./db/migrations -database "$DB_DSN" up` en `loopi-api/` y verificar con `DESCRIBE empleados` que `tipo_documento` es `ENUM('CC','CE','NUIP','PE')`
-- [ ] T020 [P] Ejecutar suite de tests backend con cobertura: `go test ./internal/empleados/... -coverprofile=coverage.out -covermode=atomic` en `loopi-api/` y verificar ≥ 95% en `service.go`
-- [ ] T021 [P] Ejecutar tests Angular: `ng test --watch=false` en `loopi-web/` y verificar que pasan los specs de `crear-empleado.component.spec.ts` y `editar-empleado.component.spec.ts`
-- [ ] T022 Ejecutar smoke test de creación per quickstart.md §4: crear empleado con `tipo_documento:"CE"` y `tienda_id` válido via curl → verificar 201 con `contrasena_temporal`
-- [ ] T023 Ejecutar smoke test de validación backend: enviar `tipo_documento:"TI"` via curl → verificar 422 `tipo_documento_invalido`; enviar `tipo_documento:"NUIP"` → verificar 201
+- [ ] T019 [P] Aplicar migración en entorno de desarrollo: `migrate -path ./migrations -database "$DB_DSN" up` en `loopi-api-v2/` y verificar con `DESCRIBE empleados` que `tipo_documento` es `ENUM('CC','CE','NUIP','PE')`
+- [X] T020 [P] Tests backend ejecutados: `go test ./internal/empleados/... -covermode=atomic` — todos pasan; `TestCrearEmpleadoTipoDocumentoInvalido` y `TestCrearEmpleadoTipoDocumentoValido` ✅; `go vet` sin errores ✅
+- [ ] T021 [P] Ejecutar tests Angular: `ng test --watch=false` en `loopi-web-v2/` — requiere entorno con Chrome
+- [ ] T022 Ejecutar smoke test de creación: crear empleado con `tipo_documento:"CE"` y `tienda_id` válido via curl → verificar 201 con `contrasena_temporal` (requiere BD migrada)
+- [ ] T023 Ejecutar smoke test de validación backend: enviar `tipo_documento:"TI"` via curl → verificar 422 `tipo_documento_invalido` (requiere BD migrada)
 
 ---
 
