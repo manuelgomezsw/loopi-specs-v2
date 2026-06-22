@@ -17,6 +17,7 @@ inline tiene costo nulo de bundle adicional (los paths SVG equivalen a <1 KB min
 para 11 íconos) y no introduce ninguna dependencia transitiva.
 
 **Alternativas consideradas**:
+
 - `@heroicons/angular` npm — rechazado por política de "sin librerías de componentes externas".
 - SVG sprite (`<symbol>` + `<use>`) — rechazado por complejidad de sincronización del sprite
   y dificultad de colorear con `currentColor` en versiones antiguas de Safari.
@@ -36,6 +37,7 @@ valores. El switch está en el template (no en el TypeScript) para facilitar la 
 de cada path SVG sin mezclar lógica de componente con datos de presentación.
 
 **Alternativas consideradas**:
+
 - Record<string, string> de paths en TypeScript + `[innerHTML]` — rechazado (ver D-01).
 - Archivo de constantes importado por el componente — viable pero agrega un nivel de
   indirección sin beneficio real; los paths SVG pertenecen naturalmente al componente de íconos.
@@ -53,6 +55,7 @@ tiene el sidebar es su responsabilidad. Crear un servicio `SidebarStateService` 
 persistir un booleano sería sobre-ingeniería.
 
 **Alternativas consideradas**:
+
 - Servicio dedicado `SidebarStateService` — rechazado por complejidad innecesaria; un booleano
   de preferencia de UI no justifica un servicio Angular con su ciclo de vida.
 - Signal en `SidebarComponent` mismo — rechazado porque el `ShellComponent` necesita el valor
@@ -65,7 +68,7 @@ persistir un booleano sería sobre-ingeniería.
 **Decisión**: Cambiar el `shell.component.html` de `flex-col` (topbar encima de todo) a
 `flex-row` (sidebar a la izquierda como columna raíz). Estructura nueva:
 
-```
+```text
 div.flex.h-screen                          ← root: flex-row
 ├── app-sidebar                            ← columna izquierda full-height
 └── div.flex.flex-col.flex-1              ← columna derecha
@@ -80,6 +83,7 @@ arrancando desde el tope del `h-screen` raíz. El sidebar en mobile sigue usando
 `fixed inset-y-0 left-0 z-50` (mismo comportamiento).
 
 **Alternativas consideradas**:
+
 - Usar `position: fixed` en el sidebar para desktop — rechazado porque requiere offset manual
   del contenido (`margin-left: 256px`) y no se integra bien con la transición de colapso.
 - CSS Grid para el layout — viable pero agrega complejidad sin ventaja real sobre flexbox
@@ -99,6 +103,7 @@ es universalmente reconocido como "cerrar/abrir panel lateral". Colocarlo en la 
 competiría visualmente con el logo.
 
 **Alternativas consideradas**:
+
 - Botón en el borde derecho del sidebar (overlay sobre el contenido) — rechazado porque cubre
   contenido y su hit-area es pequeña en trackpads.
 - Botón en la topbar — rechazado porque la topbar no debería controlar la persistencia de un
@@ -117,6 +122,7 @@ es la forma más limpia. Los 200ms satisfacen SC-002 (< 200ms). Tailwind v4 sopo
 arbitrarios en `transition-[...]` sin configuración adicional.
 
 **Alternativas consideradas**:
+
 - `max-width` en lugar de `width` — permite transición más natural en algunos casos pero
   `w-16`/`w-64` con `transition-[width]` es más predecible en este layout flex.
 - `transform: translateX` — solo aplica a drawers (mobile); para colapso de columna en desktop
@@ -142,5 +148,5 @@ Los nombres en `nav-config.ts` ya coinciden con los nombres de Heroicons v2. Map
 | Ventas / POS | `chart-bar` | `ChartBarIcon` |
 | Demanda | `presentation-chart-line` | `PresentationChartLineIcon` |
 
-Los paths SVG se obtienen de https://heroicons.com (versión outline, stroke-width=1.5).
+Los paths SVG se obtienen de <https://heroicons.com> (versión outline, stroke-width=1.5).
 No se modifica `nav-config.ts` — los nombres existentes son correctos.

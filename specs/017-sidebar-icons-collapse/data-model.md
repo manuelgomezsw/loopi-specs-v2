@@ -61,6 +61,7 @@ icon: IconName;
 | `loopi_sidebar_collapsed` | `"true"` \| `"false"` | `"false"` (expandido) | Preferencia de colapso del sidebar en desktop |
 
 **Reglas**:
+
 - Se lee en la inicialización de `ShellComponent` con try/catch silencioso.
 - Se escribe al toggle con try/catch silencioso.
 - Solo se aplica en desktop (≥ 1024px); en breakpoints menores el CSS tiene prioridad.

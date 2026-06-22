@@ -56,16 +56,16 @@ loopi-web/src/app/shared/components/shell/
 
 ### Fase P2 — Layout Full-Height (refactor de estructura)
 
-4. **Modificar `shell.component.html`**: cambiar de `flex-col` raíz a `flex-row` raíz
+1. **Modificar `shell.component.html`**: cambiar de `flex-col` raíz a `flex-row` raíz
    con sidebar como primera columna y columna derecha con topbar + main.
 
-5. **Modificar `sidebar.component.html`**: reemplazar secciones de logo desktop/tablet
+2. **Modificar `sidebar.component.html`**: reemplazar secciones de logo desktop/tablet
    para que funcionen sin topbar encima.
 
-6. **Modificar `topbar.component.html`**: eliminar logo; quitar `sticky top-0` (ya no
+3. **Modificar `topbar.component.html`**: eliminar logo; quitar `sticky top-0` (ya no
    necesario con el nuevo layout flex).
 
-7. **Verificación de regresión responsive**:
+4. **Verificación de regresión responsive**:
    - Confirmar mobile: overlay + drawer funcionan igual.
    - Confirmar tablet: sidebar `sm:w-16` sin hamburguesa.
    - Confirmar desktop expandido y colapsado con el layout nuevo.
@@ -118,7 +118,7 @@ ng build                        # Build de producción
 
 ## Heroicons v2 — paths de referencia
 
-Los paths SVG se copian desde https://heroicons.com (seleccionar: Outline, stroke-width 1.5).
+Los paths SVG se copian desde <https://heroicons.com> (seleccionar: Outline, stroke-width 1.5).
 Todos comparten el `viewBox="0 0 24 24"` y `fill="none"`.
 
 El componente `app-icon` solo incluye el `<path>` interno; el `<svg>` wrapper lo provee

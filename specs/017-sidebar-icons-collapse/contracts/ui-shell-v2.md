@@ -44,6 +44,7 @@ correspondiente al nombre recibido.
 ```
 
 **Reglas**:
+
 - `aria-hidden="true"` siempre: el ícono es decorativo; el contexto semántico lo da el enlace padre.
 - `stroke="currentColor"`: hereda automáticamente el color del texto del elemento padre
   (activo: `text-blue-700`; normal: `text-gray-500`).
@@ -83,7 +84,7 @@ correspondiente al nombre recibido.
 
 **Clases de transición en el `<nav>`**:
 
-```
+```text
 transition-[width] duration-200 ease-in-out
 ```
 
