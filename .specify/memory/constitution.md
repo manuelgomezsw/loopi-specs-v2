@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -25,6 +25,16 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.7.0 — §VI Monitoreo Preventivo ampliado: logs exclusivamente en GCP Cloud Logging
                 (Datadog no recibe logs), reglas de cardinalidad de métricas (tienda_id ✅ / user_id ❌),
                 convención de nomenclatura de métricas y referencia a spec 015 (MINOR).
+        1.9.0 — §Diseño de Interfaz: nueva subsección "Superficie de Formulario": card blanca
+                obligatoria sobre fondo gris de página; bg-white explícito en inputs;
+                jerarquía visual de tres capas; ancho máximo por densidad (MINOR).
+
+Changes in 1.9.0:
+  - §Diseño de Interfaz: nueva subsección "Superficie de Formulario"
+  - Jerarquía de tres capas obligatoria: página bg-gray-50 → tarjeta bg-white → inputs bg-white explícito
+  - Tabla de ancho máximo según densidad del formulario (max-w-lg / max-w-2xl / max-w-4xl)
+  - Regla de separación de zona destructiva con hr + mt-8
+  - Ejemplo canónico HTML de referencia para todos los formularios del sistema
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -349,6 +359,63 @@ caso excepcional.
   reemplazo del label.
 - **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
   solo cuando el llenado automático sea perjudicial para el flujo.
+
+### Superficie de Formulario
+
+Todo formulario de creación o edición DEBE establecer una jerarquía visual de tres capas para
+garantizar que los inputs sean percibidos como activos e interactivos en todos los sistemas
+operativos y navegadores:
+
+| Capa | Elemento | Clases Tailwind obligatorias |
+|------|----------|------------------------------|
+| 1 — Página | `<main>` o contenedor raíz | `bg-gray-50` |
+| 2 — Tarjeta | `<div>` que envuelve el `<form>` | `bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8` |
+| 3 — Inputs | `<input>`, `<select>`, `<textarea>` | `bg-white` explícito (no depender del default del navegador) |
+
+**Reglas:**
+
+- El contenedor de la tarjeta DEBE tener ancho máximo apropiado a la densidad del formulario:
+  - Formularios simples (≤ 6 campos): `max-w-lg` (512 px)
+  - Formularios medios (7–15 campos): `max-w-2xl` (672 px)
+  - Formularios complejos (> 15 campos o secciones): `max-w-4xl` (896 px)
+- La tarjeta se centra horizontalmente con `mx-auto`.
+- El `<main>` o página que contenga la tarjeta DEBE usar `bg-gray-50` para que el
+  contraste tarjeta/fondo sea visible. Nunca fondo blanco en la página y tarjeta blanca.
+- Los campos en estado deshabilitado (readonly en edición) usan `bg-gray-100 text-gray-500`
+  para comunicar inequívocamente que no son editables — distinto del `bg-white` del campo activo.
+- La zona de acciones destructivas (inactivar, eliminar) DEBE separarse del formulario principal
+  con un `<hr>` y un margen de al menos `mt-8`, ubicada al final de la vista.
+
+**Integración con el Shell:**
+
+Los formularios se renderizan dentro del `<main>` del `ShellComponent`, que ya aplica
+`bg-gray-50` al fondo de la página y `p-4 sm:p-6 lg:p-8` como padding base. Por lo tanto:
+
+- **No usar `<main>` propio** en la vista del formulario (sería `<main>` anidado, HTML inválido).
+- **No repetir el padding** del shell en el contenedor raíz de la vista.
+- El elemento raíz de la vista es un `<div>` con `max-w-{tamaño} mx-auto` para centrar el contenido.
+
+**Ejemplo canónico:**
+
+```html
+<!-- Vista del formulario (renderizada dentro del <main> del shell) -->
+<div class="max-w-lg mx-auto">
+  <!-- Breadcrumb + título fuera de la tarjeta -->
+  <nav ...>...</nav>
+  <h1 ...>Nueva tienda</h1>
+
+  <!-- Tarjeta del formulario -->
+  <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8">
+    <form ...>
+      <input class="bg-white w-full border border-gray-300 rounded-lg px-3 py-2 ..." />
+      ...
+    </form>
+  </div>
+
+  <!-- Zona destructiva (solo en edición) -->
+  <div class="mt-8 pt-6 border-t border-gray-200">...</div>
+</div>
+```
 
 ### Convenciones de Botones de Acción
 
