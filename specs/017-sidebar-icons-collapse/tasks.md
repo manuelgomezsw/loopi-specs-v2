@@ -22,7 +22,7 @@ y validación incremental e independiente.
 
 **Propósito**: Verificar baseline antes de modificar el shell.
 
-- [ ] T001 Compilar `loopi-web` sin errores para establecer baseline: ejecutar `ng build` desde `loopi-web/`
+- [x] T001 Compilar `loopi-web` sin errores para establecer baseline: ejecutar `ng build` desde `loopi-web/`
 
 ---
 
@@ -33,8 +33,8 @@ completarse antes de modificar el sidebar.
 
 **⚠️ CRÍTICO**: Las fases 3 y 4 no pueden comenzar hasta completar esta fase.
 
-- [ ] T002 Crear `shared/components/icon/icon.component.ts` — componente standalone con `@Input({ required: true }) name: string`; template con `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">` y bloque `@switch (name)` con un `@case` para cada uno de los 13 íconos: `home`, `building-storefront`, `users`, `squares-2x2`, `book-open`, `clipboard-document-list`, `trash`, `shopping-cart`, `banknotes`, `chart-bar`, `presentation-chart-line`, `chevron-left`, `chevron-right`; `@default` con `<circle cx="12" cy="12" r="4" fill="currentColor" />`; paths SVG obtenidos de Heroicons v2 outline
-- [ ] T003 [P] Crear `shared/components/icon/icon.component.spec.ts` — test que verifica que cada uno de los 13 nombres registrados produce un elemento `<svg>`; test que un nombre inválido produce el elemento fallback sin romper el componente
+- [x] T002 Crear `shared/components/icon/icon.component.ts` — componente standalone con `@Input({ required: true }) name: string`; template con `<svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">` y bloque `@switch (name)` con un `@case` para cada uno de los 13 íconos: `home`, `building-storefront`, `users`, `squares-2x2`, `book-open`, `clipboard-document-list`, `trash`, `shopping-cart`, `banknotes`, `chart-bar`, `presentation-chart-line`, `chevron-left`, `chevron-right`; `@default` con `<circle cx="12" cy="12" r="4" fill="currentColor" />`; paths SVG obtenidos de Heroicons v2 outline
+- [x] T003 [P] Crear `shared/components/icon/icon.component.spec.ts` — test que verifica que cada uno de los 13 nombres registrados produce un elemento `<svg>`; test que un nombre inválido produce el elemento fallback sin romper el componente
 
 **Checkpoint**: `app-icon` disponible para ser importado por el sidebar.
 
@@ -51,10 +51,10 @@ correcto en estado normal y activo.
 
 ### Implementación HU-1
 
-- [ ] T004 [US1] Importar `IconComponent` en el array `imports` de `sidebar.component.ts` y eliminar completamente el método `iconEmoji()` de `shared/components/shell/sidebar/sidebar.component.ts`
-- [ ] T005 [US1] Reemplazar `<span class="flex h-5 w-5 ...">{{ iconEmoji(item.icon) }}</span>` por `<app-icon [name]="item.icon" />` en `shared/components/shell/sidebar/sidebar.component.html`
-- [ ] T006 [US1] Verificar que cada `<a>` del sidebar tiene `[attr.title]="item.label"` y que `[attr.aria-label]="item.label"` está presente para accesibilidad en modo colapsado en `shared/components/shell/sidebar/sidebar.component.html`
-- [ ] T007 [US1] Actualizar `shared/components/shell/sidebar/sidebar.component.spec.ts` — eliminar cualquier test que referencie `iconEmoji`; agregar test que verifica que el template contiene `app-icon` para cada ítem del menú
+- [x] T004 [US1] Importar `IconComponent` en el array `imports` de `sidebar.component.ts` y eliminar completamente el método `iconEmoji()` de `shared/components/shell/sidebar/sidebar.component.ts`
+- [x] T005 [US1] Reemplazar `<span class="flex h-5 w-5 ...">{{ iconEmoji(item.icon) }}</span>` por `<app-icon [name]="item.icon" />` en `shared/components/shell/sidebar/sidebar.component.html`
+- [x] T006 [US1] Verificar que cada `<a>` del sidebar tiene `[attr.title]="item.label"` y que `[attr.aria-label]="item.label"` está presente para accesibilidad en modo colapsado en `shared/components/shell/sidebar/sidebar.component.html`
+- [x] T007 [US1] Actualizar `shared/components/shell/sidebar/sidebar.component.spec.ts` — eliminar cualquier test que referencie `iconEmoji`; agregar test que verifica que el template contiene `app-icon` para cada ítem del menú
 
 **Checkpoint**: Los 11 ítems del menú muestran SVG. Ningún emoji visible. Tests de sidebar pasan.
 
@@ -71,14 +71,14 @@ navegador — el sidebar debe mantener el estado colapsado.
 
 ### Implementación HU-2
 
-- [ ] T008 [US2] Agregar `readonly sidebarCollapsed: WritableSignal<boolean>` inicializado con `(() => { try { return localStorage.getItem('loopi_sidebar_collapsed') === 'true'; } catch { return false; } })()` y método `toggleCollapse()` con try/catch para `localStorage.setItem` en `shared/components/shell/shell.component.ts`
-- [ ] T009 [US2] Agregar `@Input() collapsed = false` y `@Output() collapseToggled = new EventEmitter<void>()` en `shared/components/shell/sidebar/sidebar.component.ts`; añadir `EventEmitter` a los imports de `@angular/core`
-- [ ] T010 [US2] Agregar botón chevron al final del `<ul>` de ítems (antes de cerrar el `<nav>`) en `shared/components/shell/sidebar/sidebar.component.html`: `class="hidden lg:flex items-center justify-center w-full p-3 text-gray-500 hover:bg-gray-100 hover:text-gray-700 border-t border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"`, `(click)="collapseToggled.emit()"`, `[attr.aria-label]="collapsed ? 'Expandir menú' : 'Colapsar menú'"`, con `<app-icon [name]="collapsed ? 'chevron-right' : 'chevron-left'" />`
-- [ ] T011 [US2] Agregar `transition-[width] duration-200 ease-in-out` al `<nav>` del sidebar y aplicar `[class.lg:w-16]="collapsed"` y `[class.lg:w-64]="!collapsed"` (reemplazando el `lg:w-64` hardcoded actual) en `shared/components/shell/sidebar/sidebar.component.html`
-- [ ] T012 [US2] Agregar `[class.lg:hidden]="collapsed"` al `<span>` del label del ítem (el que ya tiene `class="truncate sm:hidden lg:block"`) en `shared/components/shell/sidebar/sidebar.component.html`
-- [ ] T013 [US2] Pasar `[collapsed]="sidebarCollapsed()"` y `(collapseToggled)="toggleCollapse()"` al elemento `<app-sidebar>` en `shared/components/shell/shell.component.html`
-- [ ] T014 [P] [US2] Actualizar `shared/components/shell/shell.component.spec.ts` — agregar test que `sidebarCollapsed()` inicia en `false` cuando `localStorage` está vacío; test que `toggleCollapse()` alterna el signal y escribe en `localStorage`; mockear `localStorage` con `spyOn(window.localStorage, 'getItem')`
-- [ ] T015 [P] [US2] Actualizar `shared/components/shell/sidebar/sidebar.component.spec.ts` — agregar test que cuando `collapsed=true` el texto del ítem tiene clase `lg:hidden`; test que el botón chevron emite el evento `collapseToggled` al hacer clic
+- [x] T008 [US2] Agregar `readonly sidebarCollapsed: WritableSignal<boolean>` inicializado con `(() => { try { return localStorage.getItem('loopi_sidebar_collapsed') === 'true'; } catch { return false; } })()` y método `toggleCollapse()` con try/catch para `localStorage.setItem` en `shared/components/shell/shell.component.ts`
+- [x] T009 [US2] Agregar `@Input() collapsed = false` y `@Output() collapseToggled = new EventEmitter<void>()` en `shared/components/shell/sidebar/sidebar.component.ts`; añadir `EventEmitter` a los imports de `@angular/core`
+- [x] T010 [US2] Agregar botón chevron al final del `<ul>` de ítems (antes de cerrar el `<nav>`) en `shared/components/shell/sidebar/sidebar.component.html`: `class="hidden lg:flex items-center justify-center w-full p-3 text-gray-500 hover:bg-gray-100 hover:text-gray-700 border-t border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"`, `(click)="collapseToggled.emit()"`, `[attr.aria-label]="collapsed ? 'Expandir menú' : 'Colapsar menú'"`, con `<app-icon [name]="collapsed ? 'chevron-right' : 'chevron-left'" />`
+- [x] T011 [US2] Agregar `transition-[width] duration-200 ease-in-out` al `<nav>` del sidebar y aplicar `[class.lg:w-16]="collapsed"` y `[class.lg:w-64]="!collapsed"` (reemplazando el `lg:w-64` hardcoded actual) en `shared/components/shell/sidebar/sidebar.component.html`
+- [x] T012 [US2] Agregar `[class.lg:hidden]="collapsed"` al `<span>` del label del ítem (el que ya tiene `class="truncate sm:hidden lg:block"`) en `shared/components/shell/sidebar/sidebar.component.html`
+- [x] T013 [US2] Pasar `[collapsed]="sidebarCollapsed()"` y `(collapseToggled)="toggleCollapse()"` al elemento `<app-sidebar>` en `shared/components/shell/shell.component.html`
+- [x] T014 [P] [US2] Actualizar `shared/components/shell/shell.component.spec.ts` — agregar test que `sidebarCollapsed()` inicia en `false` cuando `localStorage` está vacío; test que `toggleCollapse()` alterna el signal y escribe en `localStorage`; mockear `localStorage` con `spyOn(window.localStorage, 'getItem')`
+- [x] T015 [P] [US2] Actualizar `shared/components/shell/sidebar/sidebar.component.spec.ts` — agregar test que cuando `collapsed=true` el texto del ítem tiene clase `lg:hidden`; test que el botón chevron emite el evento `collapseToggled` al hacer clic
 
 **Checkpoint**: El sidebar se colapsa y expande en desktop con animación < 200ms. Estado persiste al recargar. Tests pasan.
 
@@ -95,10 +95,10 @@ de la ventana (sin espacio de topbar encima) y que el logo "Loopi" aparece dentr
 
 ### Implementación HU-3
 
-- [ ] T016 [US3] Refactorizar `shared/components/shell/shell.component.html` — cambiar el div raíz de `flex-col` a `flex-row`; el `<app-sidebar>` es el primer hijo directo del div raíz; el segundo hijo es `<div class="flex flex-col flex-1 overflow-hidden">` que contiene `<app-topbar>` y `<main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">` con `<router-outlet />`; eliminar el div intermedio `flex flex-1 overflow-hidden` que envolvía sidebar + main
-- [ ] T017 [US3] Ajustar la sección de logo en `shared/components/shell/sidebar/sidebar.component.html` — el logo desktop expandido (`hidden lg:flex items-center px-4 py-5`) ahora lleva `border-b border-gray-100`; el logo tablet colapsado (`hidden sm:flex lg:hidden`) también lleva `border-b border-gray-100`; verificar que ambos bloques de logo se ven correctos sin topbar encima
-- [ ] T018 [US3] Ajustar `shared/components/shell/topbar/topbar.component.html` — eliminar cualquier sección de logo/branding de la topbar (el logo ahora vive en el sidebar); quitar la clase `sticky top-0` del `<header>` (ya no necesaria; la posición la garantiza la estructura flex del shell); verificar que el `border-b border-gray-200` y `shadow-sm` se mantienen
-- [ ] T019 [P] [US3] Actualizar `shared/components/shell/shell.component.spec.ts` si existen tests que verifican estructura DOM del layout (clases del div raíz, posición del topbar)
+- [x] T016 [US3] Refactorizar `shared/components/shell/shell.component.html` — cambiar el div raíz de `flex-col` a `flex-row`; el `<app-sidebar>` es el primer hijo directo del div raíz; el segundo hijo es `<div class="flex flex-col flex-1 overflow-hidden">` que contiene `<app-topbar>` y `<main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">` con `<router-outlet />`; eliminar el div intermedio `flex flex-1 overflow-hidden` que envolvía sidebar + main
+- [x] T017 [US3] Ajustar la sección de logo en `shared/components/shell/sidebar/sidebar.component.html` — el logo desktop expandido (`hidden lg:flex items-center px-4 py-5`) ahora lleva `border-b border-gray-100`; el logo tablet colapsado (`hidden sm:flex lg:hidden`) también lleva `border-b border-gray-100`; verificar que ambos bloques de logo se ven correctos sin topbar encima
+- [x] T018 [US3] Ajustar `shared/components/shell/topbar/topbar.component.html` — eliminar cualquier sección de logo/branding de la topbar (el logo ahora vive en el sidebar); quitar la clase `sticky top-0` del `<header>` (ya no necesaria; la posición la garantiza la estructura flex del shell); verificar que el `border-b border-gray-200` y `shadow-sm` se mantienen
+- [x] T019 [P] [US3] Actualizar `shared/components/shell/shell.component.spec.ts` si existen tests que verifican estructura DOM del layout (clases del div raíz, posición del topbar)
 - [ ] T020 [US3] Verificación manual de regresión responsive: abrir la app y confirmar mobile (< 640px) — drawer con overlay funciona; tablet (640-1023px) — sidebar `w-16` siempre visible; desktop (≥ 1024px) — sidebar full-height, logo en sidebar, topbar en columna derecha
 
 **Checkpoint**: El sidebar va de tope a fondo en desktop. Responsive mobile/tablet sin regresiones.
@@ -109,8 +109,8 @@ de la ventana (sin espacio de topbar encima) y que el logo "Loopi" aparece dentr
 
 **Propósito**: Calidad final, build de producción y checklist manual completo.
 
-- [ ] T021 [P] Ejecutar `ng test --watch=false` desde `loopi-web/` y resolver cualquier test que falle por los cambios en `IconComponent`, `SidebarComponent` o `ShellComponent`
-- [ ] T022 [P] Ejecutar `ng build` desde `loopi-web/` y verificar que la build de producción compila sin errores ni warnings relacionados con la feature
+- [x] T021 [P] Ejecutar `ng test --watch=false` desde `loopi-web/` y resolver cualquier test que falle por los cambios en `IconComponent`, `SidebarComponent` o `ShellComponent`
+- [x] T022 [P] Ejecutar `ng build` desde `loopi-web/` y verificar que la build de producción compila sin errores ni warnings relacionados con la feature
 - [ ] T023 Ejecutar el checklist manual completo de `specs/017-sidebar-icons-collapse/quickstart.md` — todos los ítems de P1 (íconos y colapso) y P2 (layout full-height) deben estar marcados como verificados
 
 ---
