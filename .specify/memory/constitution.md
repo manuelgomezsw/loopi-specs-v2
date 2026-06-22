@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -13,21 +13,28 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.4.0 — nueva sección "Diseño de Interfaz (UX/UI)": responsive mobile-first,
                 accesibilidad WCAG 2.1 AA, estados de carga/error/vacío, convenciones
                 de formularios, feedback de acciones y estructura mínima de vistas (MINOR).
+        1.4.1 — patrón de listas y formularios: navegación por clic de fila, zona de precaución
+                en formulario de edición para acciones destructivas (PATCH).
         1.5.0 — nueva subsección "Arquitectura del backend Go — separación de capas":
                 tabla Handler/Service/Repository con responsabilidades exclusivas,
                 reglas de cruce, test corolario. Previene SQL en la capa service (MINOR).
         1.6.0 — estrategia de testing backend Go: técnica por capa (httptest/mock/sqlmock/t.Setenv),
                 thresholds (≥ 95% lógica, ≥ 90% infraestructura, ≥ 70% OTel), gate CI,
                 qué cubrir obligatoriamente en service y middleware (MINOR).
-        1.8.0 — §Diseño de Interfaz: nueva subsección "Convenciones de Botones de Acción":
-                prefijo '+ ' obligatorio en botones de creación en vistas de lista;
-                títulos de formulario sin prefijo (MINOR).
         1.7.0 — §VI Monitoreo Preventivo ampliado: logs exclusivamente en GCP Cloud Logging
                 (Datadog no recibe logs), reglas de cardinalidad de métricas (tienda_id ✅ / user_id ❌),
                 convención de nomenclatura de métricas y referencia a spec 015 (MINOR).
+        1.8.0 — §Diseño de Interfaz: nueva subsección "Convenciones de Botones de Acción":
+                prefijo '+ ' obligatorio en botones de creación en vistas de lista;
+                títulos de formulario sin prefijo (MINOR).
         1.9.0 — §Diseño de Interfaz: nueva subsección "Superficie de Formulario": card blanca
                 obligatoria sobre fondo gris de página; bg-white explícito en inputs;
                 jerarquía visual de tres capas; ancho máximo por densidad (MINOR).
+
+Changes in 1.4.1:
+  - Patrón de listas: filas clickeables con cursor-pointer, tabindex="0", role="button", keydown.enter
+  - Patrón de formularios: acciones destructivas en "Zona de precaución" al pie del formulario
+  - Texto de impacto en lenguaje no técnico; modal de confirmación antes de acción irreversible
 
 Changes in 1.9.0:
   - §Diseño de Interfaz: nueva subsección "Superficie de Formulario"
@@ -57,6 +64,14 @@ Changes in 1.4.0:
   - Convenciones de formularios: validación on blur + on submit; botón deshabilitado en loading
   - Feedback de acciones: toasts 3 s en éxito; modal de confirmación en destructivas
   - Estructura mínima de vistas: h1 único, breadcrumb contextual, acción primaria identificada
+
+Changes in 1.4.1:
+  - Patrón de listas: las filas son clickeables y navegan al formulario de edición
+    (cursor-pointer, tabindex="0", role="button", keydown.enter). Sin botones por fila.
+  - Patrón de formularios: las acciones destructivas (inactivar, eliminar) van en una
+    sección "Zona de precaución" al pie del formulario en modo edición, nunca en la lista.
+    El texto explica el impacto en lenguaje para usuarios no técnicos (no jerga interna).
+    Un modal de confirmación precede toda acción destructiva irreversible.
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -359,6 +374,24 @@ caso excepcional.
   reemplazo del label.
 - **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
   solo cuando el llenado automático sea perjudicial para el flujo.
+
+### Patrón Lista–Formulario
+
+Toda entidad de catálogo o maestro sigue este patrón de navegación y acciones:
+
+- **Lista**: cada fila es clickeable y navega al formulario de edición del registro. No se
+  colocan botones de "Editar" ni "Inactivar" por fila. Atributos obligatorios en el `<tr>`:
+  `cursor-pointer`, `tabindex="0"`, `role="button"`, handler `(keydown.enter)` para
+  accesibilidad por teclado.
+- **Formulario (modo edición)**: contiene todas las acciones posibles sobre el registro,
+  incluidas las destructivas. Las acciones destructivas van en una sección **"Zona de
+  precaución"** al pie del formulario (borde rojo, fondo rojo claro), separada visualmente
+  del resto. Un modal de confirmación precede toda acción irreversible.
+- **Texto de impacto**: escrito en lenguaje para usuarios no técnicos. No usar jerga interna
+  ("unidad canónica", "soft delete", "FK"). Describir el efecto real en el negocio.
+  Ejemplo correcto: "Los ítems que usen esta unidad de medida no podrán registrar nuevas
+  transacciones." Ejemplo incorrecto: "Los ítems con unidad canónica inactiva quedarán
+  bloqueados."
 
 ### Superficie de Formulario
 

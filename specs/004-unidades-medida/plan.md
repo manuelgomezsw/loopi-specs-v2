@@ -103,6 +103,24 @@ ios/ or android/
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
 
+```text
+src/app/unidades-medida/
+  unidades-medida-lista/
+    unidades-medida-lista.component.ts     # Listado con filtros por tipo; filas clickeables
+    unidades-medida-lista.component.html
+  unidad-medida-form/
+    unidad-medida-form.component.ts        # Modo crear + editar + zona de precaución (inactivar)
+    unidad-medida-form.component.html
+  unidades-medida.service.ts              # HTTP client + interfaces TypeScript inline
+```
+
+Rutas registradas inline en `app.routes.ts` con `loadComponent` (sin archivo `*.routes.ts`).
+
+**Decisión de Estructura**: Backend modular en `internal/unidades_medida/` + paquete compartido
+`internal/conversion/` para la función pura de conversión. Frontend con estructura plana
+(`{feature}-lista/`, `{entity}-form/`, servicio en raíz del módulo), igual que `tiendas/` y
+`empleados/`. Interfaces TypeScript en el servicio, no en archivo de modelos separado.
+
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
