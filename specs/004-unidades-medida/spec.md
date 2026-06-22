@@ -172,8 +172,9 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 
 - RF-UM-04.1: El administrador puede consultar el catálogo completo de unidades agrupado
   por tipo, con código, nombre, factor de conversión y estado (activa/inactiva).
-- RF-UM-04.2: Desde el detalle de una unidad, el admin puede ver cuántos items la tienen
-  asignada como unidad canónica (campo `items_con_unidad_canonica` en la respuesta del detalle).
+- RF-UM-04.2: Antes de inactivar una unidad, el admin ve cuántos ítems la usan como unidad
+  de medida (campo `items_con_unidad_canonica`). Esta información se muestra en el modal de
+  confirmación dentro del formulario de edición. No existe vista de detalle independiente.
 
 ---
 

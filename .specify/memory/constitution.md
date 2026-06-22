@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -13,6 +13,8 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.4.0 — nueva sección "Diseño de Interfaz (UX/UI)": responsive mobile-first,
                 accesibilidad WCAG 2.1 AA, estados de carga/error/vacío, convenciones
                 de formularios, feedback de acciones y estructura mínima de vistas (MINOR).
+        1.4.1 — patrón de listas y formularios: navegación por clic de fila, zona de precaución
+                en formulario de edición para acciones destructivas (PATCH).
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -35,6 +37,14 @@ Changes in 1.4.0:
   - Convenciones de formularios: validación on blur + on submit; botón deshabilitado en loading
   - Feedback de acciones: toasts 3 s en éxito; modal de confirmación en destructivas
   - Estructura mínima de vistas: h1 único, breadcrumb contextual, acción primaria identificada
+
+Changes in 1.4.1:
+  - Patrón de listas: las filas son clickeables y navegan al formulario de edición
+    (cursor-pointer, tabindex="0", role="button", keydown.enter). Sin botones por fila.
+  - Patrón de formularios: las acciones destructivas (inactivar, eliminar) van en una
+    sección "Zona de precaución" al pie del formulario en modo edición, nunca en la lista.
+    El texto explica el impacto en lenguaje para usuarios no técnicos (no jerga interna).
+    Un modal de confirmación precede toda acción destructiva irreversible.
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -242,6 +252,24 @@ caso excepcional.
   reemplazo del label.
 - **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
   solo cuando el llenado automático sea perjudicial para el flujo.
+
+### Patrón Lista–Formulario
+
+Toda entidad de catálogo o maestro sigue este patrón de navegación y acciones:
+
+- **Lista**: cada fila es clickeable y navega al formulario de edición del registro. No se
+  colocan botones de "Editar" ni "Inactivar" por fila. Atributos obligatorios en el `<tr>`:
+  `cursor-pointer`, `tabindex="0"`, `role="button"`, handler `(keydown.enter)` para
+  accesibilidad por teclado.
+- **Formulario (modo edición)**: contiene todas las acciones posibles sobre el registro,
+  incluidas las destructivas. Las acciones destructivas van en una sección **"Zona de
+  precaución"** al pie del formulario (borde rojo, fondo rojo claro), separada visualmente
+  del resto. Un modal de confirmación precede toda acción irreversible.
+- **Texto de impacto**: escrito en lenguaje para usuarios no técnicos. No usar jerga interna
+  ("unidad canónica", "soft delete", "FK"). Describir el efecto real en el negocio.
+  Ejemplo correcto: "Los ítems que usen esta unidad de medida no podrán registrar nuevas
+  transacciones." Ejemplo incorrecto: "Los ítems con unidad canónica inactiva quedarán
+  bloqueados."
 
 ### Feedback de Acciones
 

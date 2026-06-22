@@ -119,27 +119,22 @@ middleware/
 ### Código Fuente — Frontend (`loopi-web-v2`)
 
 ```text
-src/app/features/unidades-medida/
-  unidades-medida.routes.ts                             # Rutas lazy-loaded
-  pages/
-    lista-unidades/
-      lista-unidades.component.ts                       # Listado con filtros por tipo
-      lista-unidades.component.html
-    formulario-unidad/
-      formulario-unidad.component.ts                    # Modo crear + editar
-      formulario-unidad.component.html
-    detalle-unidad/
-      detalle-unidad.component.ts                       # Vista de detalle + items que la usan
-      detalle-unidad.component.html
-  services/
-    unidades-medida.service.ts                          # HTTP client → /api/v1/unidades_medida
-  models/
-    unidad-medida.model.ts                              # Interfaces TypeScript (ver contracts/api.md)
+src/app/unidades-medida/
+  unidades-medida-lista/
+    unidades-medida-lista.component.ts     # Listado con filtros por tipo; filas clickeables
+    unidades-medida-lista.component.html
+  unidad-medida-form/
+    unidad-medida-form.component.ts        # Modo crear + editar + zona de precaución (inactivar)
+    unidad-medida-form.component.html
+  unidades-medida.service.ts              # HTTP client + interfaces TypeScript inline
 ```
 
+Rutas registradas inline en `app.routes.ts` con `loadComponent` (sin archivo `*.routes.ts`).
+
 **Decisión de Estructura**: Backend modular en `internal/unidades_medida/` + paquete compartido
-`internal/conversion/` para la función pura de conversión. Frontend feature-based en
-`src/app/features/`. Patrón consistente con 001, 002 y 003.
+`internal/conversion/` para la función pura de conversión. Frontend con estructura plana
+(`{feature}-lista/`, `{entity}-form/`, servicio en raíz del módulo), igual que `tiendas/` y
+`empleados/`. Interfaces TypeScript en el servicio, no en archivo de modelos separado.
 
 ---
 

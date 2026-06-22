@@ -20,14 +20,15 @@
 
 - [X] T001 Crear directorios `loopi-api-v2/internal/unidades_medida/` e `internal/conversion/`
   (archivos vacíos con `.gitkeep` o directamente los primeros `.go` de la Fase 2)
-- [X] T002 [P] Crear estructura de directorios frontend en `loopi-web-v2/src/app/features/unidades-medida/`:
-  subdirectorios `pages/lista-unidades/`, `pages/formulario-unidad/`, `pages/detalle-unidad/`,
-  `services/`, `models/`
-- [X] T003 [P] Crear `loopi-web-v2/src/app/features/unidades-medida/unidades-medida.routes.ts`
-  con rutas lazy-loaded: `''` → `ListaUnidadesComponent`, `'nueva'` → `FormularioUnidadComponent`,
-  `':id'` → `DetalleUnidadComponent`, `':id/editar'` → `FormularioUnidadComponent` (modo edición)
-- [X] T004 Registrar `unidades-medida.routes.ts` en el router principal de la aplicación Angular
-  (`app.routes.ts`) bajo la ruta `/unidades-medida` (lazy load con `loadChildren`)
+- [X] T002 [P] Crear estructura de directorios frontend en `loopi-web-v2/src/app/unidades-medida/`:
+  subdirectorios `unidades-medida-lista/`, `unidad-medida-form/` (estructura plana, sin
+  `pages/`, `services/` ni `models/`, igual que `tiendas/` y `empleados/`)
+- [X] T003 [P] Registrar rutas en `app.routes.ts` con `loadComponent` inline:
+  `unidades-medida` → `UnidadesMedidaListaComponent`,
+  `unidades-medida/nueva` → `UnidadMedidaFormComponent`,
+  `unidades-medida/:id/editar` → `UnidadMedidaFormComponent` (modo edición)
+- [X] T004 Las interfaces del dominio viven en `unidades-medida.service.ts` (no archivo
+  de modelos separado), siguiendo la convención de `tiendas.service.ts` y `empleados.service.ts`
 
 **Punto de control**: `ng build` pasa sin errores tras crear la estructura vacía.
 
@@ -64,7 +65,7 @@
   Ristretto con 10_000 max keys, TTL default 5 min; implementar `invalidarCatalogo(id int64)`
   que borra claves `"um:all"`, `"um:id:{id}"`, `"um:tipo:peso"`, `"um:tipo:volumen"`,
   `"um:tipo:unidad"` según RD-01 en research.md
-- [X] T012 [P] Crear `loopi-web-v2/src/app/features/unidades-medida/models/unidad-medida.model.ts`
+- [X] T012 [P] Crear `loopi-web-v2/src/app/unidades-medida/unidades-medida.service.ts (interfaces inline)`
   con interfaces TypeScript: `TipoMedida`, `UnidadMedida`, `UnidadMedidaDetalle`,
   `ListarUnidadesMedidaResponse`, `CrearUnidadMedidaRequest`, `EditarUnidadMedidaRequest`,
   `ImpactoInactivacionResponse`, `InactivarUnidadResponse`, `ApiError` según contracts/api.md
@@ -199,18 +200,18 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
 
 ### Frontend — Service y Componentes
 
-- [X] T024 Crear `loopi-web-v2/src/app/features/unidades-medida/services/unidades-medida.service.ts`
+- [X] T024 Crear `loopi-web-v2/src/app/unidades-medida/unidades-medida.service.ts`
   como `@Injectable({providedIn:'root'})` con `HttpClient`; implementar `crearUnidad(req:
   CrearUnidadMedidaRequest): Observable<UnidadMedida>` (POST `/api/v1/unidades_medida`),
   `inactivarUnidad(id: number): Observable<InactivarUnidadResponse>` (PATCH `.../inactivar`),
   `getImpacto(id: number): Observable<ImpactoInactivacionResponse>` (GET `.../impacto`)
-- [X] T025 Crear `loopi-web-v2/src/app/features/unidades-medida/pages/formulario-unidad/formulario-unidad.component.ts`
+- [X] T025 Crear `loopi-web-v2/src/app/unidades-medida/unidad-medida-form/unidad-medida-form.component.ts`
   como componente standalone; reactive form con `FormBuilder`: campo `codigo` (required,
   maxLength 20), `nombre` (required, maxLength 100), `tipo_medida` (select required),
   `factor_conversion` (required, min 0.0001); validar onBlur + onSubmit; deshabilitar botón
   durante envío (signal `cargando`); llamar `service.crearUnidad()`; toast verde 3 s en éxito;
   navegar a `/unidades-medida` tras crear; manejar error API mostrando `mensaje` del error
-- [X] T026 Crear `loopi-web-v2/src/app/features/unidades-medida/pages/formulario-unidad/formulario-unidad.component.html`:
+- [X] T026 Crear `loopi-web-v2/src/app/unidades-medida/unidad-medida-form/unidad-medida-form.component.html`:
   `<h1>` "Nueva unidad de medida"; breadcrumb `Unidades de medida → Nueva`; todos los campos
   con `<label for="...">` explícito (WCAG 2.1 AA); `aria-describedby` en campos con error;
   `<option>` para peso, volumen y unidad en el select; mensajes de error con texto descriptivo
@@ -221,12 +222,12 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
   provee `bg-gray-50` y el padding base); envolver `<form>` en tarjeta
   `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8">`; todos los
   `<input>` y `<select>` con `class="bg-white ..."` explícito (no heredado del navegador)
-- [X] T027 Crear `loopi-web-v2/src/app/features/unidades-medida/pages/lista-unidades/lista-unidades.component.ts`
+- [X] T027 Crear `loopi-web-v2/src/app/unidades-medida/unidades-medida-lista/unidades-medida-lista.component.ts`
   (esqueleto para HU1): cargar lista al `ngOnInit`; signal `unidades: UnidadMedida[]`;
   método `abrirConfirmacionInactivar(unidad)` que llama `getImpacto(id)` y almacena resultado
   en signal `impactoSeleccionado`; método `confirmarInactivar()` que llama `inactivarUnidad(id)`
   y refresca la lista; signal `cargandoInactivar` para deshabilitar botón durante acción
-- [X] T028 [P] Crear `loopi-web-v2/src/app/features/unidades-medida/pages/lista-unidades/lista-unidades.component.html`
+- [X] T028 [P] Crear `loopi-web-v2/src/app/unidades-medida/unidades-medida-lista/unidades-medida-lista.component.html`
   (esqueleto con inactivación): encabezado con `<h1>` "Unidades de medida" y botón primario
   `+ Nueva unidad de medida` (routerLink a `./nueva`) — el prefijo `+ ` es obligatorio según
   Constitución §Botones de Acción (1.8.0); tabla responsive Tailwind CSS v4 con columnas
@@ -283,26 +284,16 @@ del seed; `GET /api/v1/unidades_medida/{id}` retorna el detalle con `items_con_u
 
 ### Frontend — Lista completa y Detalle
 
-- [X] T035 Completar `lista-unidades.component.ts`: agregar signals `filtroTipo: TipoMedida | ''`
+- [X] T035 Completar `unidades-medida-lista.component.ts`: agregar signals `filtroTipo: TipoMedida | ''`
   y `filtroActivo: boolean | null`; signal `paginaActual = 1`; signal `total = 0`; método
   `cargarUnidades()` que llama `service.listarUnidades({tipo, activo, page, limit})`; effect
   que llama `cargarUnidades()` cuando cambian los signals de filtro o página; mostrar spinner
   inline durante carga; mostrar conteo "N unidades encontradas"
-- [X] T036 [P] Completar `lista-unidades.component.html`: agregar `<select>` para `filtroTipo`
+- [X] T036 [P] Completar `unidades-medida-lista.component.html`: agregar `<select>` para `filtroTipo`
   (opciones: Todos / Peso / Volumen / Unidad) y `<select>` para `filtroActivo` (Todos / Activas /
   Inactivas); paginación con botones "Anterior" / "Siguiente" deshabilitados en extremos; spinner
   inline `< 300 ms sin indicador, 300 ms–3 s spinner` per constitución; badge de tipo de medida
   por fila con color distinto (Tailwind CSS v4)
-- [X] T037 Crear `loopi-web-v2/src/app/features/unidades-medida/pages/detalle-unidad/detalle-unidad.component.ts`:
-  standalone component; inyectar `ActivatedRoute` y `UnidadesMedidaService`; cargar unidad via
-  `service.getUnidad(id)` al init; signals `unidad: UnidadMedidaDetalle | null` y
-  `cargando: boolean`; métodos `irAEditar()` y `abrirInactivar()`
-- [X] T038 [P] Crear `loopi-web-v2/src/app/features/unidades-medida/pages/detalle-unidad/detalle-unidad.component.html`:
-  `<h1>` con nombre de la unidad; breadcrumb `Unidades de medida → [nombre]`; card con todos los
-  campos: código (badge monospace), nombre, tipo, factor, estado (badge verde/rojo), `unidad_base`
-  (badge "Unidad Base" si aplica); badge azul "N items usan esta unidad" cuando > 0; botón
-  primario "Editar" (oculto si inactiva o unidad_base), botón secundario "Inactivar" (oculto si
-  ya inactiva o unidad_base); estado vacío de error con botón "Volver al catálogo"
 - [X] T039 Agregar métodos `listarUnidades(params: Partial<{tipo: string, activo: boolean, page: number, limit: number}>): Observable<ListarUnidadesMedidaResponse>` y
   `getUnidad(id: number): Observable<UnidadMedidaDetalle>` a `unidades-medida.service.ts`
 
@@ -345,7 +336,7 @@ la unidad actualizada; intento de cambiar `factor_conversion` en unidad base ret
 
 ### Frontend — Formulario en Modo Edición
 
-- [X] T045 Actualizar `formulario-unidad.component.ts` para modo edición: detectar si la ruta
+- [X] T045 Actualizar `unidad-medida-form.component.ts` para modo edición: detectar si la ruta
   contiene `':id/editar'` via `ActivatedRoute`; si modo edición, llamar `service.getUnidad(id)`
   y pre-poblar el form; deshabilitar campo `codigo` en modo edición (`{disabled: true}`);
   cambiar label del botón a "Guardar cambios"; llamar `service.editarUnidad(id, req)` en submit;
@@ -374,7 +365,7 @@ está deshabilitado en el formulario; intento de cambiar factor en unidad base `
   INFO en éxito; ERROR en errores de negocio — los logs básicos deben haberse iniciado
   al implementar T017-T019/T030/T041 (Constitución §VI)
 - [X] T049 [P] Verificar accesibilidad WCAG 2.1 AA en los 4 componentes Angular: confirmar que
-  `formulario-unidad.component.html` tiene `<label for>` en todos los campos, `aria-describedby`
+  `unidad-medida-form.component.html` tiene `<label for>` en todos los campos, `aria-describedby`
   en inputs con error, `aria-live="polite"` en zona de mensajes de error; confirmar que el modal
   de confirmación tiene `role="dialog"` y `aria-labelledby`; confirmar navegación con Tab en modal
 - [X] T050 Ejecutar smoke test completo de `specs/004-unidades-medida/quickstart.md` secciones
@@ -420,7 +411,7 @@ está deshabilitado en el formulario; intento de cambiar factor en unidad base `
 - **HU3 (P1)**: Sin dependencias de otras HU. Comparte archivos con HU1 (repository.go, service.go,
   handler.go, service.ts) — coordinación necesaria al trabajar en los mismos archivos.
 - **HU2 (P2)**: Sin dependencias funcionales de HU1/HU3 para el backend. Para el frontend,
-  reutiliza `formulario-unidad.component.ts` de HU1.
+  reutiliza `unidad-medida-form.component.ts` de HU1.
 
 ---
 
