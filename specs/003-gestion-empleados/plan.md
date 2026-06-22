@@ -310,6 +310,7 @@ if req.TipoDocumento != "" && !tiposDocumentoValidos[req.TipoDocumento] {
 Error de dominio nuevo: `ErrTipoDocumentoInvalido` → HTTP 422, `tipo_documento_invalido`.
 
 **Validaciones adicionales implementadas** (RF-EMP-01.10 y RF-EMP-01.11):
+
 - Email: `net/mail.ParseAddress()` → `ValidationError{Codigo: "email_invalido"}` → HTTP 422.
 - Fecha nacimiento: `time.Parse("2006-01-02")` + comparación `hoy.Year()-18` → `ValidationError{Codigo: "edad_minima_requerida"}` → HTTP 422.
 - Fix colateral: `FechaNacimiento` se asigna al struct `Empleado` en `CrearEmpleado()` (omisión preexistente).

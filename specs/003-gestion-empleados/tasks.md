@@ -110,7 +110,7 @@ guardar cambios (PUT) funciona correctamente; `tipo_documento` inválido enviado
 
 ### Phase Dependencies
 
-```
+```text
 Phase 1 (Fundacional)
   ├─► T001, T002 → Phase 2 (Backend) → Phase 5 T019/T020
   └─► T003 (TiendasService) → T013 (US1) / T017 (US2)
