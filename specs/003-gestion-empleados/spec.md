@@ -207,6 +207,8 @@ estados, validando que el listado los muestra correctamente filtrados.
 - RF-EMP-01.7: El rol admin no requiere tienda asignada. Asignar tienda a un admin es un error.
 - RF-EMP-01.8: El campo "Tienda" en el formulario de creación de empleado debe presentarse como una lista desplegable. La lista carga únicamente las tiendas activas del sistema al momento de abrir el formulario. Si no existen tiendas activas, la lista aparece vacía con un mensaje informativo. No se permite entrada de texto libre en este campo.
 - RF-EMP-01.9: El campo "Tipo de documento" en el formulario de creación de empleado debe presentarse como una lista desplegable con los tipos de documento válidos para empleados del sistema. Las opciones disponibles son: **CC** (Cédula de Ciudadanía), **CE** (Cédula de Extranjería), **NUIP** (Número Único de Identificación Personal), **PE** (Permiso Especial de Permanencia). El campo es opcional; si el admin no selecciona ninguna opción, el tipo de documento queda sin registrar.
+- RF-EMP-01.10: Si se proporciona email, debe tener formato de dirección de correo electrónico válido. El sistema rechaza la creación si el formato es inválido.
+- RF-EMP-01.11: Si se proporciona fecha de nacimiento, el empleado debe ser mayor de 18 años al momento del registro. El sistema rechaza la creación si la fecha corresponde a una persona menor de 18 años.
 
 ### RF-EMP-02: Edición de empleados
 
@@ -227,6 +229,8 @@ estados, validando que el listado los muestra correctamente filtrados.
   mensaje: "No es posible cambiar el rol del último administrador activo." La verificación
   es atómica (misma garantía que RF-EMP-03.5).
 - RF-EMP-02.7: En el formulario de edición de empleado, los campos "Tienda" y "Tipo de documento" aplican las mismas reglas de presentación definidas en RF-EMP-01.8 y RF-EMP-01.9. La tienda actualmente asignada debe aparecer preseleccionada en la lista desplegable. El tipo de documento registrado (si existe) debe aparecer preseleccionado.
+- RF-EMP-02.8: El campo email sigue las mismas reglas de validación de formato definidas en RF-EMP-01.10.
+- RF-EMP-02.9: El campo fecha de nacimiento sigue las mismas reglas de edad mínima definidas en RF-EMP-01.11.
 
 ### RF-EMP-03: Inactivación y reactivación
 

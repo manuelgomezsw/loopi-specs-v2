@@ -205,6 +205,8 @@ actualizadas con:
 
 - Validación del enum `tipo_documento` (valores permitidos: CC, CE, NUIP, PE).
 - Nuevo error `422 tipo_documento_invalido`.
+- Validación de formato de email (RF-EMP-01.10): `422 email_invalido`.
+- Validación de edad mínima 18 años sobre fecha_nacimiento (RF-EMP-01.11): `422 edad_minima_requerida`, `422 fecha_nacimiento_invalida`.
 
 ### 1.3 Diseño del formulario Angular
 
@@ -306,6 +308,11 @@ if req.TipoDocumento != "" && !tiposDocumentoValidos[req.TipoDocumento] {
 ```
 
 Error de dominio nuevo: `ErrTipoDocumentoInvalido` → HTTP 422, `tipo_documento_invalido`.
+
+**Validaciones adicionales implementadas** (RF-EMP-01.10 y RF-EMP-01.11):
+- Email: `net/mail.ParseAddress()` → `ValidationError{Codigo: "email_invalido"}` → HTTP 422.
+- Fecha nacimiento: `time.Parse("2006-01-02")` + comparación `hoy.Year()-18` → `ValidationError{Codigo: "edad_minima_requerida"}` → HTTP 422.
+- Fix colateral: `FechaNacimiento` se asigna al struct `Empleado` en `CrearEmpleado()` (omisión preexistente).
 
 ---
 
