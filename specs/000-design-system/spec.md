@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-27
 
-**Status**: Draft
+**Status**: Cerrada
 
 **Input**: User description: "Adoptar los estilos de loopi v1: paleta café, fuente Inter, 4 utilidades de componentes (btn-primary, btn-secondary, input-field, card) y optimizaciones móviles"
 

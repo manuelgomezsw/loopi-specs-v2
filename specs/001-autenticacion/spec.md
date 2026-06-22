@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `001-autenticacion`
 **Creado**: 2026-05-18
-**Estado**: Borrador
+**Estado**: Cerrada
 **Referencia funcional**: [§2.2 Autenticación](../loopi-v2-funcional/spec.md)
 
 ---
