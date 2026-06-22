@@ -283,3 +283,515 @@ siguen la escala semántica:
 - Q: ¿Qué nivel de migración aplica a las vistas ya implementadas (001-autenticacion)? → A: Migración completa — los templates de login/logout se actualizan para usar btn-primary, input-field, card en lugar de clases Tailwind directas.
 - Q: ¿Qué estilo visual tendrá btn-secondary? → A: Outline — borde del color primario, fondo transparente, texto del color primario.
 - Q: ¿Desde dónde se carga la fuente Inter? → A: Self-hosted — archivos .woff2 incluidos en el proyecto; sin Google Fonts CDN.
+
+---
+
+## Componentes Angular Transversales
+
+### Filosofía de Implementación
+
+Los componentes son **standalone**, usan **signals** de Angular 17+ para estado interno y
+siguen el principio de **una responsabilidad**: cada componente resuelve exactamente un
+problema de UX. La composición de componentes pequeños produce las vistas de lista y
+formulario — no hay componentes monolíticos con decenas de inputs.
+
+**Regla de oro**: si un feature necesita un listado, badge de estado, filtro o paginación,
+DEBE usar los componentes de este catálogo. Crear una re-implementación ad-hoc es una
+violación del principio de consistencia. Si el componente existente no cubre el caso,
+extenderlo con un `@Input()` nuevo y actualizar esta spec.
+
+---
+
+### FilterStateService
+
+**Propósito**: Almacena el estado de filtros por ruta durante la sesión. Cuando el usuario
+navega de un listado a un formulario y regresa, sus filtros se preservan. Las instancias
+con default Estado=Activo se inicializan a partir de las `FilterDefinition`.
+
+**Ubicación**: `loopi-web/src/app/shared/services/filter-state.service.ts`
+
+**Idea superadora**: el servicio usa signals de Angular y está keyed por `router.url`, de
+modo que los filtros se preservan por ruta sin necesidad de que el componente padre gestione
+el estado — simplemente inyecta el servicio y lee la señal.
+
+**Modelos** (`loopi-web/src/app/shared/models/filter.model.ts`):
+
+```typescript
+export interface FilterOption {
+  value: unknown;
+  label: string;
+}
+
+export interface FilterDefinition {
+  key: string;
+  label: string;
+  defaultValue: unknown;
+  options?: FilterOption[];
+}
+
+export type ActiveFilters = Record<string, unknown>;
+
+export interface ColumnDef {
+  field: string;
+  header: string;
+  width?: string;
+}
+
+export interface BreadcrumbItem {
+  label: string;
+  route?: string;
+}
+
+export type FormMode = 'create' | 'edit';
+```
+
+**API pública del servicio**:
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class FilterStateService {
+  // Devuelve señal computada con los filtros activos para la ruta
+  getActiveFilters(routeKey: string): Signal<ActiveFilters>;
+
+  // Actualiza un filtro específico y persiste en el mapa de señales
+  setFilter(routeKey: string, key: string, value: unknown): void;
+
+  // Reinicia los filtros de la ruta aplicando los defaultValue de cada definición
+  resetFilters(routeKey: string, definitions: FilterDefinition[]): void;
+}
+```
+
+**Inicialización**: Al llamar `getActiveFilters` por primera vez para una ruta sin estado
+previo, el servicio devuelve un objeto vacío. `FilterBarComponent` llama `resetFilters` en
+`ngOnInit` cuando detecta ruta nueva, aplicando los `defaultValue` de cada `FilterDefinition`.
+
+---
+
+### ListCardComponent (`app-list-card`)
+
+**Propósito**: Provee la capa 2 (card blanca) de la jerarquía visual de listados.
+Es el wrapper estructural obligatorio de toda vista de lista.
+
+**Ubicación**: `loopi-web/src/app/shared/components/list-card/`
+
+**Inputs**: Ninguno — es puramente estructural.
+
+**Clases aplicadas al host**: `bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden w-full`
+
+**Uso**:
+
+```html
+<app-list-card>
+  <app-filter-bar [filters]="filterDefs" [routeKey]="routeKey" (filtersChange)="onFilters($event)" />
+  <app-data-table [columns]="cols" [rows]="rows()" (rowClick)="onRow($event)">
+    <ng-template appCellTemplate="estado" let-row>
+      <app-status-badge [activo]="row.activo" />
+    </ng-template>
+  </app-data-table>
+  @if (!rows().length) {
+    <app-empty-state title="..." actionLabel="..." (action)="onCreate()" />
+  }
+  <app-pagination [page]="page()" [total]="total()" (pageChange)="onPage($event)" />
+</app-list-card>
+```
+
+---
+
+### FilterBarComponent (`app-filter-bar`)
+
+**Propósito**: Barra de filtros con chip pattern. Muestra filtros activos como pills removibles
+y emite cambios para que el componente padre actualice la consulta al servidor.
+
+**Ubicación**: `loopi-web/src/app/shared/components/filter-bar/`
+
+**Inputs**:
+
+| Input | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `filters` | `FilterDefinition[]` | Sí | Definiciones de filtros con valores por defecto |
+| `routeKey` | `string` | Sí | Clave de ruta para `FilterStateService` (pasar `router.url`) |
+
+**Outputs**:
+
+| Output | Tipo | Descripción |
+|--------|------|-------------|
+| `filtersChange` | `EventEmitter<ActiveFilters>` | Emite al agregar, cambiar o quitar un filtro |
+
+**Comportamiento**:
+
+- En `ngOnInit`: carga estado desde `FilterStateService`. Si no hay estado para la ruta,
+  aplica los `defaultValue` de cada `FilterDefinition` via `resetFilters`.
+- Al remover un chip: si el filtro tiene `defaultValue`, vuelve al default en lugar de
+  eliminarse. Los filtros sin default desaparecen al quitarlos.
+- El chip de Estado=Activo se muestra con estilo azul (`bg-blue-100 text-blue-700
+  border border-blue-200 rounded-full`); es visible de inmediato al cargar la vista.
+
+**Ejemplo de definición de filtros** (en el componente padre):
+
+```typescript
+readonly filterDefs: FilterDefinition[] = [
+  {
+    key: 'estado',
+    label: 'Estado',
+    defaultValue: 'activo',
+    options: [
+      { value: 'activo', label: 'Activos' },
+      { value: 'inactivo', label: 'Inactivos' },
+      { value: 'todos', label: 'Todos' },
+    ],
+  },
+];
+```
+
+---
+
+### StatusBadgeComponent (`app-status-badge`)
+
+**Propósito**: Badge visual para el campo `activo` de cualquier entidad. Único punto de
+definición de los colores verde/gris para estado activo/inactivo en todo el sistema.
+
+**Ubicación**: `loopi-web/src/app/shared/components/status-badge/`
+
+**Inputs**:
+
+| Input | Tipo | Descripción |
+|-------|------|-------------|
+| `activo` | `boolean` | Estado del registro |
+
+**Renderizado**:
+
+- `activo = true` → pill `bg-green-100 text-green-700` con texto "Activo"
+- `activo = false` → pill `bg-gray-100 text-gray-500` con texto "Inactivo"
+
+---
+
+### DataTableComponent (`app-data-table`)
+
+**Propósito**: Tabla genérica con filas clickeables, deemphasis automático de filas inactivas
+y soporte de cell templates para renderizado personalizado por columna.
+
+**Ubicación**: `loopi-web/src/app/shared/components/data-table/`
+
+**Inputs**:
+
+| Input | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `columns` | `ColumnDef[]` | — | Definición de columnas (field, header, width opcional) |
+| `rows` | `T[]` | — | Array de datos a mostrar |
+| `trackByField` | `string` | `'id'` | Campo usado en `trackBy` |
+
+**Outputs**:
+
+| Output | Tipo | Descripción |
+|--------|------|-------------|
+| `rowClick` | `EventEmitter<T>` | Emite el objeto de la fila al hacer clic o Enter |
+
+**Idea superadora — Cell Template directive (`appCellTemplate`)**:
+Para columnas con renderizado personalizado, el padre declara `<ng-template>` con la directiva
+y el nombre de la columna en lugar de pasar funciones de renderizado como JSON. Esto permite
+usar componentes Angular dentro de celdas (badges, formatted dates, links, etc.) con pleno
+soporte de change detection y DX familiar de Angular:
+
+```html
+<app-data-table [columns]="columns" [rows]="tiendas()" (rowClick)="onRow($event)">
+  <!-- Columna con renderizado personalizado -->
+  <ng-template appCellTemplate="estado" let-row>
+    <app-status-badge [activo]="row.activo" />
+  </ng-template>
+  <!-- Las demás columnas sin ng-template muestran el valor del campo como texto -->
+</app-data-table>
+```
+
+**Comportamiento automático**:
+
+- Las filas donde `row.activo === false` reciben `class="opacity-60"` automáticamente.
+  El badge dentro de la fila NO hereda la opacity (es un elemento hijo con opacity propia).
+- Cada `<tr>` lleva `tabindex="0"`, `role="button"`, `(keydown.enter)` para accesibilidad.
+- El componente NO gestiona paginación — delega en `PaginationComponent`.
+
+---
+
+### EmptyStateComponent (`app-empty-state`)
+
+**Propósito**: Estado vacío obligatorio para toda lista sin resultados.
+
+**Ubicación**: `loopi-web/src/app/shared/components/empty-state/`
+
+**Inputs**:
+
+| Input | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `title` | `string` | Sí | Mensaje principal en primera persona |
+| `description` | `string` | No | Texto de apoyo explicativo |
+| `actionLabel` | `string` | No | Texto del botón de acción sugerida |
+| `icon` | `string` | No | Nombre del ícono en `app-icon` |
+
+**Outputs**:
+
+| Output | Tipo | Descripción |
+|--------|------|-------------|
+| `action` | `EventEmitter<void>` | Emite al hacer clic en el botón de acción |
+
+---
+
+### PaginationComponent (`app-pagination`)
+
+**Propósito**: Controles de navegación server-side entre páginas de un listado.
+
+**Ubicación**: `loopi-web/src/app/shared/components/pagination/`
+
+**Inputs**:
+
+| Input | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `page` | `number` | — | Página actual (1-based) |
+| `pageSize` | `number` | `20` | Registros por página |
+| `total` | `number` | — | Total de registros en el servidor |
+
+**Outputs**:
+
+| Output | Tipo | Descripción |
+|--------|------|-------------|
+| `pageChange` | `EventEmitter<number>` | Emite el número de página solicitada |
+
+---
+
+### PageHeaderComponent (`app-page-header`)
+
+**Propósito**: Encabezado de vista con `<h1>`, breadcrumb opcional y slot para acción primaria.
+Aplica la regla "un `<h1>` único y descriptivo por vista" de la constitución.
+
+**Ubicación**: `loopi-web/src/app/shared/components/page-header/`
+
+**Inputs**:
+
+| Input | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `title` | `string` | Sí | Texto del `<h1>` de la vista |
+| `breadcrumb` | `BreadcrumbItem[]` | No | Items del breadcrumb `[{label, route?}]` |
+
+**Slots (ng-content)**:
+
+- `[slot="actions"]` — botones de acción primaria (ej. `<button class="btn-primary">+ Nueva tienda</button>`)
+
+---
+
+### FormCardComponent (`app-form-card`)
+
+**Propósito**: Card blanca para formularios de creación y edición. Provee la capa 2 de la
+jerarquía visual de formularios, el ancho correcto según densidad, y actúa como puente entre
+el input `[mode]` y el `FormModeService` para que componentes hijos (como `DangerZoneComponent`)
+puedan reaccionar automáticamente al modo sin necesidad de `@if` en el template del feature.
+
+**Ubicación**: `loopi-web/src/app/shared/components/form-card/`
+
+**Inputs**:
+
+| Input | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Ancho: sm=`max-w-lg`, md=`max-w-2xl`, lg=`max-w-4xl` |
+| `mode` | `FormMode` | `'create'` | Modo del formulario; propaga el valor al `FormModeService` del feature via `inject(FormModeService, { optional: true })` |
+
+**Slots (ng-content)**:
+
+- Default — contenido del formulario (campos, botones de submit, y `app-danger-zone`)
+
+**Implementación del bridge** (`FormCardComponent`, extracto):
+
+```typescript
+export class FormCardComponent implements OnChanges {
+  @Input() size: 'sm' | 'md' | 'lg' = 'md';
+  @Input() mode: FormMode = 'create';
+
+  private readonly formMode = inject(FormModeService, { optional: true });
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['mode']) {
+      this.formMode?.mode.set(this.mode);
+    }
+  }
+}
+```
+
+`FormModeService` se inyecta con `optional: true`: si el feature component no lo provee, el
+input `[mode]` es un no-op y `DangerZoneComponent` permanece visible (fallback seguro).
+
+---
+
+### ReadonlyFieldComponent (`app-readonly-field`)
+
+**Propósito**: Muestra un campo no editable con label y valor, aplicando los estilos de
+read-only que comunican al usuario que el campo no puede modificarse.
+
+**Ubicación**: `loopi-web/src/app/shared/components/readonly-field/`
+
+**Inputs**:
+
+| Input | Tipo | Descripción |
+|-------|------|-------------|
+| `label` | `string` | Label del campo |
+| `value` | `string \| null \| undefined` | Valor a mostrar (null/undefined → "–") |
+
+**Renderizado**: Label con `LockClosedIcon` (14 px, `text-gray-400`) + `<div>` con
+`bg-gray-100 border border-gray-200 text-gray-500 rounded-lg px-3 py-2 cursor-not-allowed`.
+
+---
+
+### FormModeService
+
+**Propósito**: Contexto de modo creación/edición compartido entre `FormCardComponent` y sus
+componentes descendientes proyectados (principalmente `DangerZoneComponent`). Es el núcleo del
+patrón `FORM_MODE_TOKEN` — un servicio que se provee a nivel del feature component para que
+toda la vista del formulario acceda al mismo estado de modo sin pasar `@Input()` encadenados.
+
+**Ubicación**: `loopi-web/src/app/shared/services/form-mode.service.ts`
+
+**Por qué un servicio y no un InjectionToken directo**: Angular resuelve el árbol de inyección
+del *declaring component* para el contenido proyectado via `ng-content`. Al proveer
+`FormModeService` en el feature component (`providers: [FormModeService]`), **todos** sus
+descendientes de template (incluyendo los proyectados dentro de `app-form-card`) encuentran
+la misma instancia. Un `InjectionToken` en los `providers` de `FormCardComponent` no sería
+visible para el contenido proyectado (ese contenido pertenece al árbol del feature, no al
+árbol interno de `FormCardComponent`).
+
+**API**:
+
+```typescript
+@Injectable() // Sin providedIn — cada feature provee su propia instancia
+export class FormModeService {
+  readonly mode = signal<FormMode>('create');
+  readonly isEdit = computed(() => this.mode() === 'edit');
+  readonly isCreate = computed(() => this.mode() === 'create');
+}
+```
+
+**Cómo usarlo en un feature component**:
+
+```typescript
+@Component({
+  providers: [FormModeService], // instancia nueva por formulario
+})
+export class EmpleadoFormComponent implements OnInit {
+  protected readonly formMode = inject(FormModeService);
+  private readonly route = inject(ActivatedRoute);
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.params['id'];
+    this.formMode.mode.set(id ? 'edit' : 'create');
+  }
+}
+```
+
+**Template del feature (create y edit en un solo template)**:
+
+```html
+<app-page-header
+  [title]="formMode.isEdit() ? 'Editar empleado' : 'Nuevo empleado'"
+  [breadcrumb]="[{ label: 'Empleados', route: '/empleados' }]">
+  <button slot="actions" class="btn-secondary" routerLink="/empleados">Cancelar</button>
+</app-page-header>
+
+<app-form-card [mode]="formMode.mode()" size="md">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+    <!-- campos del formulario -->
+  </form>
+
+  <!-- DangerZone se auto-oculta en 'create', se auto-muestra en 'edit' -->
+  <app-danger-zone>
+    <p>Inactivar al empleado le impedirá acceder al sistema.</p>
+    <button class="btn-secondary text-red-600" (click)="onInactivar()">
+      Inactivar empleado
+    </button>
+  </app-danger-zone>
+</app-form-card>
+```
+
+**Beneficio**: el developer escribe el template **una sola vez** para creación y edición.
+No hay `@if (isEdit)` para la `DangerZone` — el contexto fluye automáticamente.
+
+---
+
+### DangerZoneComponent (`app-danger-zone`)
+
+**Propósito**: Implementación del concepto "Zona de precaución" de la constitución.
+Se auto-oculta en modo creación (`FormModeService.isCreate() === true`) y se auto-muestra
+en modo edición, eliminando la necesidad de `@if` en el template del feature.
+
+**Ubicación**: `loopi-web/src/app/shared/components/danger-zone/`
+
+**Inputs**:
+
+| Input | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `title` | `string` | `'Zona de precaución'` | Título de la sección |
+
+**Slots (ng-content)**: botones de acción destructiva y textos de impacto en lenguaje de usuario.
+
+**Implementación de auto-visibilidad** (`DangerZoneComponent`, extracto):
+
+```typescript
+export class DangerZoneComponent {
+  @Input() title = 'Zona de precaución';
+
+  private readonly formMode = inject(FormModeService, { optional: true });
+
+  // Visible siempre que: no hay servicio (fallback) o el modo es 'edit'
+  protected readonly visible = computed(() =>
+    this.formMode ? this.formMode.isEdit() : true
+  );
+}
+```
+
+**Renderizado** (solo cuando `visible()` es `true`):
+
+`<div class="mt-8 pt-6 border-t-2 border-red-200 bg-red-50/30 rounded-b-xl p-6">`
+
+---
+
+### Estructura de Archivos
+
+```text
+loopi-web/src/app/shared/
+├── components/
+│   ├── danger-zone/
+│   │   ├── danger-zone.component.ts
+│   │   ├── danger-zone.component.html
+│   │   └── danger-zone.component.spec.ts
+│   ├── data-table/
+│   │   ├── cell-template.directive.ts
+│   │   ├── data-table.component.ts
+│   │   ├── data-table.component.html
+│   │   └── data-table.component.spec.ts
+│   ├── empty-state/
+│   ├── filter-bar/
+│   ├── form-card/
+│   ├── list-card/
+│   ├── page-header/
+│   ├── pagination/
+│   ├── readonly-field/
+│   └── status-badge/
+├── models/
+│   └── filter.model.ts
+└── services/
+    ├── filter-state.service.ts
+    └── form-mode.service.ts
+```
+
+Todo componente DEBE tener su `*.spec.ts` con cobertura ≥ 90% (gate de infraestructura).
+
+### Requisitos de la nueva sección
+
+- **FR-011**: Todo componente de este catálogo DEBE ser `standalone: true` y usar signals
+  (`Signal`, `computed`, `effect`) para estado interno en lugar de propiedades mutables.
+- **FR-012**: `DataTableComponent` DEBE exponer la directiva `appCellTemplate` como API
+  pública. Los paths SVG de celdas personalizadas se agregan via ng-template, no via callbacks.
+- **FR-013**: `FilterBarComponent` DEBE coordinar con `FilterStateService` para persistir
+  el estado de filtros por ruta durante la sesión de usuario.
+- **FR-014**: `FilterStateService` DEBE inicializar los filtros con los `defaultValue` de
+  cada `FilterDefinition` cuando la ruta no tiene estado previo, garantizando que el filtro
+  Estado=Activo esté activo al cargar cualquier listado por primera vez.
+- **FR-015**: `FormModeService` DEBE proveerse con `@Injectable()` sin `providedIn` para que
+  cada feature component genere su propia instancia. `DangerZoneComponent` DEBE inyectarlo con
+  `{ optional: true }` para que el fallback sea visible cuando el servicio no está disponible.
+  `FormCardComponent` actúa como bridge entre el `@Input() mode` y el servicio, propagando el
+  valor via `ngOnChanges` para que los componentes proyectados lean el modo sin acoplamiento directo.
