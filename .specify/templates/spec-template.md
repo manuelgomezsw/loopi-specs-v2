@@ -129,3 +129,31 @@
 - [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
 - [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
 - [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+
+## Observabilidad *(obligatorio para endpoints críticos)*
+
+<!--
+  Incluir esta sección en todos los features que expongan endpoints críticos:
+  autenticación, inventario, pedidos, ventas, recepciones, mermas, caja menor.
+  Omitir en features puramente de configuración o UI sin lógica de negocio en backend.
+
+  Reglas (constitución §VI):
+  - Etiqueta `resultado`: SIEMPRE en operaciones que pueden fallar.
+  - Etiqueta `tienda_id`: DEBE incluirse en operaciones de negocio (cardinalidad baja: ≤ 20 tiendas).
+  - `user_id`: NUNCA como etiqueta de métrica (alta cardinalidad). Va en el atributo del span.
+  - Nomenclatura: [dominio].[entidad].[operacion].[tipo]
+    - tipo: `duration` (histograma ms) | `total` (contador) | `size` (gauge)
+-->
+
+### Trazas (Spans OTel)
+
+| Operación | Nombre del Span | Atributos Obligatorios |
+|---|---|---|
+| [Nombre operación] | `[dominio.operacion]` | `resultado`, `tienda_id` (solo en éxito) |
+
+### Métricas
+
+| Nombre | Tipo | Unidad | Descripción | Etiquetas |
+|---|---|---|---|---|
+| `[dominio.operacion.duration]` | Histograma | ms | Duración de [operación] | `resultado`, `tienda_id` |
+| `[dominio.operacion.total]` | Contador | — | Total de [operaciones] por resultado | `resultado`, `tienda_id` |

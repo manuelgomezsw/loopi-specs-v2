@@ -11,10 +11,14 @@
 migrate -path ./db/migrations -database "$DB_DSN" up
 ```
 
-Migraciones nuevas en esta feature:
+Migraciones de la feature original (003):
 
 - `NNNN_crear_tabla_empleados.up.sql`
 - `NNNN+1_crear_tabla_log_auditoria_empleados.up.sql`
+
+Migración incremental (018-selects-tienda-tipo-doc):
+
+- `NNNN+2_alter_empleados_tipo_documento_enum.up.sql`
 
 Verificar:
 
@@ -22,6 +26,7 @@ Verificar:
 SHOW TABLES LIKE 'empleados';
 SHOW TABLES LIKE 'log_auditoria_empleados';
 DESCRIBE empleados;
+-- El campo tipo_documento debe mostrar tipo ENUM('CC','CE','NUIP','PE')
 DESCRIBE log_auditoria_empleados;
 ```
 
@@ -126,12 +131,75 @@ go tool cover -html=coverage.out
 | `TestListarEmpleadosBusquedaYPaginacion` | Total correcto + filtros activos |
 | `TestAuditLogCreadoEnCadaOperacion` | Log registrado para CREAR, EDITAR, INACTIVAR, REACTIVAR, RESET |
 | `TestEmpleadoInactivoNoAutentica` | Login rechazado (integración con 001-autenticacion) |
+| `TestCrearEmpleadoTipoDocumentoInvalido` | Error 422 `tipo_documento_invalido` para valor fuera del ENUM |
+| `TestCrearEmpleadoTipoDocumentoValido` | CC, CE, NUIP, PE aceptados; campo vacío aceptado |
 
 ---
 
-## 6. Rollback
+---
+
+## 6. Integración con 001-autenticacion (RF-EMP-04.6)
+
+**Estado**: ✅ Implementado — el bloqueo por `requiere_cambio_contrasena` está activo en `JWTMiddleware`.
+
+### Cómo funciona
+
+1. Al crear o resetear la contraseña de un empleado, `empleados.requiere_cambio_contrasena = 1`.
+2. Al autenticarse, `BuscarUsuarioPorNombre` lee `requiere_cambio_contrasena` desde `empleados`
+   e incluye el claim `requiere_cambio_contrasena: true` en el JWT emitido.
+3. `JWTMiddleware` lee ese claim en cada request y, si es `true`, retorna **HTTP 403**
+   con `{"error":"cambio_contrasena_requerido"}` en **todos los endpoints**, excepto
+   `POST /api/v1/empleados/{id}/contrasena/cambiar`.
+4. Al cambiar la contraseña exitosamente, `requiere_cambio_contrasena = 0` en la BD
+   (y el empleado obtiene un nuevo JWT limpio en el siguiente login).
+
+### Nota sobre la tabla `usuarios`
+
+A partir de la migración 003, el módulo de auth lee desde `empleados` (no desde `usuarios`).
+Los campos de control de acceso (`bloqueado_hasta`, `intentos_fallidos`) fueron agregados
+a `empleados` en la migración 005. La tabla `usuarios` queda como artefacto legacy.
+
+### Smoke test — flujo completo de cambio de contraseña
+
+```bash
+# 1. Crear un empleado (recibe contraseña temporal)
+TEMP_PASS=$(curl -s -X POST http://localhost:8080/api/v1/empleados \
+  -H "Authorization: Bearer $TOKEN_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Ana","apellido":"Gómez","usuario":"ana.gomez","rol":"barista","tienda_id":1}' \
+  | jq -r '.contrasena_temporal')
+
+# 2. Autenticarse con contraseña temporal → JWT con requiere_cambio_contrasena=true
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"usuario\":\"ana.gomez\",\"contrasena\":\"$TEMP_PASS\"}"
+# → HTTP 200, cookie jwt válida
+
+# 3. Intentar cualquier endpoint → HTTP 403 cambio_contrasena_requerido
+curl -s http://localhost:8080/api/v1/tiendas \
+  --cookie "jwt=<token_de_ana>" | jq .
+# → {"error":"cambio_contrasena_requerido","mensaje":"Debes cambiar tu contraseña antes de continuar."}
+
+# 4. Cambiar la contraseña (endpoint permitido sin rol=admin)
+ANA_ID=<id_de_ana>
+curl -s -X POST "http://localhost:8080/api/v1/empleados/$ANA_ID/contrasena/cambiar" \
+  --cookie "jwt=<token_de_ana>" \
+  -H "Content-Type: application/json" \
+  -d '{"nueva_contrasena":"nueva1234"}'
+# → HTTP 200 {"mensaje":"Contraseña actualizada correctamente."}
+
+# 5. Nuevo login → JWT con requiere_cambio_contrasena=false → acceso normal
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"usuario":"ana.gomez","contrasena":"nueva1234"}'
+# → HTTP 200, acceso desbloqueado
+```
+
+---
+
+## 7. Rollback
 
 ```bash
 # Revertir migraciones (en orden inverso)
-migrate -path ./db/migrations -database "$DB_DSN" down 2
+migrate -path ./migrations -database "$DB_DSN" down 5
 ```

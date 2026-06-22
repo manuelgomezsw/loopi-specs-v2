@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -13,6 +13,35 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.4.0 — nueva sección "Diseño de Interfaz (UX/UI)": responsive mobile-first,
                 accesibilidad WCAG 2.1 AA, estados de carga/error/vacío, convenciones
                 de formularios, feedback de acciones y estructura mínima de vistas (MINOR).
+        1.4.1 — patrón de listas y formularios: navegación por clic de fila, zona de precaución
+                en formulario de edición para acciones destructivas (PATCH).
+        1.5.0 — nueva subsección "Arquitectura del backend Go — separación de capas":
+                tabla Handler/Service/Repository con responsabilidades exclusivas,
+                reglas de cruce, test corolario. Previene SQL en la capa service (MINOR).
+        1.6.0 — estrategia de testing backend Go: técnica por capa (httptest/mock/sqlmock/t.Setenv),
+                thresholds (≥ 95% lógica, ≥ 90% infraestructura, ≥ 70% OTel), gate CI,
+                qué cubrir obligatoriamente en service y middleware (MINOR).
+        1.7.0 — §VI Monitoreo Preventivo ampliado: logs exclusivamente en GCP Cloud Logging
+                (Datadog no recibe logs), reglas de cardinalidad de métricas (tienda_id ✅ / user_id ❌),
+                convención de nomenclatura de métricas y referencia a spec 015 (MINOR).
+        1.8.0 — §Diseño de Interfaz: nueva subsección "Convenciones de Botones de Acción":
+                prefijo '+ ' obligatorio en botones de creación en vistas de lista;
+                títulos de formulario sin prefijo (MINOR).
+        1.9.0 — §Diseño de Interfaz: nueva subsección "Superficie de Formulario": card blanca
+                obligatoria sobre fondo gris de página; bg-white explícito en inputs;
+                jerarquía visual de tres capas; ancho máximo por densidad (MINOR).
+
+Changes in 1.4.1:
+  - Patrón de listas: filas clickeables con cursor-pointer, tabindex="0", role="button", keydown.enter
+  - Patrón de formularios: acciones destructivas en "Zona de precaución" al pie del formulario
+  - Texto de impacto en lenguaje no técnico; modal de confirmación antes de acción irreversible
+
+Changes in 1.9.0:
+  - §Diseño de Interfaz: nueva subsección "Superficie de Formulario"
+  - Jerarquía de tres capas obligatoria: página bg-gray-50 → tarjeta bg-white → inputs bg-white explícito
+  - Tabla de ancho máximo según densidad del formulario (max-w-lg / max-w-2xl / max-w-4xl)
+  - Regla de separación de zona destructiva con hr + mt-8
+  - Ejemplo canónico HTML de referencia para todos los formularios del sistema
 
 Changes in 1.3.2:
   - golangci-lint: agrega gosec (G101, G201, G202, G404, G402, G501-G505); excluye G104 (cubierto por errcheck)
@@ -35,6 +64,14 @@ Changes in 1.4.0:
   - Convenciones de formularios: validación on blur + on submit; botón deshabilitado en loading
   - Feedback de acciones: toasts 3 s en éxito; modal de confirmación en destructivas
   - Estructura mínima de vistas: h1 único, breadcrumb contextual, acción primaria identificada
+
+Changes in 1.4.1:
+  - Patrón de listas: las filas son clickeables y navegan al formulario de edición
+    (cursor-pointer, tabindex="0", role="button", keydown.enter). Sin botones por fila.
+  - Patrón de formularios: las acciones destructivas (inactivar, eliminar) van en una
+    sección "Zona de precaución" al pie del formulario en modo edición, nunca en la lista.
+    El texto explica el impacto en lenguaje para usuarios no técnicos (no jerga interna).
+    Un modal de confirmación precede toda acción destructiva irreversible.
 
 Templates reviewed:
   - .specify/templates/plan-template.md — pendiente de revisión
@@ -107,18 +144,44 @@ y brechas operacionales. Un flujo que crea oportunidad de fraude DEBE rediseñar
 Cada feature DEBE ser monitoreable desde el primer deploy en producción. El sistema DEBE permitir
 diagnosticar degradaciones en menos de 5 segundos.
 
-**Stack de observabilidad**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
-**Datadog** como plataforma de observabilidad (trazas, métricas, dashboards y alertas).
-Los logs estructurados van a stdout → GCP Cloud Logging → Datadog vía integración GCP nativa.
+**Stack de observabilidad**:
+
+- **Trazas y métricas**: **OpenTelemetry** (OTel) como SDK de instrumentación en el backend Go;
+  **Datadog** exclusivamente para APM (trazas) y métricas. Datadog NO recibe logs.
+- **Logs**: stdout → **GCP Cloud Logging** exclusivamente. No se configura ningún reenvío de
+  logs a Datadog. Los logs se consultan en GCP Log Explorer.
+
+**Qué instrumentar:**
 
 - Todo endpoint crítico (autenticación, conteo de inventario, movimientos de stock, generación
   y recepción de pedidos, integración con ventas) DEBE tener trazas OTel y métricas de latencia
-  y tasa de errores visibles en Datadog.
+  y tasa de errores visibles en Datadog APM.
 - Los logs DEBEN ser estructurados (JSON) e incluir: `tienda_id`, `user_id`, `rol`, timestamp,
-  operación.
+  operación y nivel (`info`/`warn`/`error`).
 - Las alertas DEBEN configurarse en Datadog y ser preventivas: detectar anomalías antes de que
   impacten al usuario final.
 - El monitoreo es responsabilidad del equipo de desarrollo, no solo de operaciones.
+
+**Convención de nomenclatura de métricas** (normativa para todos los features):
+
+- Formato: `[dominio].[entidad].[operacion].[tipo]`
+  - Dominio: nombre corto del módulo (`auth`, `inventario`, `pedidos`, `ventas`, `mermas`, etc.)
+  - Tipo al final: `duration` (histograma en ms), `total` (contador), `size` (gauge)
+- Etiqueta `resultado` SIEMPRE presente en operaciones que pueden fallar. Valores descriptivos
+  en español: `success`, `not_found`, `validation_error`, `account_locked`, `timeout`, etc.
+- Etiqueta `tienda_id` DEBE incluirse en operaciones de negocio (cardinalidad baja: ≤ 20 tiendas).
+  Permite filtrado por tienda en dashboards y alertas de Datadog.
+- **`user_id` NUNCA como etiqueta de métrica**: cardinalidad alta → coste en Datadog.
+  El `user_id` va en el atributo del span (traza), no en la métrica.
+- No incluir valores de alta cardinalidad en etiquetas: IPs, UUIDs de request, tokens.
+
+**Implementación de la fundación**: ver [spec 015-observabilidad-otel-datadog](../../specs/015-observabilidad-otel-datadog/spec.md)
+para el paquete `internal/observability`, configuración del agente Datadog en Cloud Run
+e instrumentación automática de queries de BD.
+
+**Declaración en specs de feature**: todo feature con endpoints críticos DEBE incluir una
+sección `## Observabilidad` en su `spec.md` con las tablas de spans y métricas que define.
+Ver plantilla en `.specify/templates/spec-template.md`.
 
 ---
 
@@ -134,6 +197,31 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
 
 **Autenticación**: JWT con expiración configurable (default 24 h).
 
+**Arquitectura del backend Go — separación de capas:**
+
+Cada módulo del backend (`internal/<dominio>/`) sigue tres capas con responsabilidades
+exclusivas y no negociables:
+
+| Capa | Archivo | Responsabilidad única |
+|------|---------|----------------------|
+| **Handler** | `handler.go` | HTTP: parsear request, llamar al service, escribir response. Sin lógica de negocio ni SQL. |
+| **Service** | `service.go` | Lógica de negocio: decisiones, validaciones, orquestación. **Sin ninguna sentencia SQL ni dependencia directa a `*sql.DB`.** |
+| **Repository** | `repository.go` | **Todo** acceso a la base de datos. Es la única capa que importa `database/sql`. Una sentencia SQL fuera del repository es una violación. |
+
+Reglas de cruce entre capas:
+
+- El handler llama al service. El handler NUNCA llama al repositorio directamente
+  (salvo en handlers de jobs que no tienen lógica de negocio).
+- El service declara **qué datos necesita** a través de métodos de la interfaz `Repository`;
+  nunca sabe que existe MySQL, `sql.Row` ni `db.Exec`.
+- Si el service necesita un dato de la BD que no está en el repositorio, la solución es
+  **agregar el método al repositorio**, no agregar un `dbQuerier` al service.
+- Los métodos del repositorio tienen nombres de dominio (`BuscarUsuarioPorNombre`,
+  `ResetearIntentosLogin`), no nombres de SQL (`QueryUsuarios`, `ExecUpdate`).
+
+**Test corolario:** si un test del service requiere una conexión real a BD (o un mock de
+`*sql.DB`), el service tiene SQL que no le pertenece.
+
 **Lineamientos transversales:**
 
 - Paginación: SIEMPRE del lado del servidor (base de datos). Prohibida la paginación en memoria
@@ -147,6 +235,50 @@ y aplicada mediante herramienta de migración declarativa (ej. Flyway, golang-mi
 - Pruebas backend: las integraciones con base de datos y servicios externos (POS, GCP services) DEBEN
   testearse mediante **mocks**. Prohibida la integración directa en tests — los entornos de CI no
   tienen acceso a infraestructura real y la paridad mock/real se valida en stage (ver sección Ambientes).
+
+**Estrategia de testing backend Go — técnica por capa:**
+
+Cada capa usa una técnica específica que aísla exactamente lo que prueba:
+
+| Capa | Archivo de test | Técnica | Qué valida |
+|------|----------------|---------|-----------|
+| **Handler** | `handler_test.go` | `httptest.NewRecorder()` + mock `Service` + mock `Repository` | Contrato HTTP: códigos de status, headers, cookies, body JSON |
+| **Service** | `service_test.go` | Mock de interfaz `Repository` (sin BD) | Lógica de negocio: flujos, decisiones, manejo de errores de dominio |
+| **Middleware** | `middleware_test.go` | `httptest` + JWT generado en el test + mock `Repository` | Validación de tokens: todos los caminos de aceptación y rechazo |
+| **Repository** | `repository_test.go` | `go-sqlmock` (`github.com/DATA-DOG/go-sqlmock`) | Construcción correcta de queries SQL y manejo de errores de BD |
+| **Config** | `config_test.go` | `t.Setenv()` | Carga de variables de entorno, defaults y errores de configuración |
+| **Metrics/OTel** | cubierto desde `handler_test.go` o `service_test.go` | OTel noop provider (incluido en SDK) | Wiring de instrumentos; no se requiere Datadog real |
+
+**Cobertura mínima obligatoria:**
+
+- Paquetes de lógica (`internal/<dominio>/service.go`, `internal/<dominio>/middleware.go`): **≥ 95%**
+- Paquetes de infraestructura (`internal/<dominio>/repository.go`, `config/`): **≥ 90%**
+- Paquetes de wiring OTel (`metrics.go`, `otel.go`): **≥ 70%** — la inicialización del SDK depende de providers externos; se prioriza el wiring sobre los caminos de error del SDK
+- **Excluidos** del gate de cobertura: `cmd/` (punto de entrada), `main.go` (inyección de dependencias)
+
+El gate se verifica con:
+
+```bash
+go test ./internal/... ./config/... -coverprofile=coverage.out -covermode=atomic
+go tool cover -func=coverage.out
+```
+
+Un PR no puede mergearse si algún paquete bajo `internal/` cae por debajo del 90%.
+
+**Qué cubrir obligatoriamente en cada service:**
+
+- Todos los caminos `if/switch` en funciones exportadas.
+- El camino de error de cada llamada al repositorio (simular `error != nil`).
+- La rama de bloqueo de cuenta cuando el contador llega al límite.
+- El camino "usuario no existe" y "usuario inactivo" como distintos casos de test,
+  aunque devuelvan el mismo error de dominio.
+
+**Qué cubrir obligatoriamente en cada middleware:**
+
+- Token ausente, vacío, firma inválida, expirado, algoritmo incorrecto.
+- Token revocado (blacklist = true).
+- BD no disponible durante la verificación de blacklist (política fail-closed → 503).
+- Token válido: el handler siguiente recibe los claims en el contexto.
 - Markdown: sub-listas con indentación de 2 espacios; línea en blanco antes/después de headings
   y listas; archivo termina con newline (markdownlint MD007, MD022, MD032, MD047).
 
@@ -242,6 +374,90 @@ caso excepcional.
   reemplazo del label.
 - **Autocompletar**: habilitar `autocomplete` en credenciales (`current-password`); deshabilitar
   solo cuando el llenado automático sea perjudicial para el flujo.
+
+### Patrón Lista–Formulario
+
+Toda entidad de catálogo o maestro sigue este patrón de navegación y acciones:
+
+- **Lista**: cada fila es clickeable y navega al formulario de edición del registro. No se
+  colocan botones de "Editar" ni "Inactivar" por fila. Atributos obligatorios en el `<tr>`:
+  `cursor-pointer`, `tabindex="0"`, `role="button"`, handler `(keydown.enter)` para
+  accesibilidad por teclado.
+- **Formulario (modo edición)**: contiene todas las acciones posibles sobre el registro,
+  incluidas las destructivas. Las acciones destructivas van en una sección **"Zona de
+  precaución"** al pie del formulario (borde rojo, fondo rojo claro), separada visualmente
+  del resto. Un modal de confirmación precede toda acción irreversible.
+- **Texto de impacto**: escrito en lenguaje para usuarios no técnicos. No usar jerga interna
+  ("unidad canónica", "soft delete", "FK"). Describir el efecto real en el negocio.
+  Ejemplo correcto: "Los ítems que usen esta unidad de medida no podrán registrar nuevas
+  transacciones." Ejemplo incorrecto: "Los ítems con unidad canónica inactiva quedarán
+  bloqueados."
+
+### Superficie de Formulario
+
+Todo formulario de creación o edición DEBE establecer una jerarquía visual de tres capas para
+garantizar que los inputs sean percibidos como activos e interactivos en todos los sistemas
+operativos y navegadores:
+
+| Capa | Elemento | Clases Tailwind obligatorias |
+|------|----------|------------------------------|
+| 1 — Página | `<main>` o contenedor raíz | `bg-gray-50` |
+| 2 — Tarjeta | `<div>` que envuelve el `<form>` | `bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8` |
+| 3 — Inputs | `<input>`, `<select>`, `<textarea>` | `bg-white` explícito (no depender del default del navegador) |
+
+**Reglas:**
+
+- El contenedor de la tarjeta DEBE tener ancho máximo apropiado a la densidad del formulario:
+  - Formularios simples (≤ 6 campos): `max-w-lg` (512 px)
+  - Formularios medios (7–15 campos): `max-w-2xl` (672 px)
+  - Formularios complejos (> 15 campos o secciones): `max-w-4xl` (896 px)
+- La tarjeta se centra horizontalmente con `mx-auto`.
+- El `<main>` o página que contenga la tarjeta DEBE usar `bg-gray-50` para que el
+  contraste tarjeta/fondo sea visible. Nunca fondo blanco en la página y tarjeta blanca.
+- Los campos en estado deshabilitado (readonly en edición) usan `bg-gray-100 text-gray-500`
+  para comunicar inequívocamente que no son editables — distinto del `bg-white` del campo activo.
+- La zona de acciones destructivas (inactivar, eliminar) DEBE separarse del formulario principal
+  con un `<hr>` y un margen de al menos `mt-8`, ubicada al final de la vista.
+
+**Integración con el Shell:**
+
+Los formularios se renderizan dentro del `<main>` del `ShellComponent`, que ya aplica
+`bg-gray-50` al fondo de la página y `p-4 sm:p-6 lg:p-8` como padding base. Por lo tanto:
+
+- **No usar `<main>` propio** en la vista del formulario (sería `<main>` anidado, HTML inválido).
+- **No repetir el padding** del shell en el contenedor raíz de la vista.
+- El elemento raíz de la vista es un `<div>` con `max-w-{tamaño} mx-auto` para centrar el contenido.
+
+**Ejemplo canónico:**
+
+```html
+<!-- Vista del formulario (renderizada dentro del <main> del shell) -->
+<div class="max-w-lg mx-auto">
+  <!-- Breadcrumb + título fuera de la tarjeta -->
+  <nav ...>...</nav>
+  <h1 ...>Nueva tienda</h1>
+
+  <!-- Tarjeta del formulario -->
+  <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8">
+    <form ...>
+      <input class="bg-white w-full border border-gray-300 rounded-lg px-3 py-2 ..." />
+      ...
+    </form>
+  </div>
+
+  <!-- Zona destructiva (solo en edición) -->
+  <div class="mt-8 pt-6 border-t border-gray-200">...</div>
+</div>
+```
+
+### Convenciones de Botones de Acción
+
+- **Botón de creación (acción primaria de lista)**: lleva el prefijo `+ ` antes del texto.
+  Ejemplos correctos: `+ Nueva tienda`, `+ Nuevo empleado`, `+ Nuevo pedido`.
+- **Título de formulario**: NO lleva `+ `. Es un encabezado de página (`<h1>`), no un botón.
+  Ejemplos correctos: `Nueva tienda`, `Editar empleado`.
+- El prefijo `+ ` aplica solo a los botones/enlaces de acción primaria en vistas de lista.
+  No aplica a acciones secundarias (Editar, Inactivar, Reactivar, Cancelar).
 
 ### Feedback de Acciones
 
@@ -519,4 +735,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.4.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-05-23
+**Version**: 1.8.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-06-21

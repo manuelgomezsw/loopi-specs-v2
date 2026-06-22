@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/006-proveedores-catalogo/plan.md
+at specs/003-gestion-empleados/plan.md
 <!-- SPECKIT END -->
 
 # Idioma
@@ -48,3 +48,20 @@ git checkout -b <tipo>/<nombre-descriptivo>
 - Los `feature/*`, `bugfix/*` y `chore/*` parten desde `develop` y se mergean solo a `develop`.
 - Los `release/*` parten desde `develop` y se mergean a `main` **y** `develop`.
 - Nunca hagas `git push --force` en `main` o `develop`.
+
+## Markdown Lint — regla obligatoria antes de cada commit
+
+**Antes de ejecutar cualquier `git commit` en este repositorio**, corre:
+
+```bash
+npx markdownlint-cli2 "**/*.md"
+```
+
+Si hay errores, corrígelos antes de commitear. No uses `--no-verify` para saltarte esta validación.
+
+El hook `.githooks/pre-commit` automatiza esto para clientes git locales.
+Tras clonar el repositorio, actívalo una sola vez:
+
+```bash
+git config core.hooksPath .githooks
+```
