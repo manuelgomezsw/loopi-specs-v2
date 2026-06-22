@@ -250,6 +250,44 @@ comprobando que el listado las muestra agrupadas y con su estado.
 
 ---
 
+## Observabilidad
+
+### Trazas (OTel Spans)
+
+| Nombre del Span | Trigger | Atributos Obligatorios |
+|-----------------|---------|------------------------|
+| `categorias.crear` | `POST /api/v1/categorias` | `categoria.id`, `user.rol`, `resultado` |
+| `categorias.listar` | `GET /api/v1/categorias` | `catalogo.total`, `user.rol`, `cache.hit` |
+| `categorias.editar` | `PUT /api/v1/categorias/{id}` | `categoria.id`, `user.rol`, `resultado` |
+| `categorias.inactivar` | `PATCH /api/v1/categorias/{id}/inactivar` | `categoria.id`, `subcategorias_inactivadas`, `user.rol`, `resultado` |
+| `categorias.reactivar` | `PATCH /api/v1/categorias/{id}/reactivar` | `categoria.id`, `user.rol`, `resultado` |
+| `subcategorias.crear` | `POST /api/v1/subcategorias` | `subcategoria.id`, `categoria.id`, `user.rol`, `resultado` |
+| `subcategorias.editar` | `PUT /api/v1/subcategorias/{id}` | `subcategoria.id`, `user.rol`, `resultado` |
+| `subcategorias.inactivar` | `PATCH /api/v1/subcategorias/{id}/inactivar` | `subcategoria.id`, `categoria.id`, `user.rol`, `resultado` |
+| `subcategorias.reactivar` | `PATCH /api/v1/subcategorias/{id}/reactivar` | `subcategoria.id`, `categoria.id`, `user.rol`, `resultado` |
+
+### Métricas
+
+Formato: `[dominio].[entidad].[operacion].[tipo]` · Etiqueta `resultado` obligatoria en escrituras.
+
+| Nombre de Métrica | Tipo | Etiquetas | Descripción |
+|-------------------|------|-----------|-------------|
+| `catalogo.categoria.crear.total` | Counter | `resultado` | Total de categorías creadas (`success` / `nombre_duplicado` / `validation_error`) |
+| `catalogo.categoria.crear.duration` | Histogram (ms) | `resultado` | Latencia de creación de categoría |
+| `catalogo.categoria.listar.duration` | Histogram (ms) | `cache_hit` | Latencia del listado completo; `cache_hit=true/false` |
+| `catalogo.categoria.inactivar.total` | Counter | `resultado` | Total de inactivaciones de categoría (`success` / `not_found`) |
+| `catalogo.subcategoria.crear.total` | Counter | `resultado` | Total de subcategorías creadas |
+| `catalogo.subcategoria.crear.duration` | Histogram (ms) | `resultado` | Latencia de creación de subcategoría |
+| `catalogo.subcategoria.inactivar.total` | Counter | `resultado` | Total de inactivaciones de subcategoría |
+
+**Notas**:
+
+- `user_id` NUNCA como etiqueta de métrica (alta cardinalidad → coste en Datadog).
+- `tienda_id` no aplica: el catálogo es compartido por marca, sin aislamiento por tienda.
+- Los logs de operaciones de escritura van a GCP Cloud Logging exclusivamente (stdout → GCP).
+
+---
+
 ## Dependencias y Suposiciones
 
 ### Dependencias

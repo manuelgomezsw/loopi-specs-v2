@@ -25,7 +25,7 @@ el listado sin paginación.
 
 - `go-sql-driver/mysql` — Driver MySQL (ya en proyecto desde 001)
 - `golang-migrate/migrate` — Migraciones de base de datos (ya en proyecto desde 001)
-- `dgraph-io/ristretto` — Caché en proceso para catálogo (ya agregado en 004)
+- `dgraph-io/ristretto` — Caché en proceso para catálogo (ya agregado en 004); el paquete compartido `internal/cache/` (con `EntityCache[T]` y `ReadThrough[T]`) ya existe en `develop`
 - JWT library — Extracción de `user_id` y `rol` del token (ya en proyecto desde 001)
 
 **Almacenamiento**: MySQL en GCP Cloud SQL
@@ -49,7 +49,7 @@ el listado sin paginación.
   colecciones que puedan crecer ilimitadamente; este catálogo es acotado por diseño
   (< 120 registros totales), por lo que retornar todos los registros en una sola query
   sin LIMIT es la implementación correcta y eficiente.
-- Ristretto TTL 5 min; invalidación total en cualquier operación de escritura
+- Ristretto TTL 24 h; invalidación selectiva por entidad: Create → `cache.Clear()`, Update/Inactivar/Reactivar → `cache.Delete("id:<id>") + cache.Clear()` (política normativa constitucional)
 - Nombres únicos case-insensitive: garantizado por collation `utf8mb4_unicode_ci`
 
 **Escala/Alcance**: < 20 categorías, < 100 subcategorías por marca
@@ -94,12 +94,15 @@ specs/005-categorias-catalogo/
 
 ```text
 internal/
+├── cache/                        # Paquete compartido ya existente en develop (entity_cache.go)
+│   └── cache.go                  # EntityCache[T] + ReadThrough[T]
 └── categorias/
-    ├── models.go         # Structs Categoria, Subcategoria y tipos de respuesta
-    ├── handler.go        # Handlers HTTP: categorías + subcategorías
-    ├── service.go        # Lógica de negocio (cascade, validaciones)
-    ├── repository.go     # Consultas MySQL con transacciones
-    └── cache.go          # Caché Ristretto (invalidación total en writes)
+    ├── models.go                 # Structs Categoria, Subcategoria y tipos de respuesta
+    ├── handler.go                # Handlers HTTP: categorías + subcategorías
+    ├── service.go                # Lógica de negocio (cascade, validaciones)
+    ├── repository.go             # Consultas MySQL con transacciones
+    ├── cached_repository.go      # Decorador Ristretto TTL 24 h (patrón constitucional)
+    └── cached_repository_test.go # Tests del decorador ≥ 90% (gate CI)
 
 db/migrations/
 ├── NNNN_crear_tabla_categorias.up.sql
