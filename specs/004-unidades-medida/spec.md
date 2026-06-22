@@ -175,6 +175,13 @@ unidad canónica es gramos y comprobando que el stock aumenta en 2000 g.
 - RF-UM-04.2: Antes de inactivar una unidad, el admin ve cuántos ítems la usan como unidad
   de medida (campo `items_con_unidad_canonica`). Esta información se muestra en el modal de
   confirmación dentro del formulario de edición. No existe vista de detalle independiente.
+- RF-UM-04.3: El listado incluye un filtro por estado (Activas / Inactivas / Todas). Por defecto
+  muestra **Activas** (lineamiento cross §Filtros en Listados de la constitución). El admin puede
+  cambiar a Inactivas o Todas de forma explícita.
+- RF-UM-04.4: Las filas de unidades inactivas se distinguen visualmente de las activas mediante
+  badge de estado gris (`StatusBadgeComponent`) y deemphasis `opacity-60` en la fila.
+  El código corto read-only en el formulario de edición usa `bg-gray-100 text-gray-500`
+  con etiqueta `(no editable)` junto al label.
 
 ---
 

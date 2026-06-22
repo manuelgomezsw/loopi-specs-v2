@@ -196,6 +196,13 @@ cabecera de la aplicación está a la derecha del sidebar.
 - **FR-012**: El refactor de layout NO DEBE introducir regresiones en los comportamientos
   responsive existentes: tablet colapsado a íconos, móvil con drawer.
 
+- **FR-013**: Cuando la URL activa corresponde a cualquier ruta hija de un grupo de menú
+  (ej. listado de empleados `/empleados` o formulario `/empleados/nuevo`), el grupo DEBE
+  permanecer expandido sin colapsarse al navegar entre esas rutas. La expansión es determinada
+  exclusivamente por el estado del router Angular (`routerLinkActive` o inspección de
+  `router.url`) — nunca por una variable booleana local. Un grupo puede colapsarse manualmente
+  solo cuando ninguna de sus rutas hijas está activa en ese momento.
+
 ### Entidades Clave
 
 - **Componente `app-icon`**: Componente Angular standalone que recibe `name: string` como

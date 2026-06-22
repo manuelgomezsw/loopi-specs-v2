@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0 → 1.10.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0 → 1.10.0 → 1.11.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -36,6 +36,12 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
                  TTL 24 h para todas las entidades de catálogo, esquema de claves, política de
                  invalidación en escrituras, restricción multi-instancia explícita,
                  tabla de entidades con caché obligatoria (MINOR).
+        1.11.0 — §Diseño de Interfaz: Superficie de Listado (jerarquía 3 capas para tablas),
+                 Filtros en Listados (chip pattern, default Estado=Activo), Estados de
+                 Registros (badge verde/gris + opacity-60), Inputs Read-Only (tabla de estados
+                 con clases explícitas), Sub-menú Lateral (expansión controlada por router) y
+                 Componentes Angular Transversales (catálogo normativo 10 componentes +
+                 FilterStateService, prohibición de re-implementaciones) (MINOR).
 
 Changes in 1.10.0:
   - Nuevo bloque normativo §Caché Transversal — Ristretto dentro de §Stack Técnico
@@ -48,6 +54,14 @@ Changes in 1.10.0:
   - Tabla normativa de 7 entidades que DEBEN tener caché (002 a 008)
   - cached_repository_test.go obligatorio con cobertura ≥ 90%
   - Wiring canónico en main.go
+
+Changes in 1.11.0:
+  - §Superficie de Listado: jerarquía 3 capas para listas (card blanca, thead bg-gray-50, hover bg-blue-50/30)
+  - §Filtros en Listados: chip pattern, fondo bg-gray-50/70, default Estado=Activo para entidades con campo activo
+  - §Estados de Registros: badge verde/gris (StatusBadgeComponent) + opacity-60 en filas inactivas
+  - §Inputs Read-Only: tabla de estados (editable/readonly/disabled) con clases explícitas; label con ícono candado
+  - §Sub-menú Lateral: expansión controlada por routerLinkActive; abierto en rutas hijas activas
+  - §Componentes Transversales: catálogo normativo (10 componentes + FilterStateService); prohibición de re-implementaciones
 
 Changes in 1.4.1:
   - Patrón de listas: filas clickeables con cursor-pointer, tabindex="0", role="button", keydown.enter
@@ -489,6 +503,60 @@ Toda entidad de catálogo o maestro sigue este patrón de navegación y acciones
   transacciones." Ejemplo incorrecto: "Los ítems con unidad canónica inactiva quedarán
   bloqueados."
 
+### Superficie de Listado
+
+Todo listado de entidades (tabla, lista de registros) DEBE seguir la misma jerarquía visual
+de tres capas que los formularios, adaptada a la presentación tabular:
+
+| Capa | Elemento | Clases Tailwind obligatorias |
+|------|----------|------------------------------|
+| 1 — Página | `<main>` del shell | `bg-gray-50` |
+| 2 — Card del listado | `<div>` wrapper | `bg-white rounded-xl border border-gray-100 shadow-sm` |
+| 3 — Encabezado de tabla | `<thead>` | `bg-gray-50 border-b border-gray-200` |
+| 3 — Filas de datos | `<tbody> <tr>` | `bg-white hover:bg-blue-50/30 transition-colors cursor-pointer` |
+
+**Reglas:**
+
+- El card del listado ocupa el ancho disponible (`w-full`); sin `max-w-*` (a diferencia de los formularios).
+- El elemento raíz de la vista de listado es un `<div>` directo sin restricción de ancho.
+- No usar `<main>` propio en la vista — sería `<main>` anidado (HTML inválido).
+- Implementar con `ListCardComponent` (ver §Componentes Angular Transversales).
+
+### Filtros en Listados
+
+**Posición**: Dentro del card del listado, entre el encabezado y la tabla, separada por
+`border-b border-gray-200`. La barra de filtros usa `bg-gray-50/70` para distinguirse del
+área de datos. Los controles de filtro usan `h-8` o `h-9` — más compactos que los inputs de
+formulario — para comunicar que son controles de navegación, no campos de datos.
+
+**Patrón de chips/pills**: Los filtros activos se representan como chips removibles
+(`bg-blue-100 text-blue-700 border border-blue-200 rounded-full`). El chip "Estado: Activo"
+aparece azul por defecto; quitarlo explícitamente cambia la vista a todos los registros.
+
+**Regla de default obligatoria**: Todo listado de una entidad con campo `activo` DEBE
+preseleccionar el filtro de estado en **Activos** al cargar por primera vez en la sesión.
+El usuario puede cambiarlo a Inactivos o Todos de forma explícita.
+
+**Implementación**: Usar `FilterBarComponent` con `FilterStateService` (ver §Componentes
+Angular Transversales). Prohibido implementar filtros ad-hoc por feature.
+
+### Estados de Registros en Listados
+
+Todo listado con campo `activo` DEBE diferenciar visualmente registros activos e inactivos
+con dos mecanismos complementarios:
+
+**1. Badge de estado** — obligatorio en la columna Estado de toda tabla con campo `activo`:
+
+| Estado | Clases del `<span>` |
+|--------|---------------------|
+| Activo | `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700` |
+| Inactivo | `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500` |
+
+Implementación: usar `StatusBadgeComponent` (ver §Componentes Angular Transversales).
+
+**2. Deemphasis de fila inactiva**: La `<tr>` de un registro inactivo lleva `class="opacity-60"`.
+El badge NO recibe `opacity-60` — debe permanecer legible para identificar el estado.
+
 ### Superficie de Formulario
 
 Todo formulario de creación o edición DEBE establecer una jerarquía visual de tres capas para
@@ -510,8 +578,7 @@ operativos y navegadores:
 - La tarjeta se centra horizontalmente con `mx-auto`.
 - El `<main>` o página que contenga la tarjeta DEBE usar `bg-gray-50` para que el
   contraste tarjeta/fondo sea visible. Nunca fondo blanco en la página y tarjeta blanca.
-- Los campos en estado deshabilitado (readonly en edición) usan `bg-gray-100 text-gray-500`
-  para comunicar inequívocamente que no son editables — distinto del `bg-white` del campo activo.
+- Los campos en estado deshabilitado o read-only: ver §Inputs en Estado Read-Only o Deshabilitado.
 - La zona de acciones destructivas (inactivar, eliminar) DEBE separarse del formulario principal
   con un `<hr>` y un margen de al menos `mt-8`, ubicada al final de la vista.
 
@@ -546,6 +613,28 @@ Los formularios se renderizan dentro del `<main>` del `ShellComponent`, que ya a
 </div>
 ```
 
+### Inputs en Estado Read-Only o Deshabilitado
+
+Los campos no editables en formularios de edición (ej. `codigo` de tienda, nombre de usuario
+de empleado) DEBEN comunicar inequívocamente su estado mediante contraste con los campos activos:
+
+| Estado | Atributo HTML | Clases del `<input>` |
+|--------|--------------|----------------------|
+| Editable | — | `bg-white border border-gray-300 text-gray-900 focus:ring-2 focus:ring-blue-500` |
+| Read-only | `readonly` | `bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed` |
+| Deshabilitado | `disabled` | `bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed opacity-60` |
+
+**Label del campo read-only**: DEBE incluir una señal visual de no editable. Opciones
+(elegir una por módulo, mantenerla consistente):
+
+- Ícono de candado (`LockClosedIcon`, 14 px, `text-gray-400`) junto al label.
+- Texto `(no editable)` en `text-xs text-gray-400` junto al label.
+
+**Nunca** usar `bg-white` en un campo `readonly` o `disabled`. El contraste `bg-gray-100`
+vs. `bg-white` es el mecanismo primario de comunicación del estado.
+
+**Implementación**: Usar `ReadonlyFieldComponent` (ver §Componentes Angular Transversales).
+
 ### Convenciones de Botones de Acción
 
 - **Botón de creación (acción primaria de lista)**: lleva el prefijo `+ ` antes del texto.
@@ -575,6 +664,45 @@ Cada vista de la aplicación DEBE tener:
 - **Acción primaria** claramente identificada cuando la vista tiene una acción principal
   (ej. "Nuevo pedido", "Confirmar inventario").
 - **Layout consistente** con el resto del módulo: mismo padding, misma estructura de header.
+
+### Sub-menú Lateral — Estabilidad de Expansión
+
+Cuando el menú lateral contiene grupos con sub-ítems, el estado de expansión del grupo DEBE
+estar determinado exclusivamente por el router Angular:
+
+- Un grupo **permanece expandido** mientras la URL activa corresponda a cualquier ruta hija
+  del grupo, independientemente de si el usuario navega entre el listado y el formulario del mismo módulo.
+- La expansión se implementa con `routerLinkActive` o inspeccionando `router.url` —
+  nunca con una variable booleana local que se colapse al navegar.
+- El ítem activo dentro del grupo lleva `bg-blue-50 text-blue-700 font-medium`.
+- El grupo padre lleva `text-blue-700` cuando algún hijo está activo.
+- Un grupo puede colapsarse manualmente solo cuando **ninguna ruta hija está activa**.
+
+### Componentes Angular Transversales
+
+La aplicación provee un catálogo de componentes Angular standalone que toda vista nueva DEBE
+usar para garantizar consistencia sin re-implementaciones ad-hoc. Su especificación completa
+está en [spec 000-design-system](../../specs/000-design-system/spec.md).
+
+**Catálogo normativo** (todos en `loopi-web/src/app/shared/`):
+
+| Componente / Servicio | Selector | Responsabilidad |
+|----------------------|----------|-----------------|
+| `ListCardComponent` | `app-list-card` | Card blanca para listados; capa 2 de la jerarquía visual |
+| `FilterBarComponent` | `app-filter-bar` | Barra de filtros con chips; default Estado=Activo |
+| `StatusBadgeComponent` | `app-status-badge` | Badge verde/gris para el campo `activo` |
+| `DataTableComponent` | `app-data-table` | Tabla con filas clickeables; `opacity-60` en filas inactivas |
+| `EmptyStateComponent` | `app-empty-state` | Estado vacío con mensaje y acción sugerida |
+| `PaginationComponent` | `app-pagination` | Paginación server-side |
+| `PageHeaderComponent` | `app-page-header` | H1 + breadcrumb + slot de acción primaria |
+| `FormCardComponent` | `app-form-card` | Card blanca para formularios; variantes sm/md/lg |
+| `ReadonlyFieldComponent` | `app-readonly-field` | Label + valor no editable con ícono de candado |
+| `DangerZoneComponent` | `app-danger-zone` | Sección de acciones destructivas (borde rojo) |
+| `FilterStateService` | `@Injectable({providedIn:'root'})` | Estado de filtros por ruta; persiste durante la sesión |
+
+**Prohibición**: Está prohibido re-implementar la funcionalidad de cualquier componente de
+este catálogo en una vista de feature. Si un componente no cubre el caso, extenderlo con
+un `@Input()` nuevo y actualizar la spec 000-design-system.
 
 ---
 
@@ -831,4 +959,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.10.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-06-22
+**Version**: 1.11.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-06-22
