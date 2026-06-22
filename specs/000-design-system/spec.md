@@ -153,8 +153,21 @@ distintos para normal, hover, foco, deshabilitado y carga.
   del color primario, fondo transparente, texto del color primario;
   estados hover/foco/deshabilitado coherentes con la paleta.
 - **FR-005**: El sistema de diseño DEBE proveer la clase utilitaria
-  `input-field` para campos de formulario: borde sutil, padding
-  táctil adecuado, estados normal/foco/error/deshabilitado.
+  `input-field` para campos de formulario `<input>` y `<textarea>`:
+  `bg-white`, `text-gray-900`, borde sutil, padding táctil, `font-size: 1rem`
+  (previene zoom iOS), estados normal/foco/deshabilitado.
+- **FR-005b**: El sistema de diseño DEBE proveer la clase utilitaria
+  `select-field` para elementos `<select>`: mismos tokens que `input-field`
+  más `appearance-none` y un chevron SVG controlado que normaliza la apariencia
+  entre Chrome, Firefox y Safari.
+- **FR-005c**: El sistema de diseño DEBE proveer `input-field-error` como
+  modificador de estado de error combinable con `input-field` y `select-field`.
+  Los colores de focus en error DEBEN ser `red-500` en lugar de `primary-600`.
+- **FR-005d**: Ningún formulario ni listado DEBE usar clases Tailwind ad-hoc
+  (`bg-indigo-*`, `focus:ring-indigo-*`, etc.) para campos de entrada o botones
+  de acción principal/secundaria. La paleta de la aplicación es `primary-*`
+  (marrón cálido); `indigo` y `blue` están reservados para acentos semánticos
+  externos al sistema de formularios.
 - **FR-006**: El sistema de diseño DEBE proveer la clase utilitaria
   `card` para contenedores de información: fondo blanco, borde suave,
   sombra leve, radio de esquinas consistente.
@@ -251,9 +264,11 @@ siguen la escala semántica:
 
 | Componente | Clase | Descripción |
 |---|---|---|
-| Botón primario | `btn-primary` | Acción principal; fondo primario, texto blanco |
-| Botón secundario | `btn-secondary` | Acción secundaria; contorno primario |
-| Campo de formulario | `input-field` | Input y textarea; borde suave, padding táctil |
+| Botón primario | `btn-primary` | Acción principal; fondo `primary-700`, texto blanco |
+| Botón secundario | `btn-secondary` | Acción secundaria; contorno `primary-700` |
+| Campo de texto | `input-field` | `<input>` y `<textarea>`; borde suave, bg-white, padding táctil, disabled automático |
+| Campo selector | `select-field` | `<select>`; mismos tokens que `input-field` + `appearance-none` + chevron SVG |
+| Estado de error | `input-field-error` | Modificador de error; se combina con `input-field` o `select-field` |
 | Tarjeta | `card` | Contenedor de información; fondo blanco, sombra leve |
 
 ### Responsive
@@ -283,6 +298,13 @@ siguen la escala semántica:
 - Q: ¿Qué nivel de migración aplica a las vistas ya implementadas (001-autenticacion)? → A: Migración completa — los templates de login/logout se actualizan para usar btn-primary, input-field, card en lugar de clases Tailwind directas.
 - Q: ¿Qué estilo visual tendrá btn-secondary? → A: Outline — borde del color primario, fondo transparente, texto del color primario.
 - Q: ¿Desde dónde se carga la fuente Inter? → A: Self-hosted — archivos .woff2 incluidos en el proyecto; sin Google Fonts CDN.
+
+### Session 2026-06-22
+
+- Q: ¿Cómo deben verse los `<select>` para ser consistentes con los `<input>`? → A: Token `select-field` con `appearance-none` + chevron SVG gris (gray-500) normalizado; elimina la flecha nativa del browser. Mismo padding, borde, radio y colores de focus que `input-field`.
+- Q: ¿Qué hacer con el estado de error en selects? → A: Modificador compartido `input-field-error` aplicable tanto a `input-field` como a `select-field`. Cambia borde y ring a `red-500`.
+- Q: Los formularios usaban `indigo-*` en lugar de la paleta de marca. ¿Cómo corregirlo? → A: Migración de todos los formularios y listados a `btn-primary` / `btn-secondary` / `input-field` / `select-field`. Se prohíbe explícitamente `bg-indigo-*` y `focus:ring-indigo-*` en el sistema de formularios (FR-005d).
+- Q: ¿El `store-selector` de la topbar usa `select-field`? → A: No. Es un contexto compacto (`py-1.5`, `w-auto`) incompatible con `select-field` (`py-3`, `w-full`). Usa sus propias clases pero aplica `appearance-none`, chevron SVG y paleta `primary-*`.
 
 ---
 
