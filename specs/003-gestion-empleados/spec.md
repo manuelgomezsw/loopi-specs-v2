@@ -1,13 +1,20 @@
 # Especificación de Feature: Gestión de Empleados
 
 **Branch de Feature**: `003-gestion-empleados`
+**Actualización**: `018-selects-tienda-tipo-doc`
 **Creado**: 2026-05-18
-**Estado**: Cerrada
+**Actualizado**: 2026-06-21
+**Estado**: En actualización
 **Referencia funcional**: [§4.1 Gestión de Empleados](../loopi-v2-funcional/spec.md)
 
 ---
 
 ## Clarificaciones
+
+### Sesión 2026-06-21
+
+- Q: ¿El campo "Tienda" en el formulario de creación/edición de empleado debe ser un cuadro de texto o una lista desplegable? → A: Debe ser una lista desplegable (select) que carga dinámicamente las tiendas activas del sistema al abrir el formulario.
+- Q: ¿El campo "Tipo de documento" debe ser un cuadro de texto libre o una lista de opciones predefinidas? → A: Debe ser una lista desplegable (select) con los tipos de documento válidos en Colombia: CC, CE, TI, PP, RC, NUIP y PE.
 
 ### Sesión 2026-05-24
 
@@ -51,6 +58,18 @@ que puede autenticarse y accede solo a lo que su rol permite.
 4. **Dado** que el admin crea un empleado con rol admin,
    **Cuando** guarda el registro,
    **Entonces** el empleado queda sin tienda asignada fija y tiene acceso a todas las tiendas.
+
+5. **Dado** que el admin abre el formulario de creación de empleado,
+   **Cuando** el formulario se despliega,
+   **Entonces** el campo "Tienda" muestra una lista desplegable con únicamente las tiendas activas registradas en el sistema, sin necesidad de escribir texto libre.
+
+6. **Dado** que el admin abre el formulario de creación de empleado,
+   **Cuando** el formulario se despliega,
+   **Entonces** el campo "Tipo de documento" muestra una lista desplegable con las opciones: CC, CE, TI, PP, RC, NUIP, PE.
+
+7. **Dado** que no existen tiendas activas en el sistema,
+   **Cuando** el admin abre el formulario de creación,
+   **Entonces** el campo "Tienda" muestra la lista vacía e indica que no hay tiendas disponibles.
 
 ---
 
@@ -186,6 +205,8 @@ estados, validando que el listado los muestra correctamente filtrados.
   primer inicio de sesión.
 - RF-EMP-01.6: Un empleado recién creado queda activo por defecto.
 - RF-EMP-01.7: El rol admin no requiere tienda asignada. Asignar tienda a un admin es un error.
+- RF-EMP-01.8: El campo "Tienda" en el formulario de creación de empleado debe presentarse como una lista desplegable. La lista carga únicamente las tiendas activas del sistema al momento de abrir el formulario. Si no existen tiendas activas, la lista aparece vacía con un mensaje informativo. No se permite entrada de texto libre en este campo.
+- RF-EMP-01.9: El campo "Tipo de documento" en el formulario de creación de empleado debe presentarse como una lista desplegable con los tipos de documento válidos en Colombia. Las opciones disponibles son: **CC** (Cédula de Ciudadanía), **CE** (Cédula de Extranjería), **TI** (Tarjeta de Identidad), **PP** (Pasaporte), **RC** (Registro Civil), **NUIP** (Número Único de Identificación Personal), **PE** (Permiso Especial de Permanencia). El campo es opcional; si el admin no selecciona ninguna opción, el tipo de documento queda sin registrar.
 
 ### RF-EMP-02: Edición de empleados
 
@@ -205,6 +226,7 @@ estados, validando que el listado los muestra correctamente filtrados.
   activo (es decir, es el único admin activo), el sistema rechaza la operación con el
   mensaje: "No es posible cambiar el rol del último administrador activo." La verificación
   es atómica (misma garantía que RF-EMP-03.5).
+- RF-EMP-02.7: En el formulario de edición de empleado, los campos "Tienda" y "Tipo de documento" aplican las mismas reglas de presentación definidas en RF-EMP-01.8 y RF-EMP-01.9. La tienda actualmente asignada debe aparecer preseleccionada en la lista desplegable. El tipo de documento registrado (si existe) debe aparecer preseleccionado.
 
 ### RF-EMP-03: Inactivación y reactivación
 
@@ -275,7 +297,9 @@ estados, validando que el listado los muestra correctamente filtrados.
 
 ## Criterios de Éxito
 
-- **Alta sin fricción**: El admin puede crear un empleado completo en menos de 3 minutos.
+- **Alta sin fricción**: El admin puede crear un empleado completo en menos de 3 minutos, sin necesidad de recordar o escribir nombres de tiendas ni códigos de tipo de documento.
+- **Selección sin errores**: El 100% de las selecciones de tienda en el formulario de empleado corresponden a tiendas activas válidas; no es posible registrar un empleado con una tienda inexistente o inactiva mediante la interfaz.
+- **Datos de documento coherentes**: El 100% de los tipos de documento registrados en el sistema corresponden a tipos válidos reconocidos en Colombia.
 - **Control de acceso inmediato**: Al inactivar un empleado, su acceso queda bloqueado
   en la próxima operación que intente, sin demora.
 - **Seguridad de contraseñas**: El 100% de las contraseñas temporales se muestran una
@@ -292,7 +316,7 @@ estados, validando que el listado los muestra correctamente filtrados.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Empleado` | nombre, apellido, usuario (único), contraseña (hash), tipo_documento, numero_documento, telefono, email, fecha_nacimiento, rol, tienda_id (FK a Tienda, nullable solo para admins), activo, requiere_cambio_contrasena |
+| `Empleado` | nombre, apellido, usuario (único), contraseña (hash), tipo_documento (enum: CC/CE/TI/PP/RC/NUIP/PE, opcional), numero_documento, telefono, email, fecha_nacimiento, rol, tienda_id (FK a Tienda, nullable solo para admins), activo, requiere_cambio_contrasena |
 | `EmployeeAuditLog` | id, actor_id (FK a Empleado), accion (enum), empleado_id (FK a Empleado), detalle (JSON), created_at (UTC, inmutable) |
 
 ---
@@ -318,3 +342,10 @@ estados, validando que el listado los muestra correctamente filtrados.
 - La contraseña temporal no tiene expiración propia; expira cuando el empleado la cambia
   o cuando el admin hace un nuevo reset.
 - No existe auto-bloqueo de cuenta por inactividad temporal (solo el admin puede inactivar).
+- El listado de tiendas para el select se consulta en tiempo real al abrir el formulario;
+  no se cachea en el cliente para garantizar que siempre refleja el estado activo actual.
+- Los tipos de documento válidos (CC, CE, TI, PP, RC, NUIP, PE) son un conjunto cerrado
+  definido por normativa colombiana y no requieren configuración dinámica; se tratan como
+  constantes de la aplicación.
+- El campo `tipo_documento` del empleado almacena únicamente el código abreviado
+  (p. ej., "CC"), no la descripción larga.
