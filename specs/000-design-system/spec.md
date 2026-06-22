@@ -341,6 +341,8 @@ export interface BreadcrumbItem {
   label: string;
   route?: string;
 }
+
+export type FormMode = 'create' | 'edit';
 ```
 
 **API pública del servicio**:
@@ -577,7 +579,9 @@ Aplica la regla "un `<h1>` único y descriptivo por vista" de la constitución.
 ### FormCardComponent (`app-form-card`)
 
 **Propósito**: Card blanca para formularios de creación y edición. Provee la capa 2 de la
-jerarquía visual de formularios con el ancho correcto según la densidad del formulario.
+jerarquía visual de formularios, el ancho correcto según densidad, y actúa como puente entre
+el input `[mode]` y el `FormModeService` para que componentes hijos (como `DangerZoneComponent`)
+puedan reaccionar automáticamente al modo sin necesidad de `@if` en el template del feature.
 
 **Ubicación**: `loopi-web/src/app/shared/components/form-card/`
 
@@ -586,11 +590,31 @@ jerarquía visual de formularios con el ancho correcto según la densidad del fo
 | Input | Tipo | Default | Descripción |
 |-------|------|---------|-------------|
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Ancho: sm=`max-w-lg`, md=`max-w-2xl`, lg=`max-w-4xl` |
+| `mode` | `FormMode` | `'create'` | Modo del formulario; propaga el valor al `FormModeService` del feature via `inject(FormModeService, { optional: true })` |
 
 **Slots (ng-content)**:
 
-- Default — contenido del formulario
-- `[slot="danger-zone"]` — sección destructiva; se renderiza al pie con `<hr>` separador
+- Default — contenido del formulario (campos, botones de submit, y `app-danger-zone`)
+
+**Implementación del bridge** (`FormCardComponent`, extracto):
+
+```typescript
+export class FormCardComponent implements OnChanges {
+  @Input() size: 'sm' | 'md' | 'lg' = 'md';
+  @Input() mode: FormMode = 'create';
+
+  private readonly formMode = inject(FormModeService, { optional: true });
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['mode']) {
+      this.formMode?.mode.set(this.mode);
+    }
+  }
+}
+```
+
+`FormModeService` se inyecta con `optional: true`: si el feature component no lo provee, el
+input `[mode]` es un no-op y `DangerZoneComponent` permanece visible (fallback seguro).
 
 ---
 
@@ -613,10 +637,85 @@ read-only que comunican al usuario que el campo no puede modificarse.
 
 ---
 
+### FormModeService
+
+**Propósito**: Contexto de modo creación/edición compartido entre `FormCardComponent` y sus
+componentes descendientes proyectados (principalmente `DangerZoneComponent`). Es el núcleo del
+patrón `FORM_MODE_TOKEN` — un servicio que se provee a nivel del feature component para que
+toda la vista del formulario acceda al mismo estado de modo sin pasar `@Input()` encadenados.
+
+**Ubicación**: `loopi-web/src/app/shared/services/form-mode.service.ts`
+
+**Por qué un servicio y no un InjectionToken directo**: Angular resuelve el árbol de inyección
+del *declaring component* para el contenido proyectado via `ng-content`. Al proveer
+`FormModeService` en el feature component (`providers: [FormModeService]`), **todos** sus
+descendientes de template (incluyendo los proyectados dentro de `app-form-card`) encuentran
+la misma instancia. Un `InjectionToken` en los `providers` de `FormCardComponent` no sería
+visible para el contenido proyectado (ese contenido pertenece al árbol del feature, no al
+árbol interno de `FormCardComponent`).
+
+**API**:
+
+```typescript
+@Injectable() // Sin providedIn — cada feature provee su propia instancia
+export class FormModeService {
+  readonly mode = signal<FormMode>('create');
+  readonly isEdit = computed(() => this.mode() === 'edit');
+  readonly isCreate = computed(() => this.mode() === 'create');
+}
+```
+
+**Cómo usarlo en un feature component**:
+
+```typescript
+@Component({
+  providers: [FormModeService], // instancia nueva por formulario
+})
+export class EmpleadoFormComponent implements OnInit {
+  protected readonly formMode = inject(FormModeService);
+  private readonly route = inject(ActivatedRoute);
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.params['id'];
+    this.formMode.mode.set(id ? 'edit' : 'create');
+  }
+}
+```
+
+**Template del feature (create y edit en un solo template)**:
+
+```html
+<app-page-header
+  [title]="formMode.isEdit() ? 'Editar empleado' : 'Nuevo empleado'"
+  [breadcrumb]="[{ label: 'Empleados', route: '/empleados' }]">
+  <button slot="actions" class="btn-secondary" routerLink="/empleados">Cancelar</button>
+</app-page-header>
+
+<app-form-card [mode]="formMode.mode()" size="md">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+    <!-- campos del formulario -->
+  </form>
+
+  <!-- DangerZone se auto-oculta en 'create', se auto-muestra en 'edit' -->
+  <app-danger-zone>
+    <p>Inactivar al empleado le impedirá acceder al sistema.</p>
+    <button class="btn-secondary text-red-600" (click)="onInactivar()">
+      Inactivar empleado
+    </button>
+  </app-danger-zone>
+</app-form-card>
+```
+
+**Beneficio**: el developer escribe el template **una sola vez** para creación y edición.
+No hay `@if (isEdit)` para la `DangerZone` — el contexto fluye automáticamente.
+
+---
+
 ### DangerZoneComponent (`app-danger-zone`)
 
 **Propósito**: Implementación del concepto "Zona de precaución" de la constitución.
-Sección para acciones destructivas (inactivar, eliminar) al pie de formularios de edición.
+Se auto-oculta en modo creación (`FormModeService.isCreate() === true`) y se auto-muestra
+en modo edición, eliminando la necesidad de `@if` en el template del feature.
 
 **Ubicación**: `loopi-web/src/app/shared/components/danger-zone/`
 
@@ -628,7 +727,24 @@ Sección para acciones destructivas (inactivar, eliminar) al pie de formularios 
 
 **Slots (ng-content)**: botones de acción destructiva y textos de impacto en lenguaje de usuario.
 
-**Renderizado**: `<div class="mt-8 pt-6 border-t-2 border-red-200 bg-red-50/30 rounded-b-xl p-6">`
+**Implementación de auto-visibilidad** (`DangerZoneComponent`, extracto):
+
+```typescript
+export class DangerZoneComponent {
+  @Input() title = 'Zona de precaución';
+
+  private readonly formMode = inject(FormModeService, { optional: true });
+
+  // Visible siempre que: no hay servicio (fallback) o el modo es 'edit'
+  protected readonly visible = computed(() =>
+    this.formMode ? this.formMode.isEdit() : true
+  );
+}
+```
+
+**Renderizado** (solo cuando `visible()` es `true`):
+
+`<div class="mt-8 pt-6 border-t-2 border-red-200 bg-red-50/30 rounded-b-xl p-6">`
 
 ---
 
@@ -657,7 +773,8 @@ loopi-web/src/app/shared/
 ├── models/
 │   └── filter.model.ts
 └── services/
-    └── filter-state.service.ts
+    ├── filter-state.service.ts
+    └── form-mode.service.ts
 ```
 
 Todo componente DEBE tener su `*.spec.ts` con cobertura ≥ 90% (gate de infraestructura).
@@ -673,3 +790,8 @@ Todo componente DEBE tener su `*.spec.ts` con cobertura ≥ 90% (gate de infraes
 - **FR-014**: `FilterStateService` DEBE inicializar los filtros con los `defaultValue` de
   cada `FilterDefinition` cuando la ruta no tiene estado previo, garantizando que el filtro
   Estado=Activo esté activo al cargar cualquier listado por primera vez.
+- **FR-015**: `FormModeService` DEBE proveerse con `@Injectable()` sin `providedIn` para que
+  cada feature component genere su propia instancia. `DangerZoneComponent` DEBE inyectarlo con
+  `{ optional: true }` para que el fallback sea visible cuando el servicio no está disponible.
+  `FormCardComponent` actúa como bridge entre el `@Input() mode` y el servicio, propagando el
+  valor via `ngOnChanges` para que los componentes proyectados lean el modo sin acoplamiento directo.

@@ -699,6 +699,7 @@ está en [spec 000-design-system](../../specs/000-design-system/spec.md).
 | `ReadonlyFieldComponent` | `app-readonly-field` | Label + valor no editable con ícono de candado |
 | `DangerZoneComponent` | `app-danger-zone` | Sección de acciones destructivas (borde rojo) |
 | `FilterStateService` | `@Injectable({providedIn:'root'})` | Estado de filtros por ruta; persiste durante la sesión |
+| `FormModeService` | `@Injectable()` (provisto en el feature) | Contexto create/edit; `DangerZoneComponent` se auto-oculta en create sin `@if` en el template |
 
 **Prohibición**: Está prohibido re-implementar la funcionalidad de cualquier componente de
 este catálogo en una vista de feature. Si un componente no cubre el caso, extenderlo con
