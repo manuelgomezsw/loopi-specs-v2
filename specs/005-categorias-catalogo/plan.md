@@ -25,7 +25,7 @@ el listado sin paginación.
 
 - `go-sql-driver/mysql` — Driver MySQL (ya en proyecto desde 001)
 - `golang-migrate/migrate` — Migraciones de base de datos (ya en proyecto desde 001)
-- `dgraph-io/ristretto` — Caché en proceso para catálogo (ya agregado en 004); el paquete compartido `internal/cache/` (con `EntityCache[T]` y `ReadThrough[T]`) debe verificarse — si 004 no lo creó, esta feature lo inicializa
+- `dgraph-io/ristretto` — Caché en proceso para catálogo (ya agregado en 004); el paquete compartido `internal/cache/` (con `EntityCache[T]` y `ReadThrough[T]`) ya existe en `develop`
 - JWT library — Extracción de `user_id` y `rol` del token (ya en proyecto desde 001)
 
 **Almacenamiento**: MySQL en GCP Cloud SQL
@@ -94,7 +94,7 @@ specs/005-categorias-catalogo/
 
 ```text
 internal/
-├── cache/                        # Paquete compartido (verificar si existe desde 004; crear si no)
+├── cache/                        # Paquete compartido ya existente en develop (entity_cache.go)
 │   └── cache.go                  # EntityCache[T] + ReadThrough[T]
 └── categorias/
     ├── models.go                 # Structs Categoria, Subcategoria y tipos de respuesta
