@@ -185,9 +185,9 @@ T015: sidebar.component.spec.ts
 
 ### Entrega completa (P1 + P2)
 
-8. Completar Phase 5: HU-3 (layout full-height)
-9. **VALIDAR**: sidebar full-height, responsive sin regresiones
-10. Completar Phase 6: Polish final
+1. Completar Phase 5: HU-3 (layout full-height)
+2. **VALIDAR**: sidebar full-height, responsive sin regresiones
+3. Completar Phase 6: Polish final
 
 ### Notas
 
