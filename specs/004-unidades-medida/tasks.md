@@ -180,6 +180,22 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
   `invalidarCatalogo` fue llamado exactamente 1 vez),
   `TestAccesoSinAdminFalla` (handler test: request sin rol admin a POST/PUT/PATCH → 403
   `acceso_denegado`; usar `httptest.NewRecorder` + token con rol `lider_tienda`)
+- [ ] T023b [P] Crear `loopi-api-v2/internal/unidades_medida/repository_test.go` con
+  `go-sqlmock` (`github.com/DATA-DOG/go-sqlmock`); cobertura obligatoria ≥ 90% en `repository.go`
+  (Constitución §Estrategia de testing — paquetes de infraestructura); implementar:
+  `TestRepositoryCrear` (INSERT correcto + SELECT del row creado; verificar columnas explícitas),
+  `TestRepositoryCrearDuplicado` (driver retorna error de clave duplicada → propagado sin envolver),
+  `TestRepositoryExisteConCodigo_Existe` (row retornado → true),
+  `TestRepositoryExisteConCodigo_NoExiste` (no rows → false),
+  `TestRepositoryListar_SinFiltros` (SQL_CALC_FOUND_ROWS + FOUND_ROWS() correctos),
+  `TestRepositoryListar_FiltroTipo` (WHERE tipo_medida=? incluido en query),
+  `TestRepositoryObtenerPorID_Existe` (row completo mapeado correctamente),
+  `TestRepositoryObtenerPorID_NoExiste` (sql.ErrNoRows → nil, nil),
+  `TestRepositoryEditar` (UPDATE dinámico incluye solo campos no-nil; actualizado_en=NOW()),
+  `TestRepositoryInactivar` (UPDATE activo=0 ejecutado con id correcto),
+  `TestRepositoryContarItemsConUnidadCanonica` (query sobre tabla items; graceful 0 si tabla no existe),
+  `TestRepositoryContarUnidadesActivasPorTipo` (SELECT COUNT con tipo y excludeID correctos);
+  todos los tests verifican que sqlmock.ExpectationsWereMet() pasa al finalizar
 
 ### Frontend — Service y Componentes
 
@@ -199,19 +215,26 @@ con sus dos errores está lista para importarse en módulos consumidores (receta
   con `<label for="...">` explícito (WCAG 2.1 AA); `aria-describedby` en campos con error;
   `<option>` para peso, volumen y unidad en el select; mensajes de error con texto descriptivo
   bajo cada campo (`text-red-600`, `border-red-500`); botón "Crear unidad" con spinner inline
-  y texto "Guardando..." durante envío; Tailwind CSS v4
+  y texto "Guardando..." durante envío; Tailwind CSS v4.
+  ⚠️ **Constitución §Superficie de Formulario (1.9.0)**: el formulario tiene ≤ 6 campos →
+  elemento raíz `<div class="max-w-lg mx-auto">` (sin `<main>` propio — el ShellComponent ya
+  provee `bg-gray-50` y el padding base); envolver `<form>` en tarjeta
+  `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 lg:p-8">`; todos los
+  `<input>` y `<select>` con `class="bg-white ..."` explícito (no heredado del navegador)
 - [ ] T027 Crear `loopi-web-v2/src/app/features/unidades-medida/pages/lista-unidades/lista-unidades.component.ts`
   (esqueleto para HU1): cargar lista al `ngOnInit`; signal `unidades: UnidadMedida[]`;
   método `abrirConfirmacionInactivar(unidad)` que llama `getImpacto(id)` y almacena resultado
   en signal `impactoSeleccionado`; método `confirmarInactivar()` que llama `inactivarUnidad(id)`
   y refresca la lista; signal `cargandoInactivar` para deshabilitar botón durante acción
 - [ ] T028 [P] Crear `loopi-web-v2/src/app/features/unidades-medida/pages/lista-unidades/lista-unidades.component.html`
-  (esqueleto con inactivación): tabla responsive Tailwind CSS v4 con columnas código/nombre/tipo/
-  factor/estado; botón "Inactivar" por fila (solo si `activo=true` y no es `unidad_base`); modal
-  de confirmación destructiva: `<h2>` "¿Inactivar esta unidad?", texto de advertencia del
-  `impactoSeleccionado.advertencia` o "Esta unidad no tiene items asignados", botón rojo
-  "Confirmar inactivación" + botón secundario "Cancelar"; empty state: "Aún no hay unidades
-  de medida registradas." con link "Crear primera unidad →"
+  (esqueleto con inactivación): encabezado con `<h1>` "Unidades de medida" y botón primario
+  `+ Nueva unidad de medida` (routerLink a `./nueva`) — el prefijo `+ ` es obligatorio según
+  Constitución §Botones de Acción (1.8.0); tabla responsive Tailwind CSS v4 con columnas
+  código/nombre/tipo/factor/estado; botón "Inactivar" por fila (solo si `activo=true` y no es
+  `unidad_base`); modal de confirmación destructiva: `<h2>` "¿Inactivar esta unidad?", texto de
+  advertencia del `impactoSeleccionado.advertencia` o "Esta unidad no tiene items asignados",
+  botón rojo "Confirmar inactivación" + botón secundario "Cancelar"; empty state: "Aún no hay
+  unidades de medida registradas." con link "Crear primera unidad →"
 
 **Punto de control HU1**: Ejecutar smoke test 4.2 de quickstart.md — crear unidad, duplicado 409,
 factor 0 → 422; PATCH inactivar funciona; modal de confirmación aparece en el frontend.
