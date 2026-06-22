@@ -30,8 +30,8 @@ aquí y se actualiza esta spec.
 
 - Fondo: `primary-700` (#9c5630) — contraste 5.5:1 con texto blanco (WCAG 2.1 AA ✅)
 - Hover: `primary-800` (#80462a)
-- Texto: blanco, semibold
-- Padding: `py-3 px-4` (área táctil ≥ 44 px)
+- Texto: blanco, `font-medium`, `text-sm`
+- Padding: `py-2 px-5`
 - Esquinas: `rounded-lg`
 - Transición: colores 200 ms
 - Disabled: opacidad 50%, cursor `not-allowed`
@@ -55,9 +55,9 @@ aquí y se actualiza esta spec.
 **Estilos aplicados**:
 
 - Fondo: transparente (hover: `primary-50`)
-- Borde: 2px `primary-700` — contraste 5.5:1 sobre blanco (WCAG 2.1 AA ✅)
-- Texto: `primary-700`, semibold
-- Padding: `py-3 px-4` (área táctil ≥ 44 px)
+- Borde: 1px `primary-700` — contraste 5.5:1 sobre blanco (WCAG 2.1 AA ✅)
+- Texto: `primary-700`, `font-medium`, `text-sm`
+- Padding: `py-2 px-5`
 - Esquinas: `rounded-lg`
 - Transición: colores 200 ms
 - Disabled: opacidad 50%, cursor `not-allowed`
