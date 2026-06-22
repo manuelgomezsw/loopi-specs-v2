@@ -4,7 +4,7 @@
 
 **Creado**: 2026-06-21
 
-**Estado**: Borrador
+**Estado**: Cerrada
 
 **Input**: Interfaz de tipo admin con menú de navegación que permita moverse entre módulos sin depender de conocer la URL directa.
 

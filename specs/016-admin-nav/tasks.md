@@ -102,7 +102,7 @@ fases siguientes necesitan.
 - [X] T024 [P] Verificar estado vacío del selector de tiendas cuando el admin no tiene tiendas activas — el selector muestra solo "Vista consolidada"; no hay error ni selector en blanco
 - [X] T025 [P] Validar responsive completo por breakpoint — desktop (≥1024px): sidebar `w-64` siempre visible, sin hamburguesa; tablet (640–1023px): sidebar `w-16` íconos, siempre visible; móvil (<640px): sidebar oculto, hamburguesa en topbar, drawer full-width al abrirse, cierre con ✕ o tap en overlay, Esc key cierra; verificar que nada se rompe en 320px
 - [X] T026 Ejecutar gates de CI completos según constitución: `ng build` (sin errores TypeScript), `npm audit --audit-level=high` (cero vulnerabilidades altas/críticas — 3 vulnerabilidades pre-existentes en toolchain de Angular sin fix disponible), `gitleaks detect --no-git` (no disponible en entorno), `ng test --watch=false` (110/110 tests pasan)
-- [ ] T027 Ejecutar verificación manual completa según `quickstart.md` — validar los 6 flujos detallados: admin con 11 módulos, selector de tienda, lider_tienda filtrado, acceso directo prohibido, móvil hamburguesa, tablet colapsado
+- [X] T027 Ejecutar verificación manual completa según `quickstart.md` — validar los 6 flujos detallados: admin con 11 módulos, selector de tienda, lider_tienda filtrado, acceso directo prohibido, móvil hamburguesa, tablet colapsado
 
 ---
 

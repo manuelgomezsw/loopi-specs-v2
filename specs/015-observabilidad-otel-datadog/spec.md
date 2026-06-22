@@ -4,7 +4,7 @@
 
 **Creado**: 2026-05-26
 
-**Estado**: Aprobado
+**Estado**: Cerrada
 
 **Tipo**: Infraestructura transversal — base para todos los demás use cases
 

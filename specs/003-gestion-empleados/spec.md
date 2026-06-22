@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `003-gestion-empleados`
 **Creado**: 2026-05-18
-**Estado**: Borrador
+**Estado**: Cerrada
 **Referencia funcional**: [§4.1 Gestión de Empleados](../loopi-v2-funcional/spec.md)
 
 ---
