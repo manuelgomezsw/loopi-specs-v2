@@ -182,6 +182,37 @@ const (
 
 ---
 
+### RD-08: Migración VARCHAR → ENUM para `tipo_documento`
+
+**Decisión**: Migración en dos pasos: (1) nullificar valores no válidos (CC, CE, NUIP, PE),
+(2) `ALTER TABLE ... MODIFY COLUMN tipo_documento ENUM('CC','CE','NUIP','PE') NULL`.
+
+**Rationale**: MySQL no permite ALTER a ENUM si existen valores no contemplados. El UPDATE previo
+limpia datos legacy que pudieran haberse ingresado por texto libre. Nullificar es más seguro que
+rechazar la migración en producción.
+
+**Alternativas descartadas**:
+
+- `VARCHAR` + validación solo en aplicación: sin constraint nativo en BD. Descartado.
+- `TINYINT` + tabla lookup: overkill para 4 valores fijos. Descartado.
+
+---
+
+### RD-09: Fuente de datos para el select de tiendas activas
+
+**Decisión**: Reutilizar `GET /api/v1/tiendas?activo=true` (ya implementado en 002-gestion-tiendas).
+El Angular llama este endpoint en `ngOnInit`. Sin caché en cliente.
+
+**Estado vacío**: Select deshabilitado con placeholder `"No hay tiendas activas disponibles"`.
+**Error de red**: Toast de error + campo deshabilitado con mensaje de reintento.
+
+**Alternativas descartadas**:
+
+- Nuevo endpoint `/api/v1/tiendas/activas`: redundante. Descartado.
+- Hardcodear tiendas en frontend: no escala. Descartado.
+
+---
+
 ## Dependencias Externas Confirmadas
 
 | Paquete | Uso | Versión mínima |

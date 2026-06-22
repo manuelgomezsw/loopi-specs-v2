@@ -14,7 +14,7 @@
 ### Sesión 2026-06-21
 
 - Q: ¿El campo "Tienda" en el formulario de creación/edición de empleado debe ser un cuadro de texto o una lista desplegable? → A: Debe ser una lista desplegable (select) que carga dinámicamente las tiendas activas del sistema al abrir el formulario.
-- Q: ¿El campo "Tipo de documento" debe ser un cuadro de texto libre o una lista de opciones predefinidas? → A: Debe ser una lista desplegable (select) con los tipos de documento válidos en Colombia: CC, CE, TI, PP, RC, NUIP y PE.
+- Q: ¿El campo "Tipo de documento" debe ser un cuadro de texto libre o una lista de opciones predefinidas? → A: Debe ser una lista desplegable (select) con los tipos de documento válidos para empleados en el sistema: CC, CE, NUIP y PE.
 
 ### Sesión 2026-05-24
 
@@ -65,7 +65,7 @@ que puede autenticarse y accede solo a lo que su rol permite.
 
 6. **Dado** que el admin abre el formulario de creación de empleado,
    **Cuando** el formulario se despliega,
-   **Entonces** el campo "Tipo de documento" muestra una lista desplegable con las opciones: CC, CE, TI, PP, RC, NUIP, PE.
+   **Entonces** el campo "Tipo de documento" muestra una lista desplegable con las opciones: CC, CE, NUIP, PE.
 
 7. **Dado** que no existen tiendas activas en el sistema,
    **Cuando** el admin abre el formulario de creación,
@@ -206,7 +206,7 @@ estados, validando que el listado los muestra correctamente filtrados.
 - RF-EMP-01.6: Un empleado recién creado queda activo por defecto.
 - RF-EMP-01.7: El rol admin no requiere tienda asignada. Asignar tienda a un admin es un error.
 - RF-EMP-01.8: El campo "Tienda" en el formulario de creación de empleado debe presentarse como una lista desplegable. La lista carga únicamente las tiendas activas del sistema al momento de abrir el formulario. Si no existen tiendas activas, la lista aparece vacía con un mensaje informativo. No se permite entrada de texto libre en este campo.
-- RF-EMP-01.9: El campo "Tipo de documento" en el formulario de creación de empleado debe presentarse como una lista desplegable con los tipos de documento válidos en Colombia. Las opciones disponibles son: **CC** (Cédula de Ciudadanía), **CE** (Cédula de Extranjería), **TI** (Tarjeta de Identidad), **PP** (Pasaporte), **RC** (Registro Civil), **NUIP** (Número Único de Identificación Personal), **PE** (Permiso Especial de Permanencia). El campo es opcional; si el admin no selecciona ninguna opción, el tipo de documento queda sin registrar.
+- RF-EMP-01.9: El campo "Tipo de documento" en el formulario de creación de empleado debe presentarse como una lista desplegable con los tipos de documento válidos para empleados del sistema. Las opciones disponibles son: **CC** (Cédula de Ciudadanía), **CE** (Cédula de Extranjería), **NUIP** (Número Único de Identificación Personal), **PE** (Permiso Especial de Permanencia). El campo es opcional; si el admin no selecciona ninguna opción, el tipo de documento queda sin registrar.
 
 ### RF-EMP-02: Edición de empleados
 
@@ -316,7 +316,7 @@ estados, validando que el listado los muestra correctamente filtrados.
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Empleado` | nombre, apellido, usuario (único), contraseña (hash), tipo_documento (enum: CC/CE/TI/PP/RC/NUIP/PE, opcional), numero_documento, telefono, email, fecha_nacimiento, rol, tienda_id (FK a Tienda, nullable solo para admins), activo, requiere_cambio_contrasena |
+| `Empleado` | nombre, apellido, usuario (único), contraseña (hash), tipo_documento (enum: CC/CE/NUIP/PE, opcional), numero_documento, telefono, email, fecha_nacimiento, rol, tienda_id (FK a Tienda, nullable solo para admins), activo, requiere_cambio_contrasena |
 | `EmployeeAuditLog` | id, actor_id (FK a Empleado), accion (enum), empleado_id (FK a Empleado), detalle (JSON), created_at (UTC, inmutable) |
 
 ---
@@ -344,7 +344,7 @@ estados, validando que el listado los muestra correctamente filtrados.
 - No existe auto-bloqueo de cuenta por inactividad temporal (solo el admin puede inactivar).
 - El listado de tiendas para el select se consulta en tiempo real al abrir el formulario;
   no se cachea en el cliente para garantizar que siempre refleja el estado activo actual.
-- Los tipos de documento válidos (CC, CE, TI, PP, RC, NUIP, PE) son un conjunto cerrado
+- Los tipos de documento válidos (CC, CE, NUIP, PE) son un conjunto cerrado
   definido por normativa colombiana y no requieren configuración dinámica; se tratan como
   constantes de la aplicación.
 - El campo `tipo_documento` del empleado almacena únicamente el código abreviado

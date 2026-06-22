@@ -11,10 +11,14 @@
 migrate -path ./db/migrations -database "$DB_DSN" up
 ```
 
-Migraciones nuevas en esta feature:
+Migraciones de la feature original (003):
 
 - `NNNN_crear_tabla_empleados.up.sql`
 - `NNNN+1_crear_tabla_log_auditoria_empleados.up.sql`
+
+Migración incremental (018-selects-tienda-tipo-doc):
+
+- `NNNN+2_alter_empleados_tipo_documento_enum.up.sql`
 
 Verificar:
 
@@ -22,6 +26,7 @@ Verificar:
 SHOW TABLES LIKE 'empleados';
 SHOW TABLES LIKE 'log_auditoria_empleados';
 DESCRIBE empleados;
+-- El campo tipo_documento debe mostrar tipo ENUM('CC','CE','NUIP','PE')
 DESCRIBE log_auditoria_empleados;
 ```
 
@@ -126,6 +131,8 @@ go tool cover -html=coverage.out
 | `TestListarEmpleadosBusquedaYPaginacion` | Total correcto + filtros activos |
 | `TestAuditLogCreadoEnCadaOperacion` | Log registrado para CREAR, EDITAR, INACTIVAR, REACTIVAR, RESET |
 | `TestEmpleadoInactivoNoAutentica` | Login rechazado (integración con 001-autenticacion) |
+| `TestCrearEmpleadoTipoDocumentoInvalido` | Error 422 `tipo_documento_invalido` para valor fuera del ENUM |
+| `TestCrearEmpleadoTipoDocumentoValido` | CC, CE, NUIP, PE aceptados; campo vacío aceptado |
 
 ---
 
