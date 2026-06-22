@@ -87,11 +87,15 @@ El JWT debe incluir `rol = "admin"`. Cualquier otro rol recibe `403 Forbidden`.
 
 | Parámetro | Tipo | Default | Valores | Descripción |
 |-----------|------|---------|---------|-------------|
-| `estado` | string | `todas` | `todas`, `activas`, `inactivas` | Filtro por estado |
+| `estado` | string | `todos` | `activo`, `inactivo`, `todos` | Filtro por estado (convención estándar del proyecto) |
 | `pagina` | int | `1` | ≥ 1 | Página solicitada |
 | `limite` | int | `50` | 1–100 | Registros por página |
 
-**Ejemplo**: `GET /api/v1/tiendas?estado=activas&pagina=1&limite=50`
+> **Convención**: `activo` = solo activas · `inactivo` = solo inactivas · `todos` = sin filtro.
+> El frontend siempre envía el parámetro explícitamente (nunca lo omite); el default `todos`
+> aplica únicamente a clientes API directos.
+
+**Ejemplo**: `GET /api/v1/tiendas?estado=activo&pagina=1&limite=50`
 
 **Respuesta 200 OK**:
 

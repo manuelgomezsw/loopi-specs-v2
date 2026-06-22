@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0 → 1.10.0 → 1.11.0
+Version change: 1.0.0 → 1.1.0 → 1.1.1 → 1.2.0 → 1.3.0 → 1.3.4 → 1.4.0 → 1.4.1 → 1.5.0 → 1.6.0 → 1.7.0 → 1.8.0 → 1.9.0 → 1.10.0 → 1.11.0 → 1.12.0
 Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
         1.1.1 — dev environment redefinido: GCP en todos los ambientes (PATCH).
         1.2.0 — rol lider_compras, convenciones API, convenciones de datos y jobs programados (MINOR).
@@ -36,12 +36,25 @@ Reason: 1.1.0 — nueva sección ambientes + correcciones de stack (MINOR).
                  TTL 24 h para todas las entidades de catálogo, esquema de claves, política de
                  invalidación en escrituras, restricción multi-instancia explícita,
                  tabla de entidades con caché obligatoria (MINOR).
+        1.12.0 — §Convenciones de API REST: nueva regla normativa del query parameter `?estado`
+                 para filtrar por estado en entidades con campo `activo`. Reemplaza el patrón
+                 `?activo=boolean` por `?estado=activo|inactivo|todos` en todos los módulos.
+                 Contratos 002 (tiendas), 003 (empleados) y 004 (unidades-medida) actualizados
+                 para reflejar la homologación. (MINOR)
         1.11.0 — §Diseño de Interfaz: Superficie de Listado (jerarquía 3 capas para tablas),
                  Filtros en Listados (chip pattern, default Estado=Activo), Estados de
                  Registros (badge verde/gris + opacity-60), Inputs Read-Only (tabla de estados
                  con clases explícitas), Sub-menú Lateral (expansión controlada por router) y
                  Componentes Angular Transversales (catálogo normativo 10 componentes +
                  FilterStateService, prohibición de re-implementaciones) (MINOR).
+
+Changes in 1.12.0:
+  - §Convenciones de API REST: nueva regla normativa del query param `?estado=activo|inactivo|todos`
+  - Aplica a todo endpoint GET sobre entidades con campo `activo TINYINT(1)`
+  - Reemplaza el patrón boolean `?activo=true|false` (deuda técnica de 003 y 004)
+  - Default server-side: `todos` (aplica solo a clientes API directos; frontend siempre envía el param)
+  - Contratos actualizados: 002-tiendas, 003-empleados, 004-unidades-medida
+  - Migración obligatoria del backend: handler.go + service.go en módulos 003 y 004
 
 Changes in 1.10.0:
   - Nuevo bloque normativo §Caché Transversal — Ristretto dentro de §Stack Técnico
@@ -718,6 +731,31 @@ Todos los endpoints del backend siguen estas reglas sin excepción.
 - Identificadores de recurso en la URL: `/api/v1/pedidos/{id}`
 - Acciones no-CRUD como sub-recursos: `/api/v1/pedidos/{id}/confirmar`
 
+**Query parameter `?estado` — filtro de estado de entidades con campo `activo`** (normativo):
+
+Todo endpoint de listado (`GET /api/v1/{recurso}`) sobre entidades con campo `activo TINYINT(1)`
+DEBE aceptar el parámetro `estado` con valores exactamente:
+
+| Valor | Semántica |
+|-------|-----------|
+| `activo` | Solo registros con `activo = true` |
+| `inactivo` | Solo registros con `activo = false` |
+| `todos` | Sin filtro por estado (todos los registros) |
+
+Reglas:
+
+- El servidor DEBE validar que `estado` sea uno de los tres valores. Valor inválido → `400`
+  con `error: "estado_invalido"`.
+- Default server-side cuando el parámetro se omite: `todos`. Este default aplica a clientes
+  API directos; el frontend **siempre** envía el parámetro explícitamente vía `FilterBarComponent`
+  (que tiene `defaultValue: 'activo'`).
+- El parámetro se llama `estado` en TODOS los módulos — no `activo`, no `active`, no `status`.
+- Nunca usar `boolean` (`true`/`false`) para este filtro: no tiene representación natural para
+  "todos" sin omitir el parámetro, lo que genera inconsistencia con los contratos que sí
+  tienen default explícito.
+- **Features existentes que usaban `?activo=true|false`** (003-empleados, 004-unidades-medida)
+  deben migrar a `?estado=activo|inactivo|todos` como parte del plan de componentes transversales.
+
 **Formato de respuesta de error** (mismo esquema para todos los errores):
 
 ```json
@@ -960,4 +998,4 @@ cumplimiento con los 6 principios antes del merge.
 introducido violaciones. Las violaciones DEBEN documentarse con justificación en el Registro
 de Complejidad del plan correspondiente.
 
-**Version**: 1.11.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-06-22
+**Version**: 1.12.0 | **Ratified**: 2026-05-18 | **Last Amended**: 2026-06-22
