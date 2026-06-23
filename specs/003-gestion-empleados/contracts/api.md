@@ -85,13 +85,19 @@ Authorization: Bearer {token_admin}
 
 **Query parameters**:
 
-| Parámetro | Tipo | Default | Descripción |
-|-----------|------|---------|-------------|
-| `q` | string | `""` | Búsqueda parcial sobre `nombre`, `apellido` o `usuario` (ILIKE) |
-| `tienda_id` | integer | — | Filtrar por tienda |
-| `activo` | boolean | — | Filtrar por estado (`true` / `false`) |
-| `page` | integer | `1` | Número de página (1-based) |
-| `limit` | integer | `20` | Registros por página (máx. 100) |
+| Parámetro | Tipo | Default | Valores | Descripción |
+|-----------|------|---------|---------|-------------|
+| `q` | string | `""` | — | Búsqueda parcial sobre `nombre`, `apellido` o `usuario` (ILIKE) |
+| `tienda_id` | integer | — | — | Filtrar por tienda |
+| `estado` | string | `todos` | `activo`, `inactivo`, `todos` | Filtro por estado (convención estándar del proyecto) |
+| `page` | integer | `1` | ≥ 1 | Número de página (1-based) |
+| `limit` | integer | `20` | 1–100 | Registros por página (máx. 100) |
+
+> **Convención**: `activo` = solo activos · `inactivo` = solo inactivos · `todos` = sin filtro.
+> El frontend siempre envía el parámetro explícitamente (nunca lo omite); el default `todos`
+> aplica únicamente a clientes API directos.
+> **Migración**: este parámetro reemplaza el anterior `activo=true|false` (boolean).
+> El backend Go debe actualizar el handler y el service para validar `activo|inactivo|todos`.
 
 **Response 200 OK**:
 

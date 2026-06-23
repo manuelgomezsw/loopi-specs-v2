@@ -191,7 +191,8 @@ comprobando que el listado las muestra todas con su estado correcto.
 - RF-TDA-04.2: El administrador puede ver el listado de todas las tiendas (activas e inactivas)
   con nombre, codigo, ciudad y estado. El listado se ordena por nombre ascendente por defecto.
 - RF-TDA-04.3: El listado incluye un selector de filtro con tres opciones: Todas / Activas / Inactivas.
-  Por defecto muestra todas. No incluye búsqueda por texto.
+  Por defecto muestra **Activas** (lineamiento cross §Filtros en Listados de la constitución).
+  El admin puede cambiar el filtro a Inactivas o Todas de forma explícita. No incluye búsqueda por texto.
 - RF-TDA-04.4: Cuando no existen tiendas registradas, el listado muestra un estado vacío con
   un mensaje que invita al admin a crear la primera tienda.
 - RF-TDA-04.5: Desde el listado, el administrador puede acceder al detalle y edición de

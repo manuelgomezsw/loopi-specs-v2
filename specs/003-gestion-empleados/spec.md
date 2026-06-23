@@ -288,7 +288,9 @@ estados, validando que el listado los muestra correctamente filtrados.
 
 - RF-EMP-05.1: El administrador puede ver el listado de todos los empleados con nombre, usuario,
   rol, tienda asignada y estado (activo/inactivo).
-- RF-EMP-05.2: El listado puede filtrarse por tienda y por estado.
+- RF-EMP-05.2: El listado puede filtrarse por tienda y por estado. El filtro de estado muestra
+  por defecto **Activos** (lineamiento cross §Filtros en Listados de la constitución).
+  El admin puede cambiar a Inactivos o Todos de forma explícita.
 - RF-EMP-05.3: Desde el listado, el admin puede acceder al detalle y edición de cualquier empleado.
 - RF-EMP-05.4: El listado soporta búsqueda por texto libre sobre nombre completo o nombre de
   usuario (coincidencia parcial, insensible a mayúsculas/minúsculas).

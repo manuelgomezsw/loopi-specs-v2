@@ -23,12 +23,18 @@ Authorization: Bearer {token}
 
 **Query parameters**:
 
-| Parámetro | Tipo | Default | Descripción |
-|-----------|------|---------|-------------|
-| `tipo` | string | — | Filtrar por tipo: `peso`, `volumen` o `unidad` |
-| `activo` | boolean | — | Filtrar por estado (`true` / `false`). Sin valor: retorna todas |
-| `page` | integer | `1` | Número de página (1-based) |
-| `limit` | integer | `50` | Registros por página (máx. 200) |
+| Parámetro | Tipo | Default | Valores | Descripción |
+|-----------|------|---------|---------|-------------|
+| `tipo` | string | — | `peso`, `volumen`, `unidad` | Filtrar por tipo de medida |
+| `estado` | string | `todos` | `activo`, `inactivo`, `todos` | Filtro por estado (convención estándar del proyecto) |
+| `page` | integer | `1` | ≥ 1 | Número de página (1-based) |
+| `limit` | integer | `50` | 1–200 | Registros por página (máx. 200) |
+
+> **Convención**: `activo` = solo activas · `inactivo` = solo inactivas · `todos` = sin filtro.
+> El frontend siempre envía el parámetro explícitamente (nunca lo omite); el default `todos`
+> aplica únicamente a clientes API directos.
+> **Migración**: este parámetro reemplaza el anterior `activo=true|false` (boolean).
+> El backend Go debe actualizar el handler y el service para validar `activo|inactivo|todos`.
 
 **Response 200 OK**:
 

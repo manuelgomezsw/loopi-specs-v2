@@ -38,7 +38,7 @@ antes de iniciar cualquier historia de usuario.
 - [ ] T004 Aplicar migraciones con `golang-migrate` y verificar tablas, índices y FKs en BD de desarrollo (`SHOW INDEX FROM categorias; SHOW INDEX FROM subcategorias`)
 - [ ] T005 [P] Definir structs Go `Categoria`, `Subcategoria` y tipos de respuesta `CategoriaResponse`, `SubcategoriaResponse`, `CatalogoResponse` en `loopi-api-v2/internal/categorias/models.go`
 - [ ] T006 Implementar `Repository` con pool de BD, interfaz y constructor `NewRepository(db)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T007 Implementar caché Ristretto (TTL 5 min, claves `cat:all`, `cat:id:{id}`, `subcat:all`, `subcat:categoria:{id}`, `subcat:id:{id}`, función `invalidarCatalogo`) en `loopi-api-v2/internal/categorias/cache.go`
+- [ ] T007 Implementar `NewCachedRepository(inner Repository, ttl time.Duration) Repository` en `loopi-api-v2/internal/categorias/cached_repository.go`: dos instancias `EntityCache[T]` independientes (categorías y subcategorías), TTL 24 h, claves `"list"` / `"id:<id>"` / `"activo:<valor>"`; invalidación: Create → `cache.Clear()`, Update/Inactivar/Reactivar → `cache.Delete("id:<id>") + cache.Clear()`; usar el paquete compartido `internal/cache/` ya existente en `develop` (`EntityCache[T]` y `ReadThrough[T]`)
 - [ ] T008 Registrar prefijos `/api/v1/categorias` y `/api/v1/subcategorias` en el router principal con middleware de autenticación JWT en `loopi-api-v2`
 
 **Checkpoint**: Estructura lista — las historias de usuario pueden comenzar.
@@ -104,19 +104,19 @@ nombre en categoría distinta retorna 201. POST con `categoria_id` de categoría
 con nombre, estado activa/inactiva y cantidad de items asignados. Puede filtrar por estado.
 
 **Prueba Independiente**: `GET /api/v1/categorias` retorna árbol con subcategorías anidadas y
-`total_items`. `GET /api/v1/categorias?activo=true` filtra solo activas. Al seleccionar una
+`total_items`. `GET /api/v1/categorias?estado=activo` filtra solo activas. Al seleccionar una
 subcategoría se muestra su `total_items`.
 
 ### Backend — US5
 
-- [ ] T022 [US5] Implementar `Service.ObtenerCatalogo(ctx, soloActivas bool)` que construye la respuesta anidada con `total_items` (JOIN graceful a `items` — retorna 0 si la tabla no existe aún) en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T023 [US5] Implementar handlers `GET /api/v1/categorias` (catálogo con subcategorías anidadas, parámetro `?activo`) y `GET /api/v1/categorias/{id}` con detalle completo en `loopi-api-v2/internal/categorias/handler.go`
+- [ ] T022 [US5] Implementar `Service.ObtenerCatalogo(ctx, estado string)` que orquesta la respuesta anidada delegando el JOIN a `Repository.ListarConItems` (la lógica SQL pertenece al repositorio, no al service); retorna `total_items=0` si la tabla `items` no existe aún en `loopi-api-v2/internal/categorias/service.go`
+- [ ] T023 [US5] Implementar handlers `GET /api/v1/categorias` (catálogo con subcategorías anidadas, parámetro `?estado=activo|inactivo|todos`; valor inválido → 400 `estado_invalido`) y `GET /api/v1/categorias/{id}` con detalle completo en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US5
 
 - [ ] T024 [P] [US5] Agregar métodos `obtenerCatalogo(activo?: boolean)` y `obtenerCategoria(id: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
 - [ ] T025 [US5] Implementar vista árbol completa en el template: categorías expandibles con subcategorías, badges de estado (activa/inactiva) y contador `total_items` por subcategoría; el detalle es inline en la misma vista (sin navegación a ruta distinta — RF-CAT-04.2) en `loopi-web-v2/src/app/categorias/categorias.component.html`
-- [ ] T026 [US5] Implementar filtro de estado (Todas / Solo activas / Solo inactivas) con señales reactivas y actualización del árbol sin recarga completa en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [ ] T026 [US5] Implementar filtro de estado con `FilterBarComponent` + `FilterStateService` (constitución §Filtros en Listados; prohibido filtro ad-hoc) y señales reactivas que actualizan el árbol sin recarga completa en `loopi-web-v2/src/app/categorias/categorias.component.ts`
 
 **Checkpoint**: US5 funcional — vista completa del catálogo con filtrado por estado.
 
@@ -189,12 +189,15 @@ desde el primer deploy en producción."
 
 - [ ] T043 [P] Instrumentar con trazas OTel: spans por endpoint con atributos `categoria.id`, `subcategoria.id`, `operacion`, `user.rol` en `loopi-api-v2/internal/categorias/handler.go`
 - [ ] T044 [P] Agregar logs estructurados JSON con campos `user_id`, `rol`, `operacion`, `categoria_id`, `subcategoria_id` y `resultado` en cada operación de escritura en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T045 [P] Implementar tests unitarios del servicio con mock del repositorio cubriendo los 12 casos de `quickstart.md §5` en `loopi-api-v2/internal/categorias/service_test.go`
-- [ ] T046 [P] Implementar tests unitarios del componente Angular (mock de `CategoriasService`) con casos: listado vacío, crear categoría, error 409, flujo de confirmación de inactivación en `loopi-web-v2/src/app/categorias/categorias.component.spec.ts`
-- [ ] T050 [P] Implementar tests unitarios del servicio Angular (mock de `HttpClient`) con casos: crear categoría exitosa, 409 nombre duplicado, crear subcategoría bajo categoría inactiva, inactivar y reactivar en `loopi-web-v2/src/app/categorias/categorias.service.spec.ts`
-- [ ] T047 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
-- [ ] T048 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`, `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin errores
-- [ ] T049 Ejecutar smoke tests completos del `specs/005-categorias-catalogo/quickstart.md §4` y verificar cada resultado esperado
+- [ ] T045 [P] Implementar `service_test.go` con mock del repositorio cubriendo los 12 casos de `quickstart.md §5` en `loopi-api-v2/internal/categorias/service_test.go`
+- [ ] T046 [P] Implementar `categorias.component.spec.ts` (mock de `CategoriasService`) con casos: listado vacío, crear categoría, error 409, flujo de confirmación de inactivación en `loopi-web-v2/src/app/categorias/categorias.component.spec.ts`
+- [ ] T047 [P] Implementar `categorias.service.spec.ts` (mock de `HttpClient`) con casos: crear categoría exitosa, 409 nombre duplicado, crear subcategoría bajo categoría inactiva, inactivar y reactivar en `loopi-web-v2/src/app/categorias/categorias.service.spec.ts`
+- [ ] T048 [P] Implementar `handler_test.go` con `httptest.NewRecorder()` y mock de `Service` cubriendo todos los códigos HTTP (201/400/401/403/404/409/422) para endpoints de categorías y subcategorías en `loopi-api-v2/internal/categorias/handler_test.go`
+- [ ] T049 [P] Implementar `repository_test.go` con `go-sqlmock` cubriendo INSERT/UPDATE/SELECT y manejo de errores de BD (error 1062 de duplicado, `sql.ErrNoRows`) para todos los métodos del repositorio en `loopi-api-v2/internal/categorias/repository_test.go`
+- [ ] T050 [P] Implementar `cached_repository_test.go` inyectando mock de `Repository` (inner): cubrir hit de caché (inner NO invocado), miss de caché (inner invocado + resultado almacenado), escritura invalida caché correctamente, error del inner no almacena en caché — cobertura mínima ≥ 90% en `loopi-api-v2/internal/categorias/cached_repository_test.go`
+- [ ] T051 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
+- [ ] T052 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`, `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin errores
+- [ ] T053 Ejecutar smoke tests completos del `specs/005-categorias-catalogo/quickstart.md §4` y verificar cada resultado esperado
 
 ---
 
@@ -238,7 +241,8 @@ desde el primer deploy en producción."
 - En US4: T033+T034 se completan primero; T035, T036 y T037 pueden ejecutarse en
   paralelo entre sí una vez T033+T034 estén completos; T038 y T039 dependen de T035-T037
 - T040 (frontend US4 service) puede ejecutarse en paralelo con T033-T037 (backend US4)
-- T043, T044, T045, T046, T048, T050: todas paralelas entre sí
+- T043, T044, T045, T046, T047, T048, T049, T050: todas paralelas entre sí
+- T051 y T052 requieren T043–T050 completadas; T053 requiere T051 y T052 completadas
 
 ---
 
