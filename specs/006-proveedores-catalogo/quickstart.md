@@ -52,6 +52,12 @@ Verificar que el módulo de proveedores registra sus rutas en los logs:
 {"level":"info","msg":"rutas registradas","modulo":"proveedores","endpoints":6}
 ```
 
+Verificar que Ristretto inicializa sin errores en los logs:
+
+```json
+{"level":"info","msg":"ristretto cache inicializado","modulo":"proveedores","ttl_segundos":86400}
+```
+
 ---
 
 ## 3. Ejecutar el frontend (Angular)
@@ -135,7 +141,7 @@ curl -s "http://localhost:8080/api/v1/proveedores" \
 # Esperado: 2, "Distribuidora La Cosecha S.A.S", "Proveedor Simple"
 
 # Filtrar activos
-curl -s "http://localhost:8080/api/v1/proveedores?activo=true" \
+curl -s "http://localhost:8080/api/v1/proveedores?estado=activo" \
   -H "Authorization: Bearer $TOKEN" | jq '.total'
 # Esperado: 2
 
@@ -193,7 +199,7 @@ curl -s -X PATCH "http://localhost:8080/api/v1/proveedores/$ID/inactivar" \
 # Esperado: 200, activo=false
 
 # Verificar que no aparece en pedidos (simulación — depende de 013)
-curl -s "http://localhost:8080/api/v1/proveedores?activo=true" \
+curl -s "http://localhost:8080/api/v1/proveedores?estado=activo" \
   -H "Authorization: Bearer $TOKEN" | jq '.total'
 # Esperado: 1 (solo Proveedor Simple está activo)
 
@@ -208,7 +214,7 @@ curl -s -X PATCH "http://localhost:8080/api/v1/proveedores/$ID/activar" \
 # Esperado: 200, activo=true
 
 # Verificar que vuelve a aparecer
-curl -s "http://localhost:8080/api/v1/proveedores?activo=true" \
+curl -s "http://localhost:8080/api/v1/proveedores?estado=activo" \
   -H "Authorization: Bearer $TOKEN" | jq '.total'
 # Esperado: 2
 ```

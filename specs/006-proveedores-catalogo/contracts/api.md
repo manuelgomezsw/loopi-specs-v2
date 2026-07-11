@@ -25,7 +25,7 @@ Authorization: Bearer {token_admin}
 
 | Parámetro | Tipo | Default | Descripción |
 |-----------|------|---------|-------------|
-| `activo` | boolean | — | Filtrar por estado (`true` / `false`). Sin valor: retorna todos |
+| `estado` | string | `todos` | Filtrar por estado: `activo` \| `inactivo` \| `todos` (constitución §Convenciones de API REST) |
 | `busqueda` | string | — | Búsqueda por razón social o NIT (subcadena, insensible a mayúsculas) |
 | `page` | integer | `1` | Número de página (1-based) |
 | `limit` | integer | `50` | Registros por página (máx. 200) |
@@ -60,6 +60,7 @@ Authorization: Bearer {token_admin}
 
 | Código HTTP | `error` | Situación |
 |-------------|---------|-----------|
+| 400 | `estado_invalido` | `estado` no es uno de `activo`, `inactivo`, `todos` |
 | 401 | `no_autenticado` | Token ausente o expirado |
 | 403 | `acceso_denegado` | El rol del token no es `admin` |
 
@@ -126,7 +127,8 @@ Content-Type: application/json
 **Campos opcionales**: `nombre_contacto`, `telefono_contacto`, `email_contacto`
 **Restricciones**:
 
-- `nit`: cadena no vacía; única en todo el sistema (case-sensitive)
+- `nit`: cadena no vacía; única en todo el sistema (insensible a mayúsculas/minúsculas,
+  collation `utf8mb4_unicode_ci`)
 - `razon_social`: cadena no vacía
 - `email_contacto`: si presente, debe tener formato de email válido
 
@@ -328,7 +330,7 @@ export interface CambiarEstadoResponse {
 }
 
 export interface FiltrosListadoProveedores {
-  activo?:    boolean;
+  estado?:    'activo' | 'inactivo' | 'todos';
   busqueda?:  string;
   page?:      number;
   limit?:     number;

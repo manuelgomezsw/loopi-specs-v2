@@ -125,13 +125,15 @@ proveedores                         items (007 — futuro)
 
 ```text
 internal/proveedores/
-├── model.go        # Tipos: Proveedor, FiltrosListado, CrearProveedorRequest,
-│                   #        EditarProveedorRequest, ProveedorResponse, ListarResponse
-├── repository.go   # Queries SQL: Crear, Listar, ObtenerPorID, Actualizar,
-│                   #              CambiarEstado, ExisteNIT
-├── service.go      # Lógica de negocio: validar NIT único, validar campos
-│                   #                    requeridos, aplicar reglas de negocio
-└── handler.go      # HTTP handlers + registro de rutas
+├── model.go                    # Tipos: Proveedor, FiltrosListado, CrearProveedorRequest,
+│                                #        EditarProveedorRequest, ProveedorResponse, ListarResponse
+├── repository.go                # Queries SQL: Crear, Listar, ObtenerPorID, Actualizar,
+│                                #              CambiarEstado, ExisteNIT
+├── cached_repository.go         # Decorador Ristretto TTL 24 h (patrón constitucional)
+├── cached_repository_test.go    # Tests del decorador ≥ 90% (gate CI)
+├── service.go                  # Lógica de negocio: validar NIT único, validar campos
+│                                #                    requeridos, aplicar reglas de negocio
+└── handler.go                  # HTTP handlers + registro de rutas
 
 db/migrations/
 ├── NNNN_crear_tabla_proveedores.up.sql
@@ -147,14 +149,12 @@ src/app/features/proveedores/
 │   │   ├── lista-proveedores.component.ts
 │   │   ├── lista-proveedores.component.html
 │   │   └── lista-proveedores.component.spec.ts
-│   ├── form-proveedor/
-│   │   ├── form-proveedor.component.ts    # Crear + editar (modo vía @Input)
-│   │   ├── form-proveedor.component.html
-│   │   └── form-proveedor.component.spec.ts
-│   └── detalle-proveedor/
-│       ├── detalle-proveedor.component.ts
-│       ├── detalle-proveedor.component.html
-│       └── detalle-proveedor.component.spec.ts
+│   └── form-proveedor/
+│       ├── form-proveedor.component.ts    # Crear + editar (modo vía @Input); en modo
+│       │                                  # editar incluye items_asignados (solo lectura)
+│       │                                  # y Zona de precaución (inactivar/reactivar)
+│       ├── form-proveedor.component.html
+│       └── form-proveedor.component.spec.ts
 ├── models/
 │   └── proveedor.model.ts
 ├── services/

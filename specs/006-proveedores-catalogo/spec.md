@@ -19,6 +19,21 @@
 
 ---
 
+## Iterations
+
+### Iteration 2026-07-11: Cumplimiento con constitución v1.12.0
+
+**Change**: Alinear spec/plan/research/data-model/quickstart/contracts con la constitución
+actual: caché Ristretto obligatoria, filtro `?estado`, sección de Observabilidad, patrón
+Lista-Formulario de 2 componentes y catálogo de componentes Angular transversales.
+**Scope**: Feature-wide
+**Artifacts updated**: spec.md, plan.md, research.md, data-model.md, quickstart.md, contracts/api.md
+**Tasks added**: N/A (tasks.md no existe aún)
+**Tasks removed**: N/A
+**Tasks marked complete**: N/A
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Registrar un proveedor (Prioridad: P1)
@@ -199,7 +214,9 @@ comprobando que el listado los muestra todos con su información de contacto y e
 - RF-PROV-04.2: Desde el detalle de un proveedor, el admin puede ver qué items del catálogo
   lo tienen como proveedor habitual asignado.
 - RF-PROV-04.3: El listado permite filtrar por estado (activo / inactivo / todos) y buscar
-  por razón social o NIT mediante texto libre.
+  por razón social o NIT mediante texto libre. El filtro de estado precarga en "Activos" al
+  entrar por primera vez en la sesión; el admin puede cambiarlo explícitamente a Inactivos
+  o Todos.
 - RF-PROV-04.4: Cuando no existe ningún proveedor registrado, el listado muestra el mensaje
   "No hay proveedores registrados" junto con un botón de acceso directo para crear el primero.
 
@@ -228,6 +245,38 @@ comprobando que el listado los muestra todos con su información de contacto y e
 
 ---
 
+## Observabilidad
+
+### Trazas (OTel Spans)
+
+| Nombre del Span | Trigger | Atributos Obligatorios |
+|-----------------|---------|------------------------|
+| `proveedores.crear` | `POST /api/v1/proveedores` | `proveedor.id`, `user.rol`, `resultado` |
+| `proveedores.listar` | `GET /api/v1/proveedores` | `catalogo.total`, `user.rol`, `cache.hit` |
+| `proveedores.editar` | `PUT /api/v1/proveedores/{id}` | `proveedor.id`, `user.rol`, `resultado` |
+| `proveedores.inactivar` | `PATCH /api/v1/proveedores/{id}/inactivar` | `proveedor.id`, `user.rol`, `resultado` |
+| `proveedores.activar` | `PATCH /api/v1/proveedores/{id}/activar` | `proveedor.id`, `user.rol`, `resultado` |
+
+### Métricas
+
+Formato: `[dominio].[entidad].[operacion].[tipo]` · Etiqueta `resultado` obligatoria en escrituras.
+
+| Nombre de Métrica | Tipo | Etiquetas | Descripción |
+|-------------------|------|-----------|-------------|
+| `catalogo.proveedor.crear.total` | Counter | `resultado` | Total de proveedores creados (`success` / `nit_duplicado` / `validation_error`) |
+| `catalogo.proveedor.crear.duration` | Histogram (ms) | `resultado` | Latencia de creación de proveedor |
+| `catalogo.proveedor.listar.duration` | Histogram (ms) | `cache_hit` | Latencia del listado; `cache_hit=true/false` |
+| `catalogo.proveedor.inactivar.total` | Counter | `resultado` | Total de inactivaciones (`success` / `not_found` / `ya_inactivo`) |
+| `catalogo.proveedor.activar.total` | Counter | `resultado` | Total de reactivaciones (`success` / `not_found` / `ya_activo`) |
+
+**Notas**:
+
+- `user_id` NUNCA como etiqueta de métrica (alta cardinalidad → coste en Datadog).
+- `tienda_id` no aplica: el catálogo de proveedores es compartido por marca, sin aislamiento por tienda.
+- Los logs de operaciones de escritura van a GCP Cloud Logging exclusivamente (stdout → GCP).
+
+---
+
 ## Dependencias y Suposiciones
 
 ### Dependencias
@@ -248,5 +297,7 @@ comprobando que el listado los muestra todos con su información de contacto y e
   alcance según la spec funcional §1.3).
 - Un proveedor puede estar asignado a múltiples items simultáneamente.
 - La razón social no requiere ser única; el NIT es el campo de unicidad.
+- La unicidad del NIT es insensible a mayúsculas/minúsculas (collation `utf8mb4_unicode_ci`
+  de la columna); dos NIT que difieran solo en capitalización se consideran duplicados.
 - No se registra historial de cambios del proveedor; los datos actuales son los únicos
   visibles en la ficha.
