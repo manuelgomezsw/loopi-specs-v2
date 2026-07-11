@@ -7,6 +7,45 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-05-24
+
+- Q: ¿Es el NIT editable después de que el proveedor es creado? → A: Sí, el NIT es editable con validación de unicidad (Opción A)
+- Q: ¿El sistema valida el formato del NIT (colombiano estricto, solo numérico, o cadena libre)? → A: Cadena libre no vacía; solo valida unicidad, sin restricción de formato (Opción B)
+- Q: ¿El listado de proveedores requiere búsqueda o filtrado? → A: Filtro por estado (activo/inactivo) y búsqueda por texto (razón social o NIT) (Opción B)
+- Q: ¿La reactivación de un proveedor requiere su propia Historia de Usuario o se cubre como escenario dentro de HU-3? → A: Escenario adicional dentro de HU-3; no requiere historia separada (Opción A)
+- Q: ¿Qué muestra el listado de proveedores cuando el catálogo está vacío? → A: Mensaje "No hay proveedores registrados" con botón CTA para crear el primero (Opción A)
+
+---
+
+## Iterations
+
+### Iteration 2026-07-11: Cumplimiento con constitución v1.12.0
+
+**Change**: Alinear spec/plan/research/data-model/quickstart/contracts con la constitución
+actual: caché Ristretto obligatoria, filtro `?estado`, sección de Observabilidad, patrón
+Lista-Formulario de 2 componentes y catálogo de componentes Angular transversales.
+**Scope**: Feature-wide
+**Artifacts updated**: spec.md, plan.md, research.md, data-model.md, quickstart.md, contracts/api.md
+**Tasks added**: N/A (tasks.md no existe aún)
+**Tasks removed**: N/A
+**Tasks marked complete**: N/A
+
+### Iteration 2026-07-11 (2): Nombre y teléfono de contacto obligatorios
+
+**Change**: `nombre_contacto` y `telefono_contacto` pasan de opcionales a obligatorios al
+crear y editar un proveedor; `email_contacto` sigue siendo opcional.
+**Scope**: Task-level (RF-PROV-01, RF-PROV-02)
+**Artifacts updated**: spec.md, data-model.md, contracts/api.md, quickstart.md; implementación
+en `loopi-api-v2` y `loopi-web-v2`
+**Tasks added**: N/A (tasks.md no se regeneró; cambio aplicado directamente sobre la
+implementación ya construida)
+**Tasks removed**: N/A
+**Tasks marked complete**: N/A
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Registrar un proveedor (Prioridad: P1)
@@ -38,6 +77,10 @@ disponible al crear o editar un item.
    **Cuando** navega a esa sección,
    **Entonces** el sistema deniega el acceso; solo el admin puede gestionar este catálogo.
 
+4. **Dado** que el admin está registrando un proveedor,
+   **Cuando** omite el nombre de contacto o el teléfono de contacto,
+   **Entonces** el sistema rechaza la operación indicando que el campo es obligatorio.
+
 ---
 
 ### Historia de Usuario 2 — Editar los datos de un proveedor (Prioridad: P2)
@@ -66,19 +109,28 @@ y comprobando que el cambio se refleja en el listado y en los items que lo tiene
    **Entonces** el sistema rechaza la operación indicando que el NIT ya pertenece a otro
    proveedor.
 
+3. **Dado** que existe un proveedor activo,
+   **Cuando** el admin intenta dejar vacío el nombre de contacto o el teléfono de contacto
+   y guarda,
+   **Entonces** el sistema rechaza la operación indicando que el campo es obligatorio.
+
 ---
 
-### Historia de Usuario 3 — Inactivar un proveedor (Prioridad: P2)
+### Historia de Usuario 3 — Inactivar y reactivar un proveedor (Prioridad: P2)
 
-El administrador marca un proveedor como inactivo cuando deja de trabajar con él. El proveedor
-inactivo ya no aparece como opción para nuevos pedidos, pero los items que lo tenían asignado
-conservan esa referencia y el historial de pedidos previos se mantiene intacto.
+El administrador marca un proveedor como inactivo cuando deja de trabajar con él, o lo
+reactiva si retoma la relación comercial. El proveedor inactivo ya no aparece como opción
+para nuevos pedidos, pero los items que lo tenían asignado conservan esa referencia y el
+historial de pedidos previos se mantiene intacto. Al reactivarse, el proveedor vuelve a
+estar disponible sin pérdida de historial.
 
 **Por qué esta prioridad**: El retiro de un proveedor es un evento de negocio real; inactivar
 sin borrar preserva la trazabilidad histórica exigida por el Principio IV de la constitución.
 
 **Prueba Independiente**: Puede verificarse inactivando un proveedor y comprobando que no
 aparece como opción al crear un nuevo pedido, pero sus pedidos históricos siguen visibles.
+La reactivación se verifica comprobando que el proveedor vuelve a aparecer disponible en
+pedidos sin perder su historial.
 
 **Escenarios de Aceptación**:
 
@@ -95,6 +147,11 @@ aparece como opción al crear un nuevo pedido, pero sus pedidos históricos sigu
    **Cuando** el admin consulta esos items,
    **Entonces** los items muestran el proveedor como referencia histórica pero con indicación
    de que está inactivo.
+
+4. **Dado** que un proveedor está inactivo con historial de pedidos previos,
+   **Cuando** el admin lo reactiva,
+   **Entonces** el proveedor vuelve a aparecer como opción en la generación de nuevos pedidos
+   y su historial de pedidos previos permanece intacto.
 
 ---
 
@@ -121,6 +178,16 @@ comprobando que el listado los muestra todos con su información de contacto y e
    **Entonces** puede ver y editar todos sus datos, así como la lista de items que lo tienen
    asignado como proveedor habitual.
 
+3. **Dado** que el admin está en el listado,
+   **Cuando** escribe parte de una razón social o NIT en el campo de búsqueda, o aplica el
+   filtro por estado,
+   **Entonces** el listado muestra solo los proveedores que coinciden con el criterio aplicado.
+
+4. **Dado** que no existe ningún proveedor registrado,
+   **Cuando** el admin accede al listado de proveedores,
+   **Entonces** el sistema muestra el mensaje "No hay proveedores registrados" y un botón
+   para crear el primero.
+
 ---
 
 ## Requisitos Funcionales
@@ -129,22 +196,25 @@ comprobando que el listado los muestra todos con su información de contacto y e
 
 - RF-PROV-01.1: Solo el administrador puede crear, editar e inactivar proveedores. Cualquier
   otro rol recibe acceso denegado.
-- RF-PROV-01.2: Un proveedor requiere como mínimo: razón social y NIT. Los campos de
-  contacto (nombre, teléfono, email) son opcionales al crear pero recomendados para la
-  gestión de pedidos.
+- RF-PROV-01.2: Un proveedor requiere: razón social, NIT, nombre de contacto y teléfono de
+  contacto. El email de contacto es opcional al crear.
 - RF-PROV-01.3: El NIT es único en todo el sistema. El sistema rechaza registros con NIT
-  duplicado tanto al crear como al editar.
+  duplicado tanto al crear como al editar. No se impone ningún formato específico: se acepta
+  cualquier cadena alfanumérica no vacía (incluyendo códigos internos para proveedores informales).
 - RF-PROV-01.4: Un proveedor recién creado queda en estado activo por defecto.
 - RF-PROV-01.5: El catálogo de proveedores es compartido entre todas las tiendas de la marca.
 
 ### RF-PROV-02: Edición de proveedores
 
 - RF-PROV-02.1: Solo el administrador puede editar los datos de un proveedor.
-- RF-PROV-02.2: Se pueden editar: razón social, nombre de contacto, teléfono de contacto
+- RF-PROV-02.2: Se pueden editar: NIT, razón social, nombre de contacto, teléfono de contacto
   y email de contacto.
 - RF-PROV-02.3: Al editar el NIT, el sistema verifica que no exista otro proveedor con ese
-  NIT.
+  NIT antes de guardar el cambio.
 - RF-PROV-02.4: La edición no afecta el historial de pedidos asociados al proveedor.
+- RF-PROV-02.5: El sistema rechaza dejar vacíos la razón social, el NIT, el nombre de
+  contacto o el teléfono de contacto al editar; estos campos son obligatorios durante toda
+  la vida del proveedor.
 
 ### RF-PROV-03: Inactivación de proveedores
 
@@ -166,6 +236,12 @@ comprobando que el listado los muestra todos con su información de contacto y e
   inactivos) con razón social, NIT, contacto y estado.
 - RF-PROV-04.2: Desde el detalle de un proveedor, el admin puede ver qué items del catálogo
   lo tienen como proveedor habitual asignado.
+- RF-PROV-04.3: El listado permite filtrar por estado (activo / inactivo / todos) y buscar
+  por razón social o NIT mediante texto libre. El filtro de estado precarga en "Activos" al
+  entrar por primera vez en la sesión; el admin puede cambiarlo explícitamente a Inactivos
+  o Todos.
+- RF-PROV-04.4: Cuando no existe ningún proveedor registrado, el listado muestra el mensaje
+  "No hay proveedores registrados" junto con un botón de acceso directo para crear el primero.
 
 ---
 
@@ -188,7 +264,42 @@ comprobando que el listado los muestra todos con su información de contacto y e
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Proveedor` | razon_social, nit (único), nombre_contacto, telefono_contacto, email_contacto, activo |
+| `Proveedor` | razon_social, nit (único), nombre_contacto, telefono_contacto, email_contacto (opcional), activo |
+
+---
+
+## Observabilidad
+
+### Trazas (OTel Spans)
+
+| Nombre del Span | Trigger | Atributos Obligatorios |
+|-----------------|---------|------------------------|
+| `proveedores.crear` | `POST /api/v1/proveedores` | `proveedor.id`, `user.rol`, `resultado` |
+| `proveedores.listar` | `GET /api/v1/proveedores` | `catalogo.total`, `user.rol`, `cache.hit` |
+| `proveedores.editar` | `PUT /api/v1/proveedores/{id}` | `proveedor.id`, `user.rol`, `resultado` |
+| `proveedores.inactivar` | `PATCH /api/v1/proveedores/{id}/inactivar` | `proveedor.id`, `user.rol`, `resultado` |
+| `proveedores.activar` | `PATCH /api/v1/proveedores/{id}/activar` | `proveedor.id`, `user.rol`, `resultado` |
+
+### Métricas
+
+Patrón real de instrumentación (igual que `tiendas`, `empleados`, `unidades_medida` y
+`categorias`): dos instrumentos por módulo, con `operacion` y `status_http` como etiquetas
+en vez de un nombre de métrica por operación.
+
+| Nombre de Métrica | Tipo | Etiquetas | Descripción |
+|-------------------|------|-----------|-------------|
+| `proveedores.request.duration` | Histogram (ms) | `operacion`, `status_http` | Latencia de cada request del módulo |
+| `proveedores.request.total` | Counter | `operacion`, `status_http` | Conteo de requests por operación y código HTTP |
+
+`operacion` toma los valores: `crear_proveedor`, `listar_proveedores`, `obtener_proveedor`,
+`editar_proveedor`, `inactivar_proveedor`, `activar_proveedor`.
+
+**Notas**:
+
+- `user_id` NUNCA como etiqueta de métrica (alta cardinalidad → coste en Datadog); va en el
+  atributo del span.
+- `tienda_id` no aplica: el catálogo de proveedores es compartido por marca, sin aislamiento por tienda.
+- Los logs de operaciones de escritura van a GCP Cloud Logging exclusivamente (stdout → GCP).
 
 ---
 
@@ -212,5 +323,7 @@ comprobando que el listado los muestra todos con su información de contacto y e
   alcance según la spec funcional §1.3).
 - Un proveedor puede estar asignado a múltiples items simultáneamente.
 - La razón social no requiere ser única; el NIT es el campo de unicidad.
+- La unicidad del NIT es insensible a mayúsculas/minúsculas (collation `utf8mb4_unicode_ci`
+  de la columna); dos NIT que difieran solo en capitalización se consideran duplicados.
 - No se registra historial de cambios del proveedor; los datos actuales son los únicos
   visibles en la ficha.

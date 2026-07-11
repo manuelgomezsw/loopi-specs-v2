@@ -1,8 +1,11 @@
 {
-  // Excluir directorios generados por herramientas externas (speckit)
+  // Excluir directorios generados por herramientas externas (speckit) y los
+  // submodules de código (cada repo linta su propio Markdown en su CI)
   "ignores": [
     ".claude/**",
-    ".specify/**"
+    ".specify/**",
+    "loopi-api-v2/**",
+    "loopi-web-v2/**"
   ],
   "config": {
     // MD013: líneas largas — deshabilitado para permitir tablas y descripciones legibles
