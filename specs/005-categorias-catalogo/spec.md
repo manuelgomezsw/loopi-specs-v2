@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `005-categorias-catalogo`
 **Creado**: 2026-05-19
-**Estado**: En implementación
+**Estado**: Cerrada
 **Referencia funcional**: [§3.1.3 Categorización en Dos Niveles](../loopi-v2-funcional/spec.md)
 
 ---

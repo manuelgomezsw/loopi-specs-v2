@@ -99,7 +99,7 @@ de la ventana (sin espacio de topbar encima) y que el logo "Loopi" aparece dentr
 - [x] T017 [US3] Ajustar la sección de logo en `shared/components/shell/sidebar/sidebar.component.html` — el logo desktop expandido (`hidden lg:flex items-center px-4 py-5`) ahora lleva `border-b border-gray-100`; el logo tablet colapsado (`hidden sm:flex lg:hidden`) también lleva `border-b border-gray-100`; verificar que ambos bloques de logo se ven correctos sin topbar encima
 - [x] T018 [US3] Ajustar `shared/components/shell/topbar/topbar.component.html` — eliminar cualquier sección de logo/branding de la topbar (el logo ahora vive en el sidebar); quitar la clase `sticky top-0` del `<header>` (ya no necesaria; la posición la garantiza la estructura flex del shell); verificar que el `border-b border-gray-200` y `shadow-sm` se mantienen
 - [x] T019 [P] [US3] Actualizar `shared/components/shell/shell.component.spec.ts` si existen tests que verifican estructura DOM del layout (clases del div raíz, posición del topbar)
-- [ ] T020 [US3] Verificación manual de regresión responsive: abrir la app y confirmar mobile (< 640px) — drawer con overlay funciona; tablet (640-1023px) — sidebar `w-16` siempre visible; desktop (≥ 1024px) — sidebar full-height, logo en sidebar, topbar en columna derecha
+- [X] T020 [US3] Verificación manual de regresión responsive: abrir la app y confirmar mobile (< 640px) — drawer con overlay funciona; tablet (640-1023px) — sidebar `w-16` siempre visible; desktop (≥ 1024px) — sidebar full-height, logo en sidebar, topbar en columna derecha
 
 **Checkpoint**: El sidebar va de tope a fondo en desktop. Responsive mobile/tablet sin regresiones.
 
@@ -111,7 +111,7 @@ de la ventana (sin espacio de topbar encima) y que el logo "Loopi" aparece dentr
 
 - [x] T021 [P] Ejecutar `ng test --watch=false` desde `loopi-web/` y resolver cualquier test que falle por los cambios en `IconComponent`, `SidebarComponent` o `ShellComponent`
 - [x] T022 [P] Ejecutar `ng build` desde `loopi-web/` y verificar que la build de producción compila sin errores ni warnings relacionados con la feature
-- [ ] T023 Ejecutar el checklist manual completo de `specs/017-sidebar-icons-collapse/quickstart.md` — todos los ítems de P1 (íconos y colapso) y P2 (layout full-height) deben estar marcados como verificados
+- [X] T023 Ejecutar el checklist manual completo de `specs/017-sidebar-icons-collapse/quickstart.md` — todos los ítems de P1 (íconos y colapso) y P2 (layout full-height) deben estar marcados como verificados
 
 ---
 

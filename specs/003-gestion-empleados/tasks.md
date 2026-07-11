@@ -98,11 +98,11 @@ guardar cambios (PUT) funciona correctamente; `tipo_documento` inválido enviado
 
 **Propósito**: Aplicar migración en dev, verificar cobertura y ejecutar smoke tests.
 
-- [ ] T019 [P] Aplicar migración en entorno de desarrollo: `migrate -path ./migrations -database "$DB_DSN" up` en `loopi-api-v2/` y verificar con `DESCRIBE empleados` que `tipo_documento` es `ENUM('CC','CE','NUIP','PE')`
+- [X] T019 [P] Aplicar migración en entorno de desarrollo: `migrate -path ./migrations -database "$DB_DSN" up` en `loopi-api-v2/` y verificar con `DESCRIBE empleados` que `tipo_documento` es `ENUM('CC','CE','NUIP','PE')`
 - [X] T020 [P] Tests backend ejecutados: `go test ./internal/empleados/... -covermode=atomic` — todos pasan; `TestCrearEmpleadoTipoDocumentoInvalido` y `TestCrearEmpleadoTipoDocumentoValido` ✅; `go vet` sin errores ✅
-- [ ] T021 [P] Ejecutar tests Angular: `ng test --watch=false` en `loopi-web-v2/` — requiere entorno con Chrome
-- [ ] T022 Ejecutar smoke test de creación: crear empleado con `tipo_documento:"CE"` y `tienda_id` válido via curl → verificar 201 con `contrasena_temporal` (requiere BD migrada)
-- [ ] T023 Ejecutar smoke test de validación backend: enviar `tipo_documento:"TI"` via curl → verificar 422 `tipo_documento_invalido` (requiere BD migrada)
+- [X] T021 [P] Ejecutar tests Angular: `ng test --watch=false` en `loopi-web-v2/` — requiere entorno con Chrome
+- [X] T022 Ejecutar smoke test de creación: crear empleado con `tipo_documento:"CE"` y `tienda_id` válido via curl → verificar 201 con `contrasena_temporal` (requiere BD migrada)
+- [X] T023 Ejecutar smoke test de validación backend: enviar `tipo_documento:"TI"` via curl → verificar 422 `tipo_documento_invalido` (requiere BD migrada)
 
 ---
 
