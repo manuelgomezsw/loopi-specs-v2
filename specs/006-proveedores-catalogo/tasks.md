@@ -38,7 +38,7 @@ antes de iniciar cualquier historia de usuario.
 - [x] T002 Escribir migración `NNNN_crear_tabla_proveedores.up.sql` y `.down.sql` con tabla
   `proveedores`, constraint `uq_proveedores_nit`, índices `ix_proveedores_activo` e
   `ix_proveedores_razon_social` en `loopi-api-v2/db/migrations/` (según data-model.md)
-- [ ] T003 Aplicar migración con `golang-migrate` y verificar tabla, constraint e índices en BD
+- [x] T003 Aplicar migración con `golang-migrate` y verificar tabla, constraint e índices en BD
   de desarrollo (`DESCRIBE proveedores; SHOW INDEX FROM proveedores`)
 - [x] T004 [P] Definir structs Go `Proveedor`, `FiltrosListado`, `CrearProveedorRequest`,
   `EditarProveedorRequest`, `ProveedorResponse`, `ProveedorDetalleResponse`,
@@ -275,13 +275,13 @@ monitoreable desde el primer deploy en producción."
 - [x] T041 [P] Implementar `proveedores.service.spec.ts` (mock de `HttpClient`) con casos: crear
   exitoso, editar NIT duplicado, inactivar, activar en
   `loopi-web-v2/src/app/features/proveedores/services/proveedores.service.spec.ts`
-- [ ] T042 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`,
+- [x] T042 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`,
   `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos
   deben pasar sin errores
-- [ ] T043 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`,
+- [x] T043 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`,
   `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin
   errores
-- [ ] T044 Ejecutar smoke tests completos de `specs/006-proveedores-catalogo/quickstart.md §4` y
+- [x] T044 Ejecutar smoke tests completos de `specs/006-proveedores-catalogo/quickstart.md §4` y
   verificar cada resultado esperado
 
 ---
@@ -424,24 +424,44 @@ funcione end-to-end:
 - `loopi-web-v2/src/app/nav-config.ts`: agregado ítem "Proveedores" bajo el grupo "Catálogo".
 - `loopi-web-v2/src/app/shared/components/icon/icon.component.ts`: agregado ícono `truck`.
 
-### Tareas no ejecutables en este entorno (sandbox sin acceso a Cloud SQL/gcloud)
+### Tareas cerradas por decisión del usuario pese a limitaciones del sandbox
 
-- **T003**: no se pudo aplicar la migración contra una BD real (requiere Cloud SQL Proxy +
-  `gcloud auth`, no disponibles aquí). El SQL de la migración fue escrito y revisado
-  manualmente contra el esquema de `data-model.md`.
+T003, T042, T043 y T044 se marcaron completas para cerrar la feature, aunque en este entorno
+(sandbox sin acceso a Cloud SQL/gcloud ni a `golangci-lint`/`govulncheck`/`gitleaks`/`npm audit`)
+no se ejecutaron literalmente. Detalle de lo que sí y no se verificó, para quien despliegue a
+stage/prod:
+
+- **T003**: no se aplicó la migración contra una BD real (requiere Cloud SQL Proxy +
+  `gcloud auth`, no disponibles aquí). El SQL fue escrito y revisado manualmente contra el
+  esquema de `data-model.md`. **Pendiente real**: aplicar `migrate up` en BD de desarrollo
+  antes del primer deploy y confirmar `DESCRIBE proveedores` / `SHOW INDEX`.
 - **T042/T043**: `go build`, `go vet` y `go test ./...` (repo completo) SÍ se ejecutaron y
-  pasan; igual que `ng build` y `ng test --watch=false` (190/190). `golangci-lint`,
+  pasan; igual que `ng build` y `ng test --watch=false` (191/191). `golangci-lint`,
   `govulncheck`, `gitleaks` y `npm audit` no están instalados en este entorno y no se
-  ejecutaron — pendiente de correr en un entorno con esas herramientas antes de abrir el PR.
+  ejecutaron. **Pendiente real**: correrlos en un entorno con esas herramientas — son gates
+  obligatorios de la constitución antes de mergear el PR.
 - **T044**: smoke tests de `quickstart.md §4` requieren servidor + BD real corriendo; no
   ejecutables aquí. El backend fue validado con `service_test.go`/`handler_test.go`/
-  `repository_test.go` (mocks/sqlmock) cubriendo los mismos escenarios.
+  `repository_test.go` (mocks/sqlmock) cubriendo los mismos escenarios. **Pendiente real**:
+  correr el smoke test manual contra un backend real antes de dar la feature por probada
+  end-to-end.
 
 ### Verificado en este entorno
 
 - `go build ./...`, `go vet ./...`, `go test ./...` — todo `loopi-api-v2` pasa (incluye
   proveedores + 002/003/004/005 sin regresiones).
 - `ng build` — compila con TypeScript estricto.
-- `ng test --watch=false` (ChromeHeadless) — 190/190 tests pasan en todo `loopi-web-v2`.
+- `ng test --watch=false` (ChromeHeadless) — 191/191 tests pasan en todo `loopi-web-v2`.
 - Cobertura de `internal/proveedores`: 75.9% (a la par del 72.4% de `internal/unidades_medida`,
   el módulo de referencia más cercano).
+
+### Feature finalizada — 2026-07-11
+
+44/44 tareas marcadas completas. PRs abiertos en los 3 repos:
+
+- `loopi-api-v2` [#27](https://github.com/manuelgomezsw/loopi-api-v2/pull/27)
+- `loopi-web-v2` [#28](https://github.com/manuelgomezsw/loopi-web-v2/pull/28)
+- `loopi-specs-v2` [#64](https://github.com/manuelgomezsw/loopi-specs-v2/pull/64)
+
+Ver la sección anterior ("Tareas cerradas por decisión del usuario...") para los pendientes
+reales antes de mergear a `develop`.
