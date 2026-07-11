@@ -22,7 +22,7 @@ independiente de cada historia.
 
 **Propósito**: Crear la estructura de carpetas del módulo en ambos repos antes de escribir código.
 
-- [ ] T001 Crear directorios `loopi-api-v2/internal/proveedores/` y
+- [x] T001 Crear directorios `loopi-api-v2/internal/proveedores/` y
   `loopi-web-v2/src/app/features/proveedores/{components/lista-proveedores,components/form-proveedor,models,services}/`
   según plan.md
 
@@ -35,32 +35,32 @@ antes de iniciar cualquier historia de usuario.
 
 **⚠️ CRÍTICO**: Ninguna historia puede comenzar hasta completar esta fase.
 
-- [ ] T002 Escribir migración `NNNN_crear_tabla_proveedores.up.sql` y `.down.sql` con tabla
+- [x] T002 Escribir migración `NNNN_crear_tabla_proveedores.up.sql` y `.down.sql` con tabla
   `proveedores`, constraint `uq_proveedores_nit`, índices `ix_proveedores_activo` e
   `ix_proveedores_razon_social` en `loopi-api-v2/db/migrations/` (según data-model.md)
 - [ ] T003 Aplicar migración con `golang-migrate` y verificar tabla, constraint e índices en BD
   de desarrollo (`DESCRIBE proveedores; SHOW INDEX FROM proveedores`)
-- [ ] T004 [P] Definir structs Go `Proveedor`, `FiltrosListado`, `CrearProveedorRequest`,
+- [x] T004 [P] Definir structs Go `Proveedor`, `FiltrosListado`, `CrearProveedorRequest`,
   `EditarProveedorRequest`, `ProveedorResponse`, `ProveedorDetalleResponse`,
   `ListarProveedoresResponse`, `CambiarEstadoResponse` en
   `loopi-api-v2/internal/proveedores/model.go`
-- [ ] T005 Implementar `Repository` (interfaz + struct + constructor `NewRepository(db)`) en
+- [x] T005 Implementar `Repository` (interfaz + struct + constructor `NewRepository(db)`) en
   `loopi-api-v2/internal/proveedores/repository.go` — esqueleto sin métodos CRUD (se agregan
   por historia de usuario)
-- [ ] T006 Implementar `NewCachedRepository(inner Repository, ttl time.Duration) Repository` en
+- [x] T006 Implementar `NewCachedRepository(inner Repository, ttl time.Duration) Repository` en
   `loopi-api-v2/internal/proveedores/cached_repository.go`: instancia propia de `EntityCache[T]`,
   TTL 24 h, claves `"list"` / `"id:<id>"` / `"activo:<valor>"`; invalidación: Crear →
   `cache.Clear()`, Editar/Inactivar/Activar → `cache.Delete("id:<id>")` + `cache.Clear()`; usa
   el paquete compartido `internal/cache/` ya existente en `develop` desde 004/005
-- [ ] T007 Registrar prefijo `/api/v1/proveedores` en el router principal con middlewares
+- [x] T007 Registrar prefijo `/api/v1/proveedores` en el router principal con middlewares
   `autenticacion` + `solo_admin` en `loopi-api-v2` (todo el módulo, incluida lectura, requiere
   rol `admin` — HU-1 Escenario 3)
-- [ ] T008 [P] Crear `proveedor.model.ts` con interfaces TypeScript `Proveedor`,
+- [x] T008 [P] Crear `proveedor.model.ts` con interfaces TypeScript `Proveedor`,
   `ProveedorDetalle`, `ListarProveedoresResponse`, `CrearProveedorRequest`,
   `EditarProveedorRequest`, `CambiarEstadoResponse`, `FiltrosListadoProveedores`, `ApiError`
   según contracts/api.md en
   `loopi-web-v2/src/app/features/proveedores/models/proveedor.model.ts`
-- [ ] T009 [P] Configurar rutas lazy-loaded con guard de rol `admin` en
+- [x] T009 [P] Configurar rutas lazy-loaded con guard de rol `admin` en
   `loopi-web-v2/src/app/features/proveedores/proveedores.routes.ts`: `/proveedores` →
   `ListaProveedoresComponent`, `/proveedores/nuevo` → `FormProveedorComponent` (modo `'crear'`),
   `/proveedores/:id/editar` → `FormProveedorComponent` (modo `'editar'`)
@@ -80,33 +80,33 @@ opcionales. El NIT duplicado es rechazado con 409. Roles no admin reciben 403.
 
 ### Backend — US1
 
-- [ ] T010 [P] [US1] Implementar `Repository.Crear(ctx, req)` y
+- [x] T010 [P] [US1] Implementar `Repository.Crear(ctx, req)` y
   `Repository.ExisteNIT(ctx, nit string, excludeID *int64) (bool, error)` en
   `loopi-api-v2/internal/proveedores/repository.go` — columnas explícitas, nunca `SELECT *`
-- [ ] T011 [US1] Implementar `Service.Crear(ctx, req CrearProveedorRequest) (*Proveedor, error)`
+- [x] T011 [US1] Implementar `Service.Crear(ctx, req CrearProveedorRequest) (*Proveedor, error)`
   en `loopi-api-v2/internal/proveedores/service.go`: validar `razon_social`/`nit` no vacíos
   (400 `campo_requerido`), validar formato de `email_contacto` si presente (400
   `email_invalido`), verificar unicidad de NIT vía `Repository.ExisteNIT` (409 `nit_duplicado`),
   crear con `activo=true` por defecto, invalidar caché
-- [ ] T012 [US1] Implementar handler `POST /api/v1/proveedores` con guard de rol `admin`,
+- [x] T012 [US1] Implementar handler `POST /api/v1/proveedores` con guard de rol `admin`,
   deserialización del body, mapeo de errores (400/401/403/409) y respuesta 201 en
   `loopi-api-v2/internal/proveedores/handler.go`
 
 ### Frontend — US1
 
-- [ ] T013 [P] [US1] Crear `ProveedoresService`
+- [x] T013 [P] [US1] Crear `ProveedoresService`
   (`@Injectable({providedIn:'root'})`) con método `crear(req: CrearProveedorRequest):
   Observable<Proveedor>` en
   `loopi-web-v2/src/app/features/proveedores/services/proveedores.service.ts`
-- [ ] T014 [US1] Implementar `FormProveedorComponent` standalone en modo `'crear'`
+- [x] T014 [US1] Implementar `FormProveedorComponent` standalone en modo `'crear'`
   (`FormModeService`), envuelto en `FormCardComponent` (`max-w-lg` — 5 campos): reactive form
   con validación on blur + submit, botón deshabilitado durante envío en
   `loopi-web-v2/src/app/features/proveedores/components/form-proveedor/form-proveedor.component.ts`
-- [ ] T015 [US1] Template `form-proveedor.component.html`: `<h1>` "Nuevo proveedor" (sin prefijo
+- [x] T015 [US1] Template `form-proveedor.component.html`: `<h1>` "Nuevo proveedor" (sin prefijo
   `+`), breadcrumb, `<label>` asociado a cada input, leyenda "* Campo obligatorio", toast verde
   3 s en éxito, navega a `/proveedores` tras crear en
   `loopi-web-v2/src/app/features/proveedores/components/form-proveedor/form-proveedor.component.html`
-- [ ] T016 [US1] Implementar `ListaProveedoresComponent` mínima (sin filtros — se extiende en
+- [x] T016 [US1] Implementar `ListaProveedoresComponent` mínima (sin filtros — se extiende en
   US4): `ListCardComponent` + `DataTableComponent` con filas clickeables que navegan a
   `/proveedores/:id/editar`, `EmptyStateComponent` con mensaje "No hay proveedores registrados"
   y botón "Crear el primero" cuando `total=0`, botón primario "+ Nuevo proveedor" en
@@ -131,30 +131,30 @@ el empty state.
 
 ### Backend — US4
 
-- [ ] T017 [P] [US4] Implementar `Repository.Listar(ctx, filtros FiltrosListado)` (con `LIKE`
+- [x] T017 [P] [US4] Implementar `Repository.Listar(ctx, filtros FiltrosListado)` (con `LIKE`
   sobre `razon_social`/`nit`, filtro `activo`, paginación), `Repository.ObtenerPorID(ctx, id)` y
   `Repository.ContarItemsAsignados(ctx, id)` (graceful `0` hasta que 007-items-catalogo exista)
   en `loopi-api-v2/internal/proveedores/repository.go`
-- [ ] T018 [US4] Implementar `Service.Listar(ctx, filtros)` (a través de `cached_repository`,
+- [x] T018 [US4] Implementar `Service.Listar(ctx, filtros)` (a través de `cached_repository`,
   claves `"list"` / `"activo:<valor>"`) y `Service.ObtenerPorID(ctx, id)` (con
   `items_asignados`) en `loopi-api-v2/internal/proveedores/service.go`
-- [ ] T019 [US4] Implementar handlers `GET /api/v1/proveedores` (parsear `estado` — default
+- [x] T019 [US4] Implementar handlers `GET /api/v1/proveedores` (parsear `estado` — default
   `todos`, 400 `estado_invalido` si no es `activo`/`inactivo`/`todos`; traducir a `*bool` para
   el filtro interno —, `busqueda`, `page`, `limit`) y `GET /api/v1/proveedores/{id}` (404
   `proveedor_no_encontrado`) en `loopi-api-v2/internal/proveedores/handler.go`
 
 ### Frontend — US4
 
-- [ ] T020 [P] [US4] Agregar métodos `listar(filtros: FiltrosListadoProveedores)` y
+- [x] T020 [P] [US4] Agregar métodos `listar(filtros: FiltrosListadoProveedores)` y
   `obtener(id: number)` a `ProveedoresService` en
   `loopi-web-v2/src/app/features/proveedores/services/proveedores.service.ts`
-- [ ] T021 [US4] Extender `ListaProveedoresComponent` con `FilterBarComponent` +
+- [x] T021 [US4] Extender `ListaProveedoresComponent` con `FilterBarComponent` +
   `FilterStateService` (default `Estado=Activo`, constitución §Filtros en Listados; prohibido
   filtro ad-hoc), campo de búsqueda por texto, `StatusBadgeComponent` en la columna Estado y
   `PaginationComponent` server-side en
   `loopi-web-v2/src/app/features/proveedores/components/lista-proveedores/lista-proveedores.component.ts`
   y `.html`
-- [ ] T022 [US4] Extender `FormProveedorComponent` para cargar los datos existentes en modo
+- [x] T022 [US4] Extender `FormProveedorComponent` para cargar los datos existentes en modo
   `'editar'` (`obtener(id)`) y mostrar `items_asignados` con `ReadonlyFieldComponent` (el guardado
   de cambios se implementa en US2) en
   `loopi-web-v2/src/app/features/proveedores/components/form-proveedor/form-proveedor.component.ts`
@@ -174,23 +174,23 @@ retorna 409 `nit_duplicado`.
 
 ### Backend — US2
 
-- [ ] T023 [P] [US2] Implementar `Repository.Actualizar(ctx, id, req EditarProveedorRequest)` en
+- [x] T023 [P] [US2] Implementar `Repository.Actualizar(ctx, id, req EditarProveedorRequest)` en
   `loopi-api-v2/internal/proveedores/repository.go`
-- [ ] T024 [US2] Implementar `Service.Editar(ctx, id, req)` en
+- [x] T024 [US2] Implementar `Service.Editar(ctx, id, req)` en
   `loopi-api-v2/internal/proveedores/service.go`: obtener proveedor (404 si no existe); si
   `nit` presente, validar no vacío (400 `campo_vacio`) y unicidad excluyendo el propio `id`
   (409 `nit_duplicado`); si `email_contacto` presente, validar formato (400 `email_invalido`);
   actualizar solo campos enviados; invalidar caché
-- [ ] T025 [US2] Implementar handler `PUT /api/v1/proveedores/{id}` con guard de rol `admin`,
+- [x] T025 [US2] Implementar handler `PUT /api/v1/proveedores/{id}` con guard de rol `admin`,
   mapeo de errores (400/401/403/404/409) y respuesta 200 en
   `loopi-api-v2/internal/proveedores/handler.go`
 
 ### Frontend — US2
 
-- [ ] T026 [P] [US2] Agregar método `editar(id: number, req: EditarProveedorRequest)` a
+- [x] T026 [P] [US2] Agregar método `editar(id: number, req: EditarProveedorRequest)` a
   `ProveedoresService` en
   `loopi-web-v2/src/app/features/proveedores/services/proveedores.service.ts`
-- [ ] T027 [US2] Completar `FormProveedorComponent` en modo `'editar'`: permitir editar el NIT,
+- [x] T027 [US2] Completar `FormProveedorComponent` en modo `'editar'`: permitir editar el NIT,
   cambiar el botón a "Guardar cambios", toast "Proveedor actualizado correctamente." en
   `loopi-web-v2/src/app/features/proveedores/components/form-proveedor/form-proveedor.component.ts`
   y `.html`
@@ -210,21 +210,21 @@ intacta) y puede reactivarlo sin pérdida de historial.
 
 ### Backend — US3
 
-- [ ] T028 [P] [US3] Implementar `Repository.CambiarEstado(ctx, id, activo bool)` en
+- [x] T028 [P] [US3] Implementar `Repository.CambiarEstado(ctx, id, activo bool)` en
   `loopi-api-v2/internal/proveedores/repository.go`
-- [ ] T029 [US3] Implementar `Service.Inactivar(ctx, id)` (404 si no existe; 409 `ya_inactivo`
+- [x] T029 [US3] Implementar `Service.Inactivar(ctx, id)` (404 si no existe; 409 `ya_inactivo`
   si ya estaba inactivo) y `Service.Activar(ctx, id)` (404; 409 `ya_activo` si ya estaba
   activo), ambos invalidando caché, en `loopi-api-v2/internal/proveedores/service.go`
-- [ ] T030 [US3] Implementar handlers `PATCH /api/v1/proveedores/{id}/inactivar` y
+- [x] T030 [US3] Implementar handlers `PATCH /api/v1/proveedores/{id}/inactivar` y
   `PATCH /api/v1/proveedores/{id}/activar` con guard de rol `admin` y mapeo de errores
   (401/403/404/409) en `loopi-api-v2/internal/proveedores/handler.go`
 
 ### Frontend — US3
 
-- [ ] T031 [P] [US3] Agregar métodos `inactivar(id: number)` y `activar(id: number)` a
+- [x] T031 [P] [US3] Agregar métodos `inactivar(id: number)` y `activar(id: number)` a
   `ProveedoresService` en
   `loopi-web-v2/src/app/features/proveedores/services/proveedores.service.ts`
-- [ ] T032 [US3] Implementar `DangerZoneComponent` en modo `'editar'` de
+- [x] T032 [US3] Implementar `DangerZoneComponent` en modo `'editar'` de
   `FormProveedorComponent` (auto-oculto en modo `'crear'` vía `FormModeService`): botón dinámico
   "Inactivar proveedor" / "Reactivar proveedor" según el estado actual, modal de confirmación
   previo (constitución §Feedback), separado con `<hr>` + `mt-8` en
@@ -243,36 +243,36 @@ intacta) y puede reactivarlo sin pérdida de historial.
 deploy a stage o producción** — Principio VI de la constitución: "Cada feature DEBE ser
 monitoreable desde el primer deploy en producción."
 
-- [ ] T033 [P] Instrumentar trazas OTel según `spec.md §Observabilidad`: spans
+- [x] T033 [P] Instrumentar trazas OTel según `spec.md §Observabilidad`: spans
   `proveedores.crear`, `proveedores.listar`, `proveedores.editar`, `proveedores.inactivar`,
   `proveedores.activar` con sus atributos obligatorios en
   `loopi-api-v2/internal/proveedores/handler.go`
-- [ ] T034 [P] Instrumentar métricas OTel según `spec.md §Observabilidad`:
+- [x] T034 [P] Instrumentar métricas OTel según `spec.md §Observabilidad`:
   `catalogo.proveedor.crear.total`, `catalogo.proveedor.crear.duration`,
   `catalogo.proveedor.listar.duration` (etiqueta `cache_hit`),
   `catalogo.proveedor.inactivar.total`, `catalogo.proveedor.activar.total` en
   `loopi-api-v2/internal/proveedores/handler.go`
-- [ ] T035 [P] Agregar logs JSON estructurados con campos `user_id`, `rol`, `operacion`,
+- [x] T035 [P] Agregar logs JSON estructurados con campos `user_id`, `rol`, `operacion`,
   `proveedor_id` y `resultado` en cada operación de escritura en
   `loopi-api-v2/internal/proveedores/service.go`
-- [ ] T036 [P] Implementar `service_test.go` con mock del repositorio cubriendo los 15 casos de
+- [x] T036 [P] Implementar `service_test.go` con mock del repositorio cubriendo los 15 casos de
   `quickstart.md §5` en `loopi-api-v2/internal/proveedores/service_test.go`
-- [ ] T037 [P] Implementar `handler_test.go` con `httptest.NewRecorder()` y mock de `Service`
+- [x] T037 [P] Implementar `handler_test.go` con `httptest.NewRecorder()` y mock de `Service`
   cubriendo todos los códigos HTTP (200/201/400/401/403/404/409) de los 6 endpoints, incluidos
   `TestAccesoLiderTiendaFalla` y `TestAccesoSinTokenFalla` en
   `loopi-api-v2/internal/proveedores/handler_test.go`
-- [ ] T038 [P] Implementar `repository_test.go` con `go-sqlmock` cubriendo INSERT/UPDATE/SELECT
+- [x] T038 [P] Implementar `repository_test.go` con `go-sqlmock` cubriendo INSERT/UPDATE/SELECT
   y manejo de errores de BD (error 1062 de NIT duplicado, `sql.ErrNoRows`) para todos los
   métodos del repositorio en `loopi-api-v2/internal/proveedores/repository_test.go`
-- [ ] T039 [P] Implementar `cached_repository_test.go` inyectando mock de `Repository` (inner):
+- [x] T039 [P] Implementar `cached_repository_test.go` inyectando mock de `Repository` (inner):
   hit de caché (inner NO invocado), miss de caché (inner invocado + resultado almacenado),
   escritura invalida caché correctamente, error del inner no almacena en caché — cobertura
   mínima ≥ 90 % en `loopi-api-v2/internal/proveedores/cached_repository_test.go`
-- [ ] T040 [P] Implementar `lista-proveedores.component.spec.ts` y
+- [x] T040 [P] Implementar `lista-proveedores.component.spec.ts` y
   `form-proveedor.component.spec.ts` (mock de `ProveedoresService`) con casos: listado vacío,
   crear proveedor, error 409 NIT duplicado, flujo de confirmación de inactivación en
   `loopi-web-v2/src/app/features/proveedores/components/`
-- [ ] T041 [P] Implementar `proveedores.service.spec.ts` (mock de `HttpClient`) con casos: crear
+- [x] T041 [P] Implementar `proveedores.service.spec.ts` (mock de `HttpClient`) con casos: crear
   exitoso, editar NIT duplicado, inactivar, activar en
   `loopi-web-v2/src/app/features/proveedores/services/proveedores.service.spec.ts`
 - [ ] T042 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`,
@@ -393,3 +393,55 @@ Con dos desarrolladores:
 - Cada historia debe ser completamente verificable con los smoke tests de `quickstart.md`
 - Commitear tras cada tarea o grupo lógico
 - Detener en cualquier checkpoint para validar la historia de forma independiente
+
+---
+
+## Notas de Ejecución (implementación 2026-07-11)
+
+### Desviaciones de ruta respecto a este documento y a plan.md/data-model.md
+
+Al implementar se verificó el estado real de `loopi-api-v2` y `loopi-web-v2` (recién
+inicializados como submodules) y se encontraron convenciones ya establecidas por 002/003/004/005
+que no coinciden con lo declarado en plan.md (escrito antes de revisar el código real). Se
+siguió la convención real del repo en vez de la ruta literal de este documento:
+
+| Declarado aquí / en plan.md | Implementado (convención real de 002-005) |
+|---|---|
+| `loopi-api-v2/db/migrations/` | `loopi-api-v2/migrations/` |
+| `loopi-web-v2/src/app/features/proveedores/components/lista-proveedores/` | `loopi-web-v2/src/app/proveedores/proveedores-lista/` |
+| `loopi-web-v2/src/app/features/proveedores/components/form-proveedor/` | `loopi-web-v2/src/app/proveedores/proveedor-form/` |
+| `proveedor.model.ts` (archivo de modelos separado) | Interfaces TypeScript inline en `proveedores.service.ts` (igual que `unidades-medida.service.ts`, `categorias.service.ts`) |
+| `proveedores.routes.ts` (archivo de rutas por feature) | Rutas registradas directamente en `loopi-web-v2/src/app/app.routes.ts` (convención única del repo) |
+| Migración `NNNN` | `011_crear_tabla_proveedores` (siguiente correlativo tras `010_crear_tabla_subcategorias`) |
+
+Cambios adicionales fuera del alcance original de las tareas, necesarios para que el módulo
+funcione end-to-end:
+
+- `loopi-api-v2/cmd/api/main.go`: wiring del módulo proveedores (repo/caché/service/handler) +
+  agregado `"PATCH"` a `AllowedMethods` de CORS (faltaba; sin esto, `/inactivar` y `/activar`
+  habrían quedado inalcanzables desde el navegador — afecta también a 004-unidades-medida, que
+  ya usa PATCH).
+- `loopi-web-v2/src/app/nav-config.ts`: agregado ítem "Proveedores" bajo el grupo "Catálogo".
+- `loopi-web-v2/src/app/shared/components/icon/icon.component.ts`: agregado ícono `truck`.
+
+### Tareas no ejecutables en este entorno (sandbox sin acceso a Cloud SQL/gcloud)
+
+- **T003**: no se pudo aplicar la migración contra una BD real (requiere Cloud SQL Proxy +
+  `gcloud auth`, no disponibles aquí). El SQL de la migración fue escrito y revisado
+  manualmente contra el esquema de `data-model.md`.
+- **T042/T043**: `go build`, `go vet` y `go test ./...` (repo completo) SÍ se ejecutaron y
+  pasan; igual que `ng build` y `ng test --watch=false` (190/190). `golangci-lint`,
+  `govulncheck`, `gitleaks` y `npm audit` no están instalados en este entorno y no se
+  ejecutaron — pendiente de correr en un entorno con esas herramientas antes de abrir el PR.
+- **T044**: smoke tests de `quickstart.md §4` requieren servidor + BD real corriendo; no
+  ejecutables aquí. El backend fue validado con `service_test.go`/`handler_test.go`/
+  `repository_test.go` (mocks/sqlmock) cubriendo los mismos escenarios.
+
+### Verificado en este entorno
+
+- `go build ./...`, `go vet ./...`, `go test ./...` — todo `loopi-api-v2` pasa (incluye
+  proveedores + 002/003/004/005 sin regresiones).
+- `ng build` — compila con TypeScript estricto.
+- `ng test --watch=false` (ChromeHeadless) — 190/190 tests pasan en todo `loopi-web-v2`.
+- Cobertura de `internal/proveedores`: 75.9% (a la par del 72.4% de `internal/unidades_medida`,
+  el módulo de referencia más cercano).
