@@ -160,6 +160,35 @@ Examples of foundational tasks (adjust based on your project):
 
 ---
 
+## Phase Final: Cumplimiento Constitucional (Loopi v2 — OBLIGATORIO)
+
+<!--
+  Esta fase existe porque las tareas generadas antes de este mecanismo (ver feature 005,
+  commit 77fad40) omitieron reglas normativas vigentes al momento del plan porque no había
+  una forma explícita de rastrearlas hasta tasks.md. Cada tarea de esta fase DEBE citar el
+  ID de regla exacto (de constitution.md o standards/*.md) que implementa o verifica —
+  copiado literalmente del `Constitution Check` de plan.md, no re-derivado de memoria.
+
+  Elimina las filas que no apliquen al tipo de tarea (backend-only / frontend-only /
+  full-stack) de esta feature. No dejes una regla marcada como aplicable en el Constitution
+  Check de plan.md sin una tarea correspondiente aquí.
+-->
+
+- [ ] TXXX Verificar [BE-ARCH-01] Separación de capas: ningún SQL fuera de `repository.go`, ningún `*sql.DB` en `service.go`
+- [ ] TXXX Verificar [BE-CACHE-01] Patrón decorador de caché (`cached_repository.go`, TTL, claves, invalidación) si la entidad es de catálogo
+- [ ] TXXX Verificar [BE-API-01] Convenciones REST: prefijo `/api/v1/`, `?estado=activo|inactivo|todos`, formato de error, códigos HTTP de la tabla normativa
+- [ ] TXXX Verificar [BE-DATA-01] Convenciones de datos: PK `BIGINT UNSIGNED`, timestamps, soft delete, nomenclatura snake_case en español
+- [ ] TXXX Verificar [BE-TEST-01] Cobertura por capa (≥95% lógica, ≥90% infraestructura) y técnica de test correcta por archivo
+- [ ] TXXX Verificar [BE-OBS-01] Sección Observabilidad en spec.md + nomenclatura de métricas + `user_id` nunca como etiqueta
+- [ ] TXXX Verificar [FE-COMP-01] Toda vista nueva usa el catálogo de componentes transversales, sin reimplementaciones ad-hoc
+- [ ] TXXX Verificar [FE-LIST-01]/[FE-FORMSURF-01] Jerarquía visual de 3 capas en listados y formularios (clases Tailwind exactas)
+- [ ] TXXX Verificar [FE-FILTER-01] Filtros con `FilterBarComponent` + `FilterStateService`, default Estado=Activo
+- [ ] TXXX Verificar [FE-A11Y-01] Accesibilidad WCAG 2.1 AA en los flujos críticos de esta feature
+- [ ] TXXX Ejecutar gates de CI backend (`standards/backend.md#BE-CI-01`) y/o frontend (`standards/frontend.md#FE-CI-01`) según aplique
+- [ ] TXXX Ejecutar smoke tests de `quickstart.md` y confirmar cada resultado esperado
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

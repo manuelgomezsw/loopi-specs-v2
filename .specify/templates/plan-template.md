@@ -40,7 +40,58 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+<!--
+  INSTRUCCIONES DE LLENADO (Loopi v2):
+  1. Determina el tipo de tarea: backend-only, frontend-only, o full-stack.
+  2. Marca cada ID como ✅ Cumple / ⚠️ Requiere justificación (ver Complexity Tracking) / N/A.
+  3. Los IDs P-* vienen de .specify/memory/constitution.md — SIEMPRE se evalúan.
+  4. Los IDs BE-* vienen de .specify/memory/standards/backend.md — solo si hay tarea backend.
+  5. Los IDs FE-* vienen de .specify/memory/standards/frontend.md — solo si hay tarea frontend.
+  6. No dejes ningún ID de la lista aplicable sin marcar. No inventes IDs nuevos aquí — si una
+     regla no tiene ID, es una señal de que constitution.md o standards/*.md necesitan una enmienda.
+  7. NO cites la regla de memoria: abre el archivo standards/*.md correspondiente y confirma el
+     texto exacto (TTL, nombre de parámetro, threshold, clases CSS) antes de marcar ✅.
+-->
+
+**Principios (siempre)** — fuente: `constitution.md`
+
+| ID | Principio | Estado | Nota |
+|----|-----------|--------|------|
+| P-I | Spec-First | | |
+| P-II | Arquitectura Multi-Tienda | | |
+| P-III | RBAC | | |
+| P-IV | Trazabilidad de Inventario | | |
+| P-V | Prevención de Pérdidas | | |
+| P-VI | Monitoreo Preventivo | | |
+
+**Backend** (solo si la feature toca `loopi-api-v2`) — fuente: `standards/backend.md`
+
+| ID | Regla | Estado | Nota |
+|----|-------|--------|------|
+| BE-ARCH-01 | Separación de capas Handler/Service/Repository | | |
+| BE-CACHE-01 | Patrón decorador Ristretto (si la entidad es catálogo) | | |
+| BE-TEST-01 | Técnica de test por capa + thresholds de cobertura | | |
+| BE-API-01 | Convenciones REST (`?estado`, formato de error, códigos HTTP) | | |
+| BE-DATA-01 | Convenciones de datos (PKs, timestamps, soft delete, nomenclatura) | | |
+| BE-JOBS-01 | Patrón de jobs programados (si aplica) | | |
+| BE-OBS-01 | Nomenclatura de métricas y logs | | |
+
+**Frontend** (solo si la feature toca `loopi-web-v2`) — fuente: `standards/frontend.md`
+
+| ID | Regla | Estado | Nota |
+|----|-------|--------|------|
+| FE-COMP-01 | Usa componentes transversales del catálogo (no reimplementa) | | |
+| FE-LIST-01 / FE-FORMSURF-01 | Jerarquía visual de 3 capas (listado / formulario) | | |
+| FE-FILTER-01 | Filtros con `FilterBarComponent`, default Estado=Activo | | |
+| FE-LISTFORM-01 | Patrón lista clickeable → formulario, zona de precaución | | |
+| FE-A11Y-01 | Accesibilidad WCAG 2.1 AA | | |
+| FE-RESP-01 | Responsive mobile-first | | |
+
+**Ambientes / CI** — fuente: `standards/environments-ci.md`
+
+| ID | Regla | Estado | Nota |
+|----|-------|--------|------|
+| CI-01 | Gitflow (branch correcto para esta feature) | | |
 
 ## Project Structure
 
@@ -107,7 +158,7 @@ directories captured above]
   NOTA PARA PROYECTOS GO (loopi-api):
   Cuando el árbol de archivos lista los archivos del dominio (handler.go, service.go,
   repository.go), documentar la responsabilidad de CADA archivo siguiendo la separación
-  de capas de la constitución §Stack Técnico:
+  de capas de standards/backend.md#BE-ARCH-01:
 
   - handler.go   → HTTP: parsear request, llamar service, escribir response. Sin SQL.
   - service.go   → Lógica de negocio. Sin SQL ni dependencia a *sql.DB.

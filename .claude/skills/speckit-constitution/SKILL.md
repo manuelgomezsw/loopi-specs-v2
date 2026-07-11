@@ -88,6 +88,24 @@ Follow this execution flow:
    - Read `.specify/templates/tasks-template.md` and ensure task categorization reflects new or removed principle-driven task types (e.g., observability, versioning, testing discipline).
    - Read each command file in `.specify/templates/commands/*.md` (including this one) to verify no outdated references (agent-specific names like CLAUDE only) remain when generic guidance is required.
    - Read any runtime guidance docs (e.g., `README.md`, `docs/quickstart.md`, or agent-specific guidance files if present). Update references to principles changed.
+   - **Loopi v2 specific — standards docs and cross-repo CLAUDE.md sync (MANDATORY, do not skip)**:
+     - Determine whether the amendment is a principle-level change (belongs in `constitution.md`
+       itself) or an implementation-convention change (belongs in `.specify/memory/standards/backend.md`,
+       `.specify/memory/standards/frontend.md`, or `.specify/memory/standards/environments-ci.md`).
+       Most amendments after v2.0.0 will be the latter — edit the relevant `standards/*.md` file
+       and bump *its own* semver version, independent of `constitution.md`'s version.
+     - If a `standards/backend.md` rule changed (new/modified rule ID or content under an existing
+       ID): the corresponding excerpt in `../loopi-api-v2/CLAUDE.md` (sibling repo, same parent
+       directory as this repo) MUST be updated in the same session, and its
+       `<!-- synced: constitution vX.Y.Z, backend-standards vA.B.C -->` header bumped to match.
+       If `../loopi-api-v2` is not present/checked out locally, do NOT silently skip this — tell
+       the user explicitly that `loopi-api-v2/CLAUDE.md` needs a follow-up PR with the same rule
+       changes, and list exactly which rule IDs changed so it can be done precisely.
+     - If a `standards/frontend.md` rule changed: same requirement for `../loopi-web-v2/CLAUDE.md`.
+     - An amendment to `standards/*.md` is NOT considered complete until the corresponding
+       `CLAUDE.md` sync is done or explicitly flagged as a pending follow-up to the user — never
+       report the constitution command as finished while a known rule change hasn't been
+       propagated to the repo(s) that actually consume it.
 
 5. Produce a Sync Impact Report (prepend as an HTML comment at top of the constitution file after update):
    - Version change: old → new
