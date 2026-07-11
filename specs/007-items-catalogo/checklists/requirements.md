@@ -40,5 +40,5 @@
 - RF-ITEM-02.3 bloquea el cambio de código solo si el item está "en uso" (inventario, pedido
   o receta). Verificar en QA el caso de un item creado pero nunca contado — ¿puede cambiar
   su código?
-- El costo de referencia es en COP entero (sin decimales), consistente con RN-ITEM-03.
+- El costo de referencia es en COP entero (sin decimales), consistente con RF-ITEM-01.7.
   Confirmar con el equipo de negocio si se requieren decimales para items con costo muy bajo.

@@ -63,10 +63,10 @@ de alta frecuencia: items por ID, por código y por frecuencia de inventario.
 |-----------|--------|-------|
 | I. Spec-First | ✅ PASA | Spec aprobada y clarificada el 2026-05-24 |
 | II. Multi-Tienda | ✅ PASA | Catálogo compartido (items sin `tienda_id`); `items_costos_tienda` lleva `tienda_id` explícito para datos de costo por tienda |
-| III. RBAC | ✅ PASA | Solo `admin` escribe; todos los roles autenticados leen; validación en backend |
+| III. RBAC | ✅ PASA | Solo `admin` escribe; todos los roles autenticados leen el catálogo, **excepto** el historial de costos por tienda (lectura y escritura exclusivas de `admin`, matriz `§2.5`); validación en backend |
 | IV. Trazabilidad | ✅ PASA | Soft delete `activo TINYINT(1)` + `creado_por`/`actualizado_por`; `items_costos_tienda` es append-only para trazabilidad de precios |
 | V. Prevención pérdidas | ✅ PASA | Código inmutable una vez en uso; no eliminación física; costo por tienda es historial sin posibilidad de borrado |
-| VI. Monitoreo | ✅ PASA | Endpoints instrumentados con OTel (trazas + métricas de latencia y tasa de errores) |
+| VI. Monitoreo | ✅ PASA | Endpoints instrumentados con OTel (trazas + métricas de latencia y tasa de errores); ver `spec.md §Observabilidad` |
 
 **Re-check post-diseño**: sin violaciones introducidas en Phase 1.
 
