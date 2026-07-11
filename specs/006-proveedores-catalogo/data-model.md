@@ -17,8 +17,8 @@ CREATE TABLE proveedores (
   id                  BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
   razon_social        VARCHAR(255)     NOT NULL          COMMENT 'Nombre legal del proveedor.',
   nit                 VARCHAR(50)      NOT NULL          COMMENT 'Identificador único. Cadena libre; acepta NITs formales y códigos internos.',
-  nombre_contacto     VARCHAR(150)     NULL              COMMENT 'Nombre de la persona de contacto. Opcional.',
-  telefono_contacto   VARCHAR(50)      NULL              COMMENT 'Teléfono de contacto. Opcional.',
+  nombre_contacto     VARCHAR(150)     NOT NULL          COMMENT 'Nombre de la persona de contacto. Obligatorio.',
+  telefono_contacto   VARCHAR(50)      NOT NULL          COMMENT 'Teléfono de contacto. Obligatorio.',
   email_contacto      VARCHAR(255)     NULL              COMMENT 'Email de contacto. Opcional.',
   activo              TINYINT(1)       NOT NULL DEFAULT 1 COMMENT '1 = activo, 0 = inactivo (soft delete).',
   creado_en           DATETIME         NOT NULL,
@@ -46,6 +46,8 @@ CREATE INDEX ix_proveedores_razon_social ON proveedores (razon_social);
 | `nit` único en el sistema | Constraint `uq_proveedores_nit` en BD |
 | `nit` no vacío | Validación a nivel aplicación (servicio Go) |
 | `razon_social` no vacío | Validación a nivel aplicación (servicio Go) |
+| `nombre_contacto` no vacío | Constraint `NOT NULL` en BD + validación a nivel aplicación |
+| `telefono_contacto` no vacío | Constraint `NOT NULL` en BD + validación a nivel aplicación |
 | `email_contacto` formato válido si presente | Validación a nivel aplicación |
 | No DELETE físico | Solo a nivel aplicación; siempre `activo = 0` |
 | `activo = 1` por defecto al crear | Valor default en BD + aplicación |

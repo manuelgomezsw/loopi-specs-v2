@@ -123,13 +123,15 @@ Content-Type: application/json
 }
 ```
 
-**Campos requeridos**: `razon_social`, `nit`
-**Campos opcionales**: `nombre_contacto`, `telefono_contacto`, `email_contacto`
+**Campos requeridos**: `razon_social`, `nit`, `nombre_contacto`, `telefono_contacto`
+**Campos opcionales**: `email_contacto`
 **Restricciones**:
 
 - `nit`: cadena no vacía; única en todo el sistema (insensible a mayúsculas/minúsculas,
   collation `utf8mb4_unicode_ci`)
 - `razon_social`: cadena no vacía
+- `nombre_contacto`: cadena no vacía
+- `telefono_contacto`: cadena no vacía
 - `email_contacto`: si presente, debe tener formato de email válido
 
 **Response 201 Created**:
@@ -152,7 +154,7 @@ Content-Type: application/json
 
 | Código HTTP | `error` | `campo` | Situación |
 |-------------|---------|---------|-----------|
-| 400 | `campo_requerido` | `razon_social` o `nit` | Campo obligatorio ausente o vacío |
+| 400 | `campo_requerido` | `razon_social`, `nit`, `nombre_contacto` o `telefono_contacto` | Campo obligatorio ausente o vacío |
 | 400 | `email_invalido` | `email_contacto` | Formato de email inválido |
 | 401 | `no_autenticado` | — | Token ausente o expirado |
 | 403 | `acceso_denegado` | — | El rol del token no es `admin` |
@@ -207,7 +209,7 @@ detalle, sin `items_asignados`):
 
 | Código HTTP | `error` | `campo` | Situación |
 |-------------|---------|---------|-----------|
-| 400 | `campo_vacio` | `razon_social` o `nit` | Se envió el campo pero con valor vacío |
+| 400 | `campo_vacio` | `razon_social`, `nit`, `nombre_contacto` o `telefono_contacto` | Se envió el campo pero con valor vacío |
 | 400 | `email_invalido` | `email_contacto` | Formato de email inválido |
 | 401 | `no_autenticado` | — | Token ausente o expirado |
 | 403 | `acceso_denegado` | — | El rol del token no es `admin` |
@@ -288,8 +290,8 @@ export interface Proveedor {
   id:                 number;
   razon_social:       string;
   nit:                string;
-  nombre_contacto:    string | null;
-  telefono_contacto:  string | null;
+  nombre_contacto:    string;
+  telefono_contacto:  string;
   email_contacto:     string | null;
   activo:             boolean;
   creado_en:          string;
@@ -310,8 +312,8 @@ export interface ListarProveedoresResponse {
 export interface CrearProveedorRequest {
   razon_social:      string;
   nit:               string;
-  nombre_contacto?:  string;
-  telefono_contacto?: string;
+  nombre_contacto:   string;
+  telefono_contacto: string;
   email_contacto?:   string;
 }
 

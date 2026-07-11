@@ -110,26 +110,40 @@ curl -s -X POST "http://localhost:8080/api/v1/proveedores" \
   }' | jq .
 # Esperado: 201, id=1, activo=true
 
-# Crear proveedor mínimo (solo razon_social y nit)
+# Crear proveedor sin email de contacto (único campo opcional)
 curl -s -X POST "http://localhost:8080/api/v1/proveedores" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"razon_social":"Proveedor Simple","nit":"PROV-001"}' | jq .
-# Esperado: 201, id=2, nombre_contacto=null
+  -d '{"razon_social":"Proveedor Simple","nit":"PROV-001","nombre_contacto":"Juan Pérez","telefono_contacto":"3009998877"}' | jq .
+# Esperado: 201, id=2, email_contacto=null
 
 # Intentar NIT duplicado → 409
 curl -s -X POST "http://localhost:8080/api/v1/proveedores" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"razon_social":"Otro Proveedor","nit":"900123456-7"}' | jq .
+  -d '{"razon_social":"Otro Proveedor","nit":"900123456-7","nombre_contacto":"X","telefono_contacto":"300"}' | jq .
 # Esperado: 409 nit_duplicado
 
 # Intentar sin razon_social → 400
 curl -s -X POST "http://localhost:8080/api/v1/proveedores" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"nit":"PROV-002"}' | jq .
+  -d '{"nit":"PROV-002","nombre_contacto":"X","telefono_contacto":"300"}' | jq .
 # Esperado: 400 campo_requerido, campo="razon_social"
+
+# Intentar sin nombre_contacto → 400
+curl -s -X POST "http://localhost:8080/api/v1/proveedores" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"razon_social":"Proveedor Y","nit":"PROV-003","telefono_contacto":"300"}' | jq .
+# Esperado: 400 campo_requerido, campo="nombre_contacto"
+
+# Intentar sin telefono_contacto → 400
+curl -s -X POST "http://localhost:8080/api/v1/proveedores" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"razon_social":"Proveedor Z","nit":"PROV-004","nombre_contacto":"X"}' | jq .
+# Esperado: 400 campo_requerido, campo="telefono_contacto"
 ```
 
 ### 4.3 Listar con filtros y búsqueda
@@ -186,6 +200,20 @@ curl -s -X PUT "http://localhost:8080/api/v1/proveedores/$ID" \
   -H "Content-Type: application/json" \
   -d '{"nit":"PROV-001"}' | jq .
 # Esperado: 409 nit_duplicado
+
+# Intentar dejar vacío el nombre de contacto → 400
+curl -s -X PUT "http://localhost:8080/api/v1/proveedores/$ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nombre_contacto":""}' | jq .
+# Esperado: 400 campo_vacio, campo="nombre_contacto"
+
+# Intentar dejar vacío el teléfono de contacto → 400
+curl -s -X PUT "http://localhost:8080/api/v1/proveedores/$ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"telefono_contacto":""}' | jq .
+# Esperado: 400 campo_vacio, campo="telefono_contacto"
 ```
 
 ### 4.5 Inactivar y reactivar
@@ -244,11 +272,15 @@ go tool cover -html=coverage.out
 
 | Test | Qué verifica |
 |------|-------------|
-| `TestCrearProveedorExitoso` | 201 con campos completos y mínimos |
+| `TestCrearProveedorExitoso` | 201 con campos completos (sin email es el único opcional) |
 | `TestCrearProveedorNITDuplicado` | Error 409 nit_duplicado |
-| `TestCrearProveedorSinRazonSocial` | Error 400 campo_requerido |
+| `TestCrearProveedorSinRazonSocial` | Error 400 campo_requerido, campo=razon_social |
+| `TestCrearProveedorSinNombreContacto` | Error 400 campo_requerido, campo=nombre_contacto |
+| `TestCrearProveedorSinTelefonoContacto` | Error 400 campo_requerido, campo=telefono_contacto |
 | `TestEditarProveedorNITPropioNoConflicto` | Editar NIT al mismo valor no da 409 |
 | `TestEditarProveedorNITDuplicado` | Error 409 al tomar NIT de otro proveedor |
+| `TestEditarProveedorNombreContactoVacio` | Error 400 campo_vacio, campo=nombre_contacto |
+| `TestEditarProveedorTelefonoContactoVacio` | Error 400 campo_vacio, campo=telefono_contacto |
 | `TestInactivarProveedor` | 200 activo=false |
 | `TestInactivarYaInactivo` | Error 409 ya_inactivo |
 | `TestActivarProveedor` | 200 activo=true |

@@ -32,6 +32,18 @@ Lista-Formulario de 2 componentes y catálogo de componentes Angular transversal
 **Tasks removed**: N/A
 **Tasks marked complete**: N/A
 
+### Iteration 2026-07-11 (2): Nombre y teléfono de contacto obligatorios
+
+**Change**: `nombre_contacto` y `telefono_contacto` pasan de opcionales a obligatorios al
+crear y editar un proveedor; `email_contacto` sigue siendo opcional.
+**Scope**: Task-level (RF-PROV-01, RF-PROV-02)
+**Artifacts updated**: spec.md, data-model.md, contracts/api.md, quickstart.md; implementación
+en `loopi-api-v2` y `loopi-web-v2`
+**Tasks added**: N/A (tasks.md no se regeneró; cambio aplicado directamente sobre la
+implementación ya construida)
+**Tasks removed**: N/A
+**Tasks marked complete**: N/A
+
 ---
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
@@ -65,6 +77,10 @@ disponible al crear o editar un item.
    **Cuando** navega a esa sección,
    **Entonces** el sistema deniega el acceso; solo el admin puede gestionar este catálogo.
 
+4. **Dado** que el admin está registrando un proveedor,
+   **Cuando** omite el nombre de contacto o el teléfono de contacto,
+   **Entonces** el sistema rechaza la operación indicando que el campo es obligatorio.
+
 ---
 
 ### Historia de Usuario 2 — Editar los datos de un proveedor (Prioridad: P2)
@@ -92,6 +108,11 @@ y comprobando que el cambio se refleja en el listado y en los items que lo tiene
    **Cuando** guarda los cambios,
    **Entonces** el sistema rechaza la operación indicando que el NIT ya pertenece a otro
    proveedor.
+
+3. **Dado** que existe un proveedor activo,
+   **Cuando** el admin intenta dejar vacío el nombre de contacto o el teléfono de contacto
+   y guarda,
+   **Entonces** el sistema rechaza la operación indicando que el campo es obligatorio.
 
 ---
 
@@ -175,9 +196,8 @@ comprobando que el listado los muestra todos con su información de contacto y e
 
 - RF-PROV-01.1: Solo el administrador puede crear, editar e inactivar proveedores. Cualquier
   otro rol recibe acceso denegado.
-- RF-PROV-01.2: Un proveedor requiere como mínimo: razón social y NIT. Los campos de
-  contacto (nombre, teléfono, email) son opcionales al crear pero recomendados para la
-  gestión de pedidos.
+- RF-PROV-01.2: Un proveedor requiere: razón social, NIT, nombre de contacto y teléfono de
+  contacto. El email de contacto es opcional al crear.
 - RF-PROV-01.3: El NIT es único en todo el sistema. El sistema rechaza registros con NIT
   duplicado tanto al crear como al editar. No se impone ningún formato específico: se acepta
   cualquier cadena alfanumérica no vacía (incluyendo códigos internos para proveedores informales).
@@ -192,6 +212,9 @@ comprobando que el listado los muestra todos con su información de contacto y e
 - RF-PROV-02.3: Al editar el NIT, el sistema verifica que no exista otro proveedor con ese
   NIT antes de guardar el cambio.
 - RF-PROV-02.4: La edición no afecta el historial de pedidos asociados al proveedor.
+- RF-PROV-02.5: El sistema rechaza dejar vacíos la razón social, el NIT, el nombre de
+  contacto o el teléfono de contacto al editar; estos campos son obligatorios durante toda
+  la vida del proveedor.
 
 ### RF-PROV-03: Inactivación de proveedores
 
@@ -241,7 +264,7 @@ comprobando que el listado los muestra todos con su información de contacto y e
 
 | Entidad | Atributos |
 |---------|-----------|
-| `Proveedor` | razon_social, nit (único), nombre_contacto, telefono_contacto, email_contacto, activo |
+| `Proveedor` | razon_social, nit (único), nombre_contacto, telefono_contacto, email_contacto (opcional), activo |
 
 ---
 
@@ -259,19 +282,22 @@ comprobando que el listado los muestra todos con su información de contacto y e
 
 ### Métricas
 
-Formato: `[dominio].[entidad].[operacion].[tipo]` · Etiqueta `resultado` obligatoria en escrituras.
+Patrón real de instrumentación (igual que `tiendas`, `empleados`, `unidades_medida` y
+`categorias`): dos instrumentos por módulo, con `operacion` y `status_http` como etiquetas
+en vez de un nombre de métrica por operación.
 
 | Nombre de Métrica | Tipo | Etiquetas | Descripción |
 |-------------------|------|-----------|-------------|
-| `catalogo.proveedor.crear.total` | Counter | `resultado` | Total de proveedores creados (`success` / `nit_duplicado` / `validation_error`) |
-| `catalogo.proveedor.crear.duration` | Histogram (ms) | `resultado` | Latencia de creación de proveedor |
-| `catalogo.proveedor.listar.duration` | Histogram (ms) | `cache_hit` | Latencia del listado; `cache_hit=true/false` |
-| `catalogo.proveedor.inactivar.total` | Counter | `resultado` | Total de inactivaciones (`success` / `not_found` / `ya_inactivo`) |
-| `catalogo.proveedor.activar.total` | Counter | `resultado` | Total de reactivaciones (`success` / `not_found` / `ya_activo`) |
+| `proveedores.request.duration` | Histogram (ms) | `operacion`, `status_http` | Latencia de cada request del módulo |
+| `proveedores.request.total` | Counter | `operacion`, `status_http` | Conteo de requests por operación y código HTTP |
+
+`operacion` toma los valores: `crear_proveedor`, `listar_proveedores`, `obtener_proveedor`,
+`editar_proveedor`, `inactivar_proveedor`, `activar_proveedor`.
 
 **Notas**:
 
-- `user_id` NUNCA como etiqueta de métrica (alta cardinalidad → coste en Datadog).
+- `user_id` NUNCA como etiqueta de métrica (alta cardinalidad → coste en Datadog); va en el
+  atributo del span.
 - `tienda_id` no aplica: el catálogo de proveedores es compartido por marca, sin aislamiento por tienda.
 - Los logs de operaciones de escritura van a GCP Cloud Logging exclusivamente (stdout → GCP).
 
