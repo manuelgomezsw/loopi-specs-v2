@@ -4,7 +4,7 @@
 
 **Creado**: 2026-06-21
 
-**Estado**: Borrador
+**Estado**: Cerrada
 
 **Input**: Mejora del menú lateral admin — íconos SVG modernos con Heroicons inline (componente app-icon), colapso manual en desktop con persistencia en localStorage, y refactor de layout sidebar full-height (sidebar como columna exterior del shell).
 

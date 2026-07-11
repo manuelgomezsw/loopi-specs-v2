@@ -22,7 +22,7 @@ independiente de cada historia.
 
 **Propósito**: Crear la estructura de carpetas del módulo en ambos repos antes de escribir código.
 
-- [ ] T001 Crear directorios `loopi-api-v2/internal/categorias/` y `loopi-web-v2/src/app/categorias/` según el plan de implementación
+- [X] T001 Crear directorios `loopi-api-v2/internal/categorias/` y `loopi-web-v2/src/app/categorias/` según el plan de implementación
 
 ---
 
@@ -33,13 +33,13 @@ antes de iniciar cualquier historia de usuario.
 
 **⚠️ CRÍTICO**: Ninguna historia puede comenzar hasta completar esta fase.
 
-- [ ] T002 Escribir migración `NNNN_crear_tabla_categorias.up.sql` y `.down.sql` con tabla, constraint `uq_categorias_nombre`, FK a `usuarios` e índice `ix_categorias_activo` en `loopi-api-v2/db/migrations/`
-- [ ] T003 [P] Escribir migración `NNNN+1_crear_tabla_subcategorias.up.sql` y `.down.sql` con tabla, constraint `uq_subcategorias_nombre_categoria`, FK a `categorias` y `usuarios`, e índice `ix_subcategorias_categoria_activo` en `loopi-api-v2/db/migrations/`
-- [ ] T004 Aplicar migraciones con `golang-migrate` y verificar tablas, índices y FKs en BD de desarrollo (`SHOW INDEX FROM categorias; SHOW INDEX FROM subcategorias`)
-- [ ] T005 [P] Definir structs Go `Categoria`, `Subcategoria` y tipos de respuesta `CategoriaResponse`, `SubcategoriaResponse`, `CatalogoResponse` en `loopi-api-v2/internal/categorias/models.go`
-- [ ] T006 Implementar `Repository` con pool de BD, interfaz y constructor `NewRepository(db)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T007 Implementar `NewCachedRepository(inner Repository, ttl time.Duration) Repository` en `loopi-api-v2/internal/categorias/cached_repository.go`: dos instancias `EntityCache[T]` independientes (categorías y subcategorías), TTL 24 h, claves `"list"` / `"id:<id>"` / `"activo:<valor>"`; invalidación: Create → `cache.Clear()`, Update/Inactivar/Reactivar → `cache.Delete("id:<id>") + cache.Clear()`; usar el paquete compartido `internal/cache/` ya existente en `develop` (`EntityCache[T]` y `ReadThrough[T]`)
-- [ ] T008 Registrar prefijos `/api/v1/categorias` y `/api/v1/subcategorias` en el router principal con middleware de autenticación JWT en `loopi-api-v2`
+- [X] T002 Escribir migración `NNNN_crear_tabla_categorias.up.sql` y `.down.sql` con tabla, constraint `uq_categorias_nombre`, FK a `usuarios` e índice `ix_categorias_activo` en `loopi-api-v2/db/migrations/`
+- [X] T003 [P] Escribir migración `NNNN+1_crear_tabla_subcategorias.up.sql` y `.down.sql` con tabla, constraint `uq_subcategorias_nombre_categoria`, FK a `categorias` y `usuarios`, e índice `ix_subcategorias_categoria_activo` en `loopi-api-v2/db/migrations/`
+- [X] T004 Aplicar migraciones con `golang-migrate` y verificar tablas, índices y FKs en BD de desarrollo (`SHOW INDEX FROM categorias; SHOW INDEX FROM subcategorias`)
+- [X] T005 [P] Definir structs Go `Categoria`, `Subcategoria` y tipos de respuesta `CategoriaResponse`, `SubcategoriaResponse`, `CatalogoResponse` en `loopi-api-v2/internal/categorias/models.go`
+- [X] T006 Implementar `Repository` con pool de BD, interfaz y constructor `NewRepository(db)` en `loopi-api-v2/internal/categorias/repository.go`
+- [X] T007 Implementar `NewCachedRepository(inner Repository, ttl time.Duration) Repository` en `loopi-api-v2/internal/categorias/cached_repository.go`: dos instancias `EntityCache[T]` independientes (categorías y subcategorías), TTL 24 h, claves `"list"` / `"id:<id>"` / `"activo:<valor>"`; invalidación: Create → `cache.Clear()`, Update/Inactivar/Reactivar → `cache.Delete("id:<id>") + cache.Clear()`; usar el paquete compartido `internal/cache/` ya existente en `develop` (`EntityCache[T]` y `ReadThrough[T]`)
+- [X] T008 Registrar prefijos `/api/v1/categorias` y `/api/v1/subcategorias` en el router principal con middleware de autenticación JWT en `loopi-api-v2`
 
 **Checkpoint**: Estructura lista — las historias de usuario pueden comenzar.
 
@@ -56,16 +56,16 @@ activa. Intento desde rol barista retorna 403.
 
 ### Backend — US1
 
-- [ ] T009 [P] [US1] Implementar `Repository.InsertarCategoria(ctx, nombre, creadoPor)` y `Repository.ListarCategorias(ctx, soloActivas bool)` con consulta básica en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T010 [US1] Implementar `Service.CrearCategoria(ctx, nombre)` extrayendo `user_id` del contexto JWT, delegando a repo e invalidando caché al completar en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T011 [US1] Implementar handler `POST /api/v1/categorias` con guard de rol `admin`, deserialización del body, manejo de 400/401/403/409 y respuesta 201 en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T009 [P] [US1] Implementar `Repository.InsertarCategoria(ctx, nombre, creadoPor)` y `Repository.ListarCategorias(ctx, soloActivas bool)` con consulta básica en `loopi-api-v2/internal/categorias/repository.go`
+- [X] T010 [US1] Implementar `Service.CrearCategoria(ctx, nombre)` extrayendo `user_id` del contexto JWT, delegando a repo e invalidando caché al completar en `loopi-api-v2/internal/categorias/service.go`
+- [X] T011 [US1] Implementar handler `POST /api/v1/categorias` con guard de rol `admin`, deserialización del body, manejo de 400/401/403/409 y respuesta 201 en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US1
 
-- [ ] T012 [P] [US1] Crear `CategoriasService` con señales de estado y métodos `crearCategoria(nombre: string)` y `obtenerCategorias(soloActivas?: boolean)` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T013 [US1] Implementar componente standalone `CategoriasComponent` con formulario inline de creación (validación on-blur, botón deshabilitado en loading, campo `*` obligatorio) en `loopi-web-v2/src/app/categorias/categorias.component.ts`
-- [ ] T014 [US1] Implementar template HTML con listado básico de categorías, formulario de creación y empty state "Aún no hay categorías registradas. Crea la primera →" en `loopi-web-v2/src/app/categorias/categorias.component.html`
-- [ ] T015 [US1] Configurar ruta lazy-loaded `/categorias` con guard de rol `admin` y `<h1>` único en `loopi-web-v2/src/app/categorias/categorias.routes.ts`
+- [X] T012 [P] [US1] Crear `CategoriasService` con señales de estado y métodos `crearCategoria(nombre: string)` y `obtenerCategorias(soloActivas?: boolean)` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
+- [X] T013 [US1] Implementar componente standalone `CategoriasComponent` con formulario inline de creación (validación on-blur, botón deshabilitado en loading, campo `*` obligatorio) en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [X] T014 [US1] Implementar template HTML con listado básico de categorías, formulario de creación y empty state "Aún no hay categorías registradas. Crea la primera →" en `loopi-web-v2/src/app/categorias/categorias.component.html`
+- [X] T015 [US1] Configurar ruta lazy-loaded `/categorias` con guard de rol `admin` y `<h1>` único en `loopi-web-v2/src/app/categorias/categorias.routes.ts`
 
 **Checkpoint**: US1 funcional — crear categoría y ver listado básico operativo en backend y frontend.
 
@@ -84,15 +84,15 @@ nombre en categoría distinta retorna 201. POST con `categoria_id` de categoría
 
 ### Backend — US2
 
-- [ ] T016 [P] [US2] Implementar `Repository.InsertarSubcategoria(ctx, nombre, categoriaID, creadoPor)` y `Repository.ListarSubcategoriasPorCategoria(ctx, categoriaID, soloActivas bool)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T017 [US2] Implementar `Service.CrearSubcategoria(ctx, nombre, categoriaID)` con validaciones: categoría padre existe y está activa + nombre único en la categoría (capturar error 1062 de MySQL) en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T018 [US2] Implementar handler `POST /api/v1/subcategorias` con guard de rol `admin` y manejo de 400/401/403/404/409/422 en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T016 [P] [US2] Implementar `Repository.InsertarSubcategoria(ctx, nombre, categoriaID, creadoPor)` y `Repository.ListarSubcategoriasPorCategoria(ctx, categoriaID, soloActivas bool)` en `loopi-api-v2/internal/categorias/repository.go`
+- [X] T017 [US2] Implementar `Service.CrearSubcategoria(ctx, nombre, categoriaID)` con validaciones: categoría padre existe y está activa + nombre único en la categoría (capturar error 1062 de MySQL) en `loopi-api-v2/internal/categorias/service.go`
+- [X] T018 [US2] Implementar handler `POST /api/v1/subcategorias` con guard de rol `admin` y manejo de 400/401/403/404/409/422 en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US2
 
-- [ ] T019 [P] [US2] Agregar métodos `crearSubcategoria(nombre: string, categoriaId: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T020 [US2] Agregar lógica de formulario inline para crear subcategoría dentro de cada fila de categoría (toggle visible al hacer clic en "＋ Subcategoría"); el selector de categorías llama a `obtenerCategorias(soloActivas: true)` para mostrar solo categorías activas (RF-CAT-01.5) en `loopi-web-v2/src/app/categorias/categorias.component.ts`
-- [ ] T021 [US2] Actualizar template HTML con subcategorías anidadas bajo su categoría y formulario de nueva subcategoría expandible en `loopi-web-v2/src/app/categorias/categorias.component.html`
+- [X] T019 [P] [US2] Agregar métodos `crearSubcategoria(nombre: string, categoriaId: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
+- [X] T020 [US2] Agregar lógica de formulario inline para crear subcategoría dentro de cada fila de categoría (toggle visible al hacer clic en "＋ Subcategoría"); el selector de categorías llama a `obtenerCategorias(soloActivas: true)` para mostrar solo categorías activas (RF-CAT-01.5) en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [X] T021 [US2] Actualizar template HTML con subcategorías anidadas bajo su categoría y formulario de nueva subcategoría expandible en `loopi-web-v2/src/app/categorias/categorias.component.html`
 
 **Checkpoint**: US2 funcional — crear subcategorías con validación de unicidad por categoría.
 
@@ -109,14 +109,14 @@ subcategoría se muestra su `total_items`.
 
 ### Backend — US5
 
-- [ ] T022 [US5] Implementar `Service.ObtenerCatalogo(ctx, estado string)` que orquesta la respuesta anidada delegando el JOIN a `Repository.ListarConItems` (la lógica SQL pertenece al repositorio, no al service); retorna `total_items=0` si la tabla `items` no existe aún en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T023 [US5] Implementar handlers `GET /api/v1/categorias` (catálogo con subcategorías anidadas, parámetro `?estado=activo|inactivo|todos`; valor inválido → 400 `estado_invalido`) y `GET /api/v1/categorias/{id}` con detalle completo en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T022 [US5] Implementar `Service.ObtenerCatalogo(ctx, estado string)` que orquesta la respuesta anidada delegando el JOIN a `Repository.ListarConItems` (la lógica SQL pertenece al repositorio, no al service); retorna `total_items=0` si la tabla `items` no existe aún en `loopi-api-v2/internal/categorias/service.go`
+- [X] T023 [US5] Implementar handlers `GET /api/v1/categorias` (catálogo con subcategorías anidadas, parámetro `?estado=activo|inactivo|todos`; valor inválido → 400 `estado_invalido`) y `GET /api/v1/categorias/{id}` con detalle completo en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US5
 
-- [ ] T024 [P] [US5] Agregar métodos `obtenerCatalogo(activo?: boolean)` y `obtenerCategoria(id: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T025 [US5] Implementar vista árbol completa en el template: categorías expandibles con subcategorías, badges de estado (activa/inactiva) y contador `total_items` por subcategoría; el detalle es inline en la misma vista (sin navegación a ruta distinta — RF-CAT-04.2) en `loopi-web-v2/src/app/categorias/categorias.component.html`
-- [ ] T026 [US5] Implementar filtro de estado con `FilterBarComponent` + `FilterStateService` (constitución §Filtros en Listados; prohibido filtro ad-hoc) y señales reactivas que actualizan el árbol sin recarga completa en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [X] T024 [P] [US5] Agregar métodos `obtenerCatalogo(activo?: boolean)` y `obtenerCategoria(id: number)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
+- [X] T025 [US5] Implementar vista árbol completa en el template: categorías expandibles con subcategorías, badges de estado (activa/inactiva) y contador `total_items` por subcategoría; el detalle es inline en la misma vista (sin navegación a ruta distinta — RF-CAT-04.2) en `loopi-web-v2/src/app/categorias/categorias.component.html`
+- [X] T026 [US5] Implementar filtro de estado con `FilterBarComponent` + `FilterStateService` (constitución §Filtros en Listados; prohibido filtro ad-hoc) y señales reactivas que actualizan el árbol sin recarga completa en `loopi-web-v2/src/app/categorias/categorias.component.ts`
 
 **Checkpoint**: US5 funcional — vista completa del catálogo con filtrado por estado.
 
@@ -133,15 +133,15 @@ subcategoría existente en la misma categoría retorna 409.
 
 ### Backend — US3
 
-- [ ] T027 [P] [US3] Implementar `Repository.ActualizarCategoria(ctx, id, nombre, actualizadoPor)` y `Repository.ActualizarSubcategoria(ctx, id, nombre, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T028 [US3] Implementar `Service.EditarCategoria(ctx, id, nombre)` y `Service.EditarSubcategoria(ctx, id, nombre)` con validación de nombre único, rechazo de intento de cambiar `categoria_id` (RF-CAT-02.3 — inmutable) e invalidación de caché en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T029 [US3] Implementar handlers `PUT /api/v1/categorias/{id}` y `PUT /api/v1/subcategorias/{id}` con guard de rol `admin` y manejo de 400/401/403/404/409 en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T027 [P] [US3] Implementar `Repository.ActualizarCategoria(ctx, id, nombre, actualizadoPor)` y `Repository.ActualizarSubcategoria(ctx, id, nombre, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
+- [X] T028 [US3] Implementar `Service.EditarCategoria(ctx, id, nombre)` y `Service.EditarSubcategoria(ctx, id, nombre)` con validación de nombre único, rechazo de intento de cambiar `categoria_id` (RF-CAT-02.3 — inmutable) e invalidación de caché en `loopi-api-v2/internal/categorias/service.go`
+- [X] T029 [US3] Implementar handlers `PUT /api/v1/categorias/{id}` y `PUT /api/v1/subcategorias/{id}` con guard de rol `admin` y manejo de 400/401/403/404/409 en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US3
 
-- [ ] T030 [P] [US3] Agregar métodos `editarCategoria(id: number, nombre: string)` y `editarSubcategoria(id: number, nombre: string)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T031 [US3] Implementar edición inline: clic en el nombre activa `<input>` editable; Enter o blur guarda, Esc cancela; spinner inline en el botón durante el guardado en `loopi-web-v2/src/app/categorias/categorias.component.ts`
-- [ ] T032 [US3] Actualizar template HTML con campos de edición inline y mensajes de error de validación (`text-red-600` bajo el campo) en `loopi-web-v2/src/app/categorias/categorias.component.html`
+- [X] T030 [P] [US3] Agregar métodos `editarCategoria(id: number, nombre: string)` y `editarSubcategoria(id: number, nombre: string)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
+- [X] T031 [US3] Implementar edición inline: clic en el nombre activa `<input>` editable; Enter o blur guarda, Esc cancela; spinner inline en el botón durante el guardado en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [X] T032 [US3] Actualizar template HTML con campos de edición inline y mensajes de error de validación (`text-red-600` bajo el campo) en `loopi-web-v2/src/app/categorias/categorias.component.html`
 
 **Checkpoint**: US3 funcional — edición de nombres con validación de duplicados.
 
@@ -161,19 +161,19 @@ categoría padre está inactiva.
 
 ### Backend — US4
 
-- [ ] T033 [P] [US4] Implementar `Repository.ContarSubcategoriasActivas(ctx, categoriaID)`, `Repository.InactivarCategoria(ctx, id, actualizadoPor)` e `Repository.InactivarSubcategoriasDeCategoria(ctx, categoriaID, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T034 [P] [US4] Implementar `Repository.ReactivarCategoria(ctx, id, actualizadoPor)`, `Repository.InactivarSubcategoria(ctx, id, actualizadoPor)` y `Repository.ReactivarSubcategoria(ctx, id, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
-- [ ] T035 [US4] Implementar `Service.InactivarCategoria(ctx, id)` con transacción que inactiva la categoría y todas sus subcategorías activas en una sola operación atómica en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T036 [US4] Implementar `Service.ObtenerImpactoCategoria(ctx, id)`, `Service.InactivarSubcategoria(ctx, id)` y `Service.ReactivarCategoria(ctx, id)` en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T037 [US4] Implementar `Service.ReactivarSubcategoria(ctx, id)` con validación: retorna 422 `categoria_padre_inactiva` si `categorias.activo = 0` para el `categoria_id` de la subcategoría en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T038 [US4] Implementar handlers `GET /api/v1/categorias/{id}/impacto`, `PATCH /api/v1/categorias/{id}/inactivar` y `PATCH /api/v1/categorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
-- [ ] T039 [US4] Implementar handlers `PATCH /api/v1/subcategorias/{id}/inactivar` y `PATCH /api/v1/subcategorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T033 [P] [US4] Implementar `Repository.ContarSubcategoriasActivas(ctx, categoriaID)`, `Repository.InactivarCategoria(ctx, id, actualizadoPor)` e `Repository.InactivarSubcategoriasDeCategoria(ctx, categoriaID, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
+- [X] T034 [P] [US4] Implementar `Repository.ReactivarCategoria(ctx, id, actualizadoPor)`, `Repository.InactivarSubcategoria(ctx, id, actualizadoPor)` y `Repository.ReactivarSubcategoria(ctx, id, actualizadoPor)` en `loopi-api-v2/internal/categorias/repository.go`
+- [X] T035 [US4] Implementar `Service.InactivarCategoria(ctx, id)` con transacción que inactiva la categoría y todas sus subcategorías activas en una sola operación atómica en `loopi-api-v2/internal/categorias/service.go`
+- [X] T036 [US4] Implementar `Service.ObtenerImpactoCategoria(ctx, id)`, `Service.InactivarSubcategoria(ctx, id)` y `Service.ReactivarCategoria(ctx, id)` en `loopi-api-v2/internal/categorias/service.go`
+- [X] T037 [US4] Implementar `Service.ReactivarSubcategoria(ctx, id)` con validación: retorna 422 `categoria_padre_inactiva` si `categorias.activo = 0` para el `categoria_id` de la subcategoría en `loopi-api-v2/internal/categorias/service.go`
+- [X] T038 [US4] Implementar handlers `GET /api/v1/categorias/{id}/impacto`, `PATCH /api/v1/categorias/{id}/inactivar` y `PATCH /api/v1/categorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T039 [US4] Implementar handlers `PATCH /api/v1/subcategorias/{id}/inactivar` y `PATCH /api/v1/subcategorias/{id}/reactivar` en `loopi-api-v2/internal/categorias/handler.go`
 
 ### Frontend — US4
 
-- [ ] T040 [P] [US4] Agregar métodos `impactoCategoria(id)`, `inactivarCategoria(id)`, `reactivarCategoria(id)`, `inactivarSubcategoria(id)` y `reactivarSubcategoria(id)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
-- [ ] T041 [US4] Implementar flujo de confirmación en el componente: llamar a `impactoCategoria(id)`, si `subcategorias_activas > 0` mostrar modal "Esta categoría tiene N subcategoría(s) activa(s). Al inactivarla, todas quedarán inactivas. ¿Confirmar?", luego llamar a `inactivarCategoria(id)` en `loopi-web-v2/src/app/categorias/categorias.component.ts`
-- [ ] T042 [US4] Implementar botones de acción inactivar/reactivar con estados de carga (spinner inline), toasts de éxito (3 s) y error (5 s), y atributos ARIA (`aria-label`, `aria-disabled`) en `loopi-web-v2/src/app/categorias/categorias.component.html`
+- [X] T040 [P] [US4] Agregar métodos `impactoCategoria(id)`, `inactivarCategoria(id)`, `reactivarCategoria(id)`, `inactivarSubcategoria(id)` y `reactivarSubcategoria(id)` a `CategoriasService` en `loopi-web-v2/src/app/categorias/categorias.service.ts`
+- [X] T041 [US4] Implementar flujo de confirmación en el componente: llamar a `impactoCategoria(id)`, si `subcategorias_activas > 0` mostrar modal "Esta categoría tiene N subcategoría(s) activa(s). Al inactivarla, todas quedarán inactivas. ¿Confirmar?", luego llamar a `inactivarCategoria(id)` en `loopi-web-v2/src/app/categorias/categorias.component.ts`
+- [X] T042 [US4] Implementar botones de acción inactivar/reactivar con estados de carga (spinner inline), toasts de éxito (3 s) y error (5 s), y atributos ARIA (`aria-label`, `aria-disabled`) en `loopi-web-v2/src/app/categorias/categorias.component.html`
 
 **Checkpoint**: US4 funcional — inactivación con cascade y reactivación selectiva operativas.
 
@@ -187,17 +187,17 @@ categoría padre está inactiva.
 a stage o producción** — Principio VI de la constitución: "Cada feature DEBE ser monitoreable
 desde el primer deploy en producción."
 
-- [ ] T043 [P] Instrumentar con trazas OTel: spans por endpoint con atributos `categoria.id`, `subcategoria.id`, `operacion`, `user.rol` en `loopi-api-v2/internal/categorias/handler.go`
-- [ ] T044 [P] Agregar logs estructurados JSON con campos `user_id`, `rol`, `operacion`, `categoria_id`, `subcategoria_id` y `resultado` en cada operación de escritura en `loopi-api-v2/internal/categorias/service.go`
-- [ ] T045 [P] Implementar `service_test.go` con mock del repositorio cubriendo los 12 casos de `quickstart.md §5` en `loopi-api-v2/internal/categorias/service_test.go`
-- [ ] T046 [P] Implementar `categorias.component.spec.ts` (mock de `CategoriasService`) con casos: listado vacío, crear categoría, error 409, flujo de confirmación de inactivación en `loopi-web-v2/src/app/categorias/categorias.component.spec.ts`
-- [ ] T047 [P] Implementar `categorias.service.spec.ts` (mock de `HttpClient`) con casos: crear categoría exitosa, 409 nombre duplicado, crear subcategoría bajo categoría inactiva, inactivar y reactivar en `loopi-web-v2/src/app/categorias/categorias.service.spec.ts`
-- [ ] T048 [P] Implementar `handler_test.go` con `httptest.NewRecorder()` y mock de `Service` cubriendo todos los códigos HTTP (201/400/401/403/404/409/422) para endpoints de categorías y subcategorías en `loopi-api-v2/internal/categorias/handler_test.go`
-- [ ] T049 [P] Implementar `repository_test.go` con `go-sqlmock` cubriendo INSERT/UPDATE/SELECT y manejo de errores de BD (error 1062 de duplicado, `sql.ErrNoRows`) para todos los métodos del repositorio en `loopi-api-v2/internal/categorias/repository_test.go`
-- [ ] T050 [P] Implementar `cached_repository_test.go` inyectando mock de `Repository` (inner): cubrir hit de caché (inner NO invocado), miss de caché (inner invocado + resultado almacenado), escritura invalida caché correctamente, error del inner no almacena en caché — cobertura mínima ≥ 90% en `loopi-api-v2/internal/categorias/cached_repository_test.go`
-- [ ] T051 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
-- [ ] T052 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`, `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin errores
-- [ ] T053 Ejecutar smoke tests completos del `specs/005-categorias-catalogo/quickstart.md §4` y verificar cada resultado esperado
+- [X] T043 [P] Instrumentar con trazas OTel: spans por endpoint con atributos `categoria.id`, `subcategoria.id`, `operacion`, `user.rol` en `loopi-api-v2/internal/categorias/handler.go`
+- [X] T044 [P] Agregar logs estructurados JSON con campos `user_id`, `rol`, `operacion`, `categoria_id`, `subcategoria_id` y `resultado` en cada operación de escritura en `loopi-api-v2/internal/categorias/service.go`
+- [X] T045 [P] Implementar `service_test.go` con mock del repositorio cubriendo los 12 casos de `quickstart.md §5` en `loopi-api-v2/internal/categorias/service_test.go`
+- [X] T046 [P] Implementar `categorias.component.spec.ts` (mock de `CategoriasService`) con casos: listado vacío, crear categoría, error 409, flujo de confirmación de inactivación en `loopi-web-v2/src/app/categorias/categorias.component.spec.ts`
+- [X] T047 [P] Implementar `categorias.service.spec.ts` (mock de `HttpClient`) con casos: crear categoría exitosa, 409 nombre duplicado, crear subcategoría bajo categoría inactiva, inactivar y reactivar en `loopi-web-v2/src/app/categorias/categorias.service.spec.ts`
+- [X] T048 [P] Implementar `handler_test.go` con `httptest.NewRecorder()` y mock de `Service` cubriendo todos los códigos HTTP (201/400/401/403/404/409/422) para endpoints de categorías y subcategorías en `loopi-api-v2/internal/categorias/handler_test.go`
+- [X] T049 [P] Implementar `repository_test.go` con `go-sqlmock` cubriendo INSERT/UPDATE/SELECT y manejo de errores de BD (error 1062 de duplicado, `sql.ErrNoRows`) para todos los métodos del repositorio en `loopi-api-v2/internal/categorias/repository_test.go`
+- [X] T050 [P] Implementar `cached_repository_test.go` inyectando mock de `Repository` (inner): cubrir hit de caché (inner NO invocado), miss de caché (inner invocado + resultado almacenado), escritura invalida caché correctamente, error del inner no almacena en caché — cobertura mínima ≥ 90% en `loopi-api-v2/internal/categorias/cached_repository_test.go`
+- [X] T051 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
+- [X] T052 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`, `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin errores
+- [X] T053 Ejecutar smoke tests completos del `specs/005-categorias-catalogo/quickstart.md §4` y verificar cada resultado esperado
 
 ---
 

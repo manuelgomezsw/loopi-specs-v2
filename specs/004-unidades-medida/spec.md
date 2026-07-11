@@ -2,7 +2,7 @@
 
 **Branch de Feature**: `004-unidades-medida`
 **Creado**: 2026-05-19
-**Estado**: Borrador
+**Estado**: Cerrada
 **Referencia funcional**: [§3.2 Tabla de Equivalencias](../loopi-v2-funcional/spec.md)
 
 ---

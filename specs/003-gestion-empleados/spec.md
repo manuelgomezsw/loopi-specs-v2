@@ -4,7 +4,7 @@
 **Actualización**: `018-selects-tienda-tipo-doc`
 **Creado**: 2026-05-18
 **Actualizado**: 2026-06-21
-**Estado**: En actualización
+**Estado**: Cerrada
 **Referencia funcional**: [§4.1 Gestión de Empleados](../loopi-v2-funcional/spec.md)
 
 ---
