@@ -4,6 +4,11 @@ shell commands, and other important information, read the current plan
 at specs/003-gestion-empleados/plan.md
 <!-- SPECKIT END -->
 
+# Loopi v2
+
+La fuente de verdad del proyecto es la constitución en `.specify/memory/constitution.md`.
+Este archivo resume las reglas operativas que Claude Code necesita para escribir código correcto en este repo.
+
 # Idioma
 
 Todos los artefactos generados por speckit (`spec.md`, `plan.md`, `tasks.md`, `constitution.md`, listas de verificación, preguntas, resúmenes y cualquier otro output) deben estar **íntegramente en español**. Esto incluye encabezados, contenido, preguntas de aclaración y mensajes al usuario.
