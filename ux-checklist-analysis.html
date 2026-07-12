@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Detallado: 56 Puntos UX Checklist</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a1a;
+                color: #e0e0e0;
+            }
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 40px;
+            overflow-x: auto;
+        }
+        @media (prefers-color-scheme: dark) {
+            .container {
+                background: #2a2a2a;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+        }
+        h1 {
+            margin-top: 0;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 15px;
+        }
+        h2 {
+            background: #f0f7ff;
+            padding: 15px;
+            border-left: 4px solid #0066cc;
+            margin-top: 30px;
+            border-radius: 4px;
+        }
+        @media (prefers-color-scheme: dark) {
+            h2 {
+                background: #1e3a5f;
+                border-left-color: #4da6ff;
+            }
+        }
+        .item {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        @media (prefers-color-scheme: dark) {
+            .item {
+                background: #333;
+                border-color: #444;
+            }
+        }
+        .item-number {
+            font-weight: bold;
+            color: #0066cc;
+        }
+        @media (prefers-color-scheme: dark) {
+            .item-number {
+                color: #4da6ff;
+            }
+        }
+        .item-question {
+            font-style: italic;
+            margin: 8px 0;
+            color: #555;
+        }
+        @media (prefers-color-scheme: dark) {
+            .item-question {
+                color: #aaa;
+            }
+        }
+        .item-category {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #01579b;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin: 5px 3px 5px 0;
+        }
+        @media (prefers-color-scheme: dark) {
+            .item-category {
+                background: #1a3a52;
+                color: #4da6ff;
+            }
+        }
+        .recommendation {
+            background: #fff8e1;
+            padding: 12px;
+            border-left: 3px solid #fbc02d;
+            margin-top: 8px;
+            border-radius: 3px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .recommendation {
+                background: #3a3a1a;
+                border-left-color: #fdd835;
+            }
+        }
+        .rec-title {
+            font-weight: bold;
+            color: #f57f17;
+        }
+        @media (prefers-color-scheme: dark) {
+            .rec-title {
+                color: #fdd835;
+            }
+        }
+        .summary {
+            background: #f3e5f5;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .summary {
+                background: #2a1a3a;
+            }
+        }
+        .section-count {
+            display: inline-block;
+            background: #0066cc;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        @media (prefers-color-scheme: dark) {
+            .section-count {
+                background: #4da6ff;
+                color: #000;
+            }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        @media (prefers-color-scheme: dark) {
+            th, td {
+                border-bottom-color: #444;
+            }
+        }
+        th {
+            background: #0066cc;
+            color: white;
+        }
+        @media (prefers-color-scheme: dark) {
+            th {
+                background: #1e3a5f;
+                border-bottom-color: #4da6ff;
+            }
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        @media (prefers-color-scheme: dark) {
+            tr:nth-child(even) {
+                background: #333;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Análisis Detallado: Checklist UX 009-inventario-conteo</h1>
+
+        <div class="summary">
+            <p><strong>Total de puntos:</strong> 56 items incompletos</p>
+            <p><strong>Estado:</strong> ✗ FALTAN ESPECIFICACIONES de calidad UX en múltiples dimensiones</p>
+            <p><strong>Prioridad:</strong> Alta — estos puntos deben resolverse antes de implementar la interfaz</p>
+        </div>
+
+        <h2><span class="section-count">6 items</span> — Requisitos Mobile-First (&lt; 640px)</h2>
+
+        <div class="item">
+            <span class="item-number">CHK001</span>
+            <div class="item-question">¿Se especifican explícitamente los requisitos de mobile-first para barista y líder de tienda?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Crear una sección en spec.md que describe explícitamente que barista y líder de tienda acceden desde dispositivos móviles (teléfonos, tablets). Definir qué capacidades/funcionalidades están disponibles en mobile vs desktop.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK002</span>
+            <div class="item-question">¿Se define qué significa "usable en mobile" con criterios medibles (p. ej., tamaño de tap targets ≥48px)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Spec §HU1-HU3</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Añadir definiciones medibles de usabilidad en mobile: tamaño mínimo de botones/targets (WCAG 2.1 recomienda 44-48px), espaciado mínimo entre elementos interactivos (8-16px), tipografía mínima legible (14-16px).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK003</span>
+            <div class="item-question">¿Se especifican los requisitos de una mano vs. dos manos en la interacción móvil?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar si el flujo de conteo está optimizado para una sola mano (botones/campos en zona accesible, sin alcance a esquina superior derecha). Considerar si barista sostiene bandeja con una mano mientras ingresa datos con la otra.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK004</span>
+            <div class="item-question">¿Se definen los requisitos de orientación de pantalla (solo portrait, ambas, rotación permitida)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar si el app de conteo funciona en portrait y landscape, o solo portrait. Definir comportamiento esperado durante rotación (¿guardar estado, animar transición, recargar?).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK005</span>
+            <div class="item-question">¿Se especifican los requisitos de scroll vs. viewport para el registro de items (¿cuántos items visibles sin scroll)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir cómo se presenta el listado de items: ¿1-3 items visibles + scroll, o paginación, o búsqueda/filtro? Para conteos con 50+ items, especificar estrategia de navegación.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK006</span>
+            <div class="item-question">¿Se define el comportamiento del teclado virtual en móvil (¿se oculta al ingresar valor? ¿retorna a la siguiente línea)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que al ingresar cantidad en un campo: (1) teclado numérico móvil aparece, (2) tras confirmar, se oculta y foco avanza al siguiente item, (3) definir si hay tecla "Siguiente" o "Listo" en teclado.
+            </div>
+        </div>
+
+        <h2><span class="section-count">4 items</span> — Requisitos Desktop (≥ 1024px)</h2>
+
+        <div class="item">
+            <span class="item-number">CHK007</span>
+            <div class="item-question">¿Se especifican explícitamente los requisitos para admin en desktop (≥1024px)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §HU4</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Crear requisitos específicos para vista de admin en desktop: historial de conteos en tabla (vs. móvil en lista), acceso a búsqueda/filtros avanzados, exportación de datos, acciones administrativas (editar, cancelar, descargar).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK008</span>
+            <div class="item-question">¿Se define cómo cambia el layout entre móvil y desktop (¿reorganización de elementos, tablas vs. cards)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar cambios de layout en cada breakpoint (< 640px, 640-1024px, > 1024px). Especificar si components son: cards en móvil → tabla en desktop, cards apiladas → grid 2/3 columnas, o modal → panel lateral.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK009</span>
+            <div class="item-question">¿Se especifican requisitos de mouse/teclado para desktop que no aplican a móvil?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir interacciones desktop: hover states, right-click context menus, teclado abreviado (Alt+S guardar, Alt+C cancelar), drag-and-drop (si aplica), doble-click.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK010</span>
+            <div class="item-question">¿Se define si el historial (HU4) es tabla en desktop y lista en móvil, con requisitos específicos por breakpoint?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que Historial es: TABLA en desktop (columnas: fecha, tienda, artículos, estado, acciones) y LISTA DE CARDS en móvil (cardón con fecha/tienda/estado + expandible para detalles).
+            </div>
+        </div>
+
+        <h2><span class="section-count">6 items</span> — Fluidez Visual sin Inducir Errores</h2>
+
+        <div class="item">
+            <span class="item-number">CHK011</span>
+            <div class="item-question">¿Se define "fluidez visual" con comportamientos específicos (transiciones, animaciones, timing)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Spec §Contexto Técnico "300ms"</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir "fluidez visual" como: cambios visuales <100ms (transiciones de UI), animaciones suaves <300ms (entrada de cards, recalc de diferencia), feedback inmediato al pulsar botón (<50ms). Evitar jank/lag.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK012</span>
+            <div class="item-question">¿Se especifican los requisitos de transiciones al ingresar valor real (¿inmediata, animada a lo largo de Xms)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Spec §RF-INV-02.3</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir transición tras ingresar cantidad: (1) valor se registra inmediatamente (feedback visual <50ms), (2) diferencia se recalcula y anima entrada de badge (100-200ms), (3) campo se marca "completado" con icono ✓ o verde.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK013</span>
+            <div class="item-question">¿Se define cómo evitar "errores inducidos" por fluidez visual (p. ej., ¿desactivar botones durante transiciones para prevenir doble-click)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que: (1) botón "Confirmar conteo" se deshabilita durante envío (loading state), (2) campo de entrada no permite doble-ingreso de mismo valor, (3) no hay race conditions entre guardado y cálculo de diferencia.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK014</span>
+            <div class="item-question">¿Se especifican los requisitos de feedback visual al registrar un valor (cambio de color, icono, animación de confirmación)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir feedback al registrar cantidad: (1) fondo de campo cambia a color claro/confirmado, (2) icono ✓ o checkmark aparece, (3) diferencia se destaca con color (rojo si diferencia negativa, verde si positiva), (4) animación subtle (100-200ms).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK015</span>
+            <div class="item-question">¿Se define la duración máxima de transiciones/animaciones para mantener perceptibilidad de "inmediato"?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que todas las animaciones/transiciones deben estar <300ms para mantener perceptibilidad de "inmediato" (ref. Nielsen: 100ms-1s para feedback). Medir p95 latencia de cálculo + animación.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK016</span>
+            <div class="item-question">¿Se especifican requisitos de animaciones bajo condiciones de poca batería o modo ahorro de datos?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que si dispositivo está en modo ahorro de energía o reduce motion (prefers-reduced-motion), desactivar animaciones y mostrar cambios instantáneamente (feedback sin transiciones).
+            </div>
+        </div>
+
+        <h2><span class="section-count">6 items</span> — Usabilidad Minimalista</h2>
+
+        <div class="item">
+            <span class="item-number">CHK017</span>
+            <div class="item-question">¿Se define "minimalista" con criterios concretos (p. ej., máximo 3 botones de acción por vista)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Spec §HU1-HU3</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir "minimalista" como: máximo 3 acciones primarias por vista, ocultar información secundaria en acordeones/expandibles, eliminar campos opcionales innecesarios, usar iconografía clara (máx 1 ícono + label).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK018</span>
+            <div class="item-question">¿Se especifica qué información es OBLIGATORIA vs. OPCIONAL en cada vista del conteo?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Para cada HU (HU1: iniciar, HU2: registrar, HU3: confirmar, HU4: historial), listar campos obligatorios vs. opcionales. Ej: tienda (oblig), fecha (auto), items (oblig), comentarios (opt).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK019</span>
+            <div class="item-question">¿Se define cómo ocultar información secundaria (p. ej., ¿en acordeones, modal, tab separado)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar dónde va info secundaria: timestamps en acordeón, metadata en tooltip, notas en campo expandible, filtros en panel lateral (desktop) o modal (móvil).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK020</span>
+            <div class="item-question">¿Se especifican los requisitos de etiquetado de campos (¿placeholder, label, ícono)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §HU2</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que cada campo tiene: (1) label visible (no solo placeholder), (2) ícono descriptivo (ej: 📦 para cantidad), (3) hint/helper text si necesario (ej: "cantidad física en estante"), (4) validación clara.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK021</span>
+            <div class="item-question">¿Se define cómo evitar opciones conflictivas o confusas (p. ej., botones con acciones opuestas cerca uno del otro)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que botones conflictivos (Guardar/Cancelar, Confirmar/Retomar) están separados visualmente, con colores distintos (primaria/secundaria), y "Cancelar" está lejos del thumb zone.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK022</span>
+            <div class="item-question">¿Se especifican requisitos de "escaneo rápido" (visual hierarchy, contrastes, tipografía)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir jerarquía visual: título de item en 16px/bold, cantidad registrada en 20px/bold/color destacado, diferencia en 14px/italic/rojo-verde, status badge pequeño en esquina.
+            </div>
+        </div>
+
+        <h2><span class="section-count">5 items</span> — Flujo de Conteo (Requisitos de Interacción)</h2>
+
+        <div class="item">
+            <span class="item-number">CHK023</span>
+            <div class="item-question">¿Se especifican los pasos del flujo de conteo (iniciar → registrar → confirmar) y cómo cambian entre móvil y desktop?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §HU1-HU3</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar flujo lineal: (1) Seleccionar tienda (HU1), (2) Registrar quantities (HU2, puede repetir), (3) Revisar/confirmar (HU3). En móvil: pasos en vistas separadas. En desktop: panel lateral + tabla central.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK024</span>
+            <div class="item-question">¿Se define cómo el usuario sabe "dónde está" en el flujo (¿progress bar, step indicator, estado visual)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar indicador de progreso: breadcrumbs en desktop ("Iniciar > Registrar > Confirmar"), tab indicator en móvil (paso 1/3), o progress bar con porcentaje (33%, 66%, 100%).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK025</span>
+            <div class="item-question">¿Se especifican los requisitos de "cancelar" o "volver atrás" en cada paso?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que en cada paso hay opción "Atrás" o "Cancelar": (1) HU1 → sale del app, (2) HU2 → vuelve a HU1 (warning si items registrados), (3) HU3 → vuelve a HU2 (permite editar). Confirmación si hay cambios sin guardar.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK026</span>
+            <div class="item-question">¿Se define el comportamiento de interrupción (app cierra, conexión cae, timeout)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §RF-INV-02.4</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar: (1) estado se guarda automáticamente cada X segundos, (2) al reabrir, muestra "Retomar conteo en progreso" con opción de continuar, (3) si timeout >2h, sugiere descartar y comenzar nuevo.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK027</span>
+            <div class="item-question">¿Se especifican requisitos de guardado automático sin interferer con fluidez?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que guardado automático ocurre en background (no bloquea UI), cada 10-30 segundos o cuando cambia un campo. Mostrar indicador subtle (pequeño ícono "guardado" en esquina) sin interrumpir entrada de datos.
+            </div>
+        </div>
+
+        <h2><span class="section-count">6 items</span> — Posicionamiento en Nav-Bar</h2>
+
+        <div class="item">
+            <span class="item-number">CHK028</span>
+            <div class="item-question">¿Se especifica explícitamente dónde debe aparecer "Iniciar Conteo" / "Inventario" en la navegación?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar posición del enlace "Inventario" en nav: ¿2do item (tras Home), ¿en grupo "Operaciones", ¿solo para barista+líder. Definir orden: Home, POS, Inventario, Mermas, Admin (o similar).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK029</span>
+            <div class="item-question">¿Se define la jerarquía visual del enlace de inventario (¿icono solo, icono+label, ubicación en orden de prioridad)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir presentación: icono (📊) + label "Inventario", o solo icono si space limitado. En móvil: icono en bottom nav (5-6 items máx), en desktop: icono+label en sidebar.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK030</span>
+            <div class="item-question">¿Se especifican requisitos de accesibilidad del nav-bar (¿aria-labels, focus visible, keyboard navigation)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que nav tiene: (1) aria-label en cada enlace ("Iniciar Conteo", "Historial"), (2) focus visible (outline o border), (3) keyboard navigation con Tab/Enter, (4) tecla rápida (Alt+I para Inventario).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK031</span>
+            <div class="item-question">¿Se define cómo cambia la nav según el rol (barista vs. admin) y si el enlace de "Historial" es visible solo para admin?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Spec §RF-INV-04</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que: (1) Barista ve "Inventario" (iniciar conteo) en nav, (2) Admin ve "Inventario" + "Historial de Conteos", (3) Líder de tienda ve ambas opciones, (4) items no aplican desaparecen (no en gris).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK032</span>
+            <div class="item-question">¿Se especifican requisitos de "estado activo" del nav-bar cuando el usuario está dentro del flujo de conteo?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que al entrar en flujo de conteo, enlace "Inventario" en nav se marca como activo (underline, fondo de color, o icono destacado). Así usuario sabe dónde está.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK033</span>
+            <div class="item-question">¿Se define el comportamiento del nav-bar en móvil (¿siempre visible, hamburger, fijo al pie)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar que en móvil, nav está fijo al PIE (bottom nav, como en iOS/Android apps). En desktop, nav es sidebar fijo o top bar. En móvil durante conteo: nav visible para regresar rápido.
+            </div>
+        </div>
+
+        <h2><span class="section-count">5 items</span> — Accesibilidad (WCAG 2.1 AA)</h2>
+
+        <div class="item">
+            <span class="item-number">CHK034</span>
+            <div class="item-question">¿Se especifican requisitos de contraste para todos los elementos interactivos?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §FE-A11Y-01</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir contrastes: texto normal ≥4.5:1, texto grande/botones ≥3:1 (WCAG AA). Especificar para diferencias: rojo para negativa (mín ratio en fondo blanco), verde para positiva. Validar con herramienta.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK035</span>
+            <div class="item-question">¿Se define navegación por teclado completa (Tab, Enter, Esc) para el flujo de conteo?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar: (1) Tab navega campos en orden lógico, (2) Enter confirma/envía, (3) Esc cancela, (4) campos tienen focus visible (outline), (5) orden de tab es intuitivo (izq→der, arriba→abajo).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK036</span>
+            <div class="item-question">¿Se especifican requisitos de labels asociados a inputs de valor real?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §FE-FORM-01</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que cada input tiene label <label> asociado (no solo placeholder). Label visible y descriptivo: "Cantidad física" vs. "Qty". Usar atributo `for` correcto.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK037</span>
+            <div class="item-question">¿Se define cómo los usuarios de screen reader entienden la diferencia y confirmación de valores?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar: (1) lectura de cantidad registrada: "Artículo X: 5 unidades registradas, diferencia -2", (2) badge diferencia con aria-label, (3) cambio de estado anunciado con aria-live="polite".
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK038</span>
+            <div class="item-question">¿Se especifican requisitos de aria-live para actualizaciones en tiempo real (diferencia recalculada)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que cuando diferencia se recalcula, región aria-live="polite" anuncia: "Diferencia actualizada: -2 unidades" sin interrumpir entrada de datos.
+            </div>
+        </div>
+
+        <h2><span class="section-count">5 items</span> — Estados y Feedback</h2>
+
+        <div class="item">
+            <span class="item-number">CHK039</span>
+            <div class="item-question">¿Se especifican explícitamente TODOS los estados de UI (idle, typing, validating, saved, error, locked)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Listar todos los estados para: (1) campo input: idle (blanco), typing (borde azul), validando (spinner), guardado (✓ verde), error (borde rojo), (2) botón: idle, disabled (durante envío), loading, success, (3) card item: editable, locked (admin).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK040</span>
+            <div class="item-question">¿Se define cómo comunica visualmente cada estado (color, icono, deshabilitación, tooltip)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar visual de cada estado: idle (gris claro), validando (spinner 12px), guardado (✓ verde, duración 2s), error (icono ⚠ rojo + tooltip "Valor debe ser >0"), locked (overlay semi-transparente + icono 🔒).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK041</span>
+            <div class="item-question">¿Se especifican requisitos de feedback inmediato al ingresar valor (<50ms, 100ms, 300ms máximo)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Spec §RF-INV-02.3</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir latencias máximas: <50ms foco en campo (teclado aparece), <100ms confirmación de valor ingresado (✓ aparece), <300ms recalc de diferencia (badge se actualiza). Medir p95.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK042</span>
+            <div class="item-question">¿Se define el feedback de error clara y sin inducir al error (p. ej., "Ingresa cantidad positiva" vs. "Error")?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar mensajes de error específicos: "Cantidad debe ser ≥0" (no "Error"), "Artículo no encontrado, verifica código de barras" (no "Invalid item"), mostrar error en rojo debajo del campo, no en modal.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK043</span>
+            <div class="item-question">¿Se especifican requisitos de confirmación para acciones destructivas (eliminar conteo, confirmar conteo)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §RF-INV-05</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir confirmación para: (1) "Confirmar conteo" → modal "¿Seguro? No podrás editar después", (2) "Cancelar conteo" → modal "Se perderán X items registrados", (3) "Descartar cambios" al salir sin guardar.
+            </div>
+        </div>
+
+        <h2><span class="section-count">4 items</span> — Consistencia Entre Vistas</h2>
+
+        <div class="item">
+            <span class="item-number">CHK044</span>
+            <div class="item-question">¿Los requisitos de botones, campos de input y cards son consistentes entre HU1, HU2, HU3 y HU4?</div>
+            <div>
+                <span class="item-category">Consistency</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que: (1) botones primarios siempre son azules/mismo tamaño 48px, (2) inputs tienen consistent padding/border, (3) cards tienen consistent border-radius/shadow, (4) tipografía es igual en todas las vistas (títulos 18px, labels 14px).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK045</span>
+            <div class="item-question">¿Se especifican requisitos consistentes de "zona de precaución" (bordes rojos, fondo rojo) en el detalle de completado?</div>
+            <div>
+                <span class="item-category">Consistency</span>
+                <span class="item-category">Spec §FE-LISTFORM-01</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que diferencias negativas (falta inventario) usan zona de precaución: borde rojo 2px, fondo rojo 5% opacidad, icono ⚠ rojo. Aplicar consistently en todos los items con diferencia negativa.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK046</span>
+            <div class="item-question">¿Los requisitos de tipografía, espaciado y colores son consistentes con el catálogo de componentes transversales (FE-COMP-01)?</div>
+            <div>
+                <span class="item-category">Consistency</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Revisar standards/frontend.md para componentes transversales (typography scale, spacing grid, color palette) y garantizar que inventario los respeta: usando tipos/espacios/colores del sistema.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK047</span>
+            <div class="item-question">¿Se especifica cómo se reutilizan `ListCardComponent`, `FormCardComponent`, `StatusBadgeComponent` en el flujo de inventario?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §FE-COMP-01</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar uso de componentes: (1) ListCardComponent para listar items en HU2/HU3, (2) FormCardComponent para entrada de cantidad (HU2), (3) StatusBadgeComponent para diferencia (✓ verde, ⚠ rojo), confirma reutilización.
+            </div>
+        </div>
+
+        <h2><span class="section-count">5 items</span> — Casos Extremos y Edge Cases</h2>
+
+        <div class="item">
+            <span class="item-number">CHK048</span>
+            <div class="item-question">¿Se especifica el comportamiento cuando el listado de items es vacío (¿estado vacío, mensaje)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §FE-EMPTY-01</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que cuando no hay items para contar, mostrar estado vacío: ícono 📋 grande, mensaje "No hay artículos para este tienda/conteo", botón "Sincronizar inventario" o "Contacta administrador".
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK049</span>
+            <div class="item-question">¿Se especifica el comportamiento cuando hay >100 items en el conteo (¿paginación, scroll, buscar/filtrar)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Documentar estrategia para conteos grandes: (1) búsqueda por nombre/SKU (typeahead), (2) filtros por categoría, (3) paginación de 20 items/página, (4) scroll infinito, o (5) tabs por sección.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK050</span>
+            <div class="item-question">¿Se especifican requisitos para valores muy pequeños o muy grandes (¿límites, validación visual)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir límites: (1) cantidad mínima = 0, máxima = 999,999, (2) si ingresa >máximo, mostrar warning "Verifica cantidad", (3) formato numérico con separadores (1,000), (4) validación en tiempo real.
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK051</span>
+            <div class="item-question">¿Se define el comportamiento en conectividad lenta (¿spinners, timeouts, resiliencia)?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Especificar: (1) spinner tras 500ms si tardío, (2) timeout tras 30s de inactividad de conexión, (3) retry automático o manual, (4) modo offline: guardar localmente, sincronizar cuando conexión vuelve, (5) mensaje claro "Conectando..." vs. "Sin conexión".
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK052</span>
+            <div class="item-question">¿Se especifica cómo se presenta "historial" cuando no hay conteos previos?</div>
+            <div>
+                <span class="item-category">Completeness</span>
+                <span class="item-category">Spec §FE-EMPTY-01</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir que si no hay historial, mostrar: ícono 📊 grande, mensaje "No hay conteos registrados aún", botón "Iniciar nuevo conteo". En lugar de tabla vacía.
+            </div>
+        </div>
+
+        <h2><span class="section-count">4 items</span> — Ambigüedades y Conflictos Detectados</h2>
+
+        <div class="item">
+            <span class="item-number">CHK053</span>
+            <div class="item-question">¿El plan menciona "barista registra desde móvil" pero la spec no especifica restricciones de funcionalidad por dispositivo?</div>
+            <div>
+                <span class="item-category">Ambiguity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Aclarar: (1) ¿Barista SOLO puede usar móvil, o móvil+desktop? (2) ¿Qué funcionalidad falta en móvil (si es que hay)? (3) ¿Líder de tienda usa móvil o desktop? (4) ¿Admin solo desktop para historial?
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK054</span>
+            <div class="item-question">¿"Fluido" se define en plan (300ms p95 para registrar) pero no está vinculado a requisitos UX de animación/transición?</div>
+            <div>
+                <span class="item-category">Ambiguity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Vincular plan.md SLA técnico (300ms p95) con requisitos UX concretos: "registrar cantidad" = foco en campo + teclado aparece (<50ms) + feedback visual (<100ms) + diferencia recalculada (<300ms total). Documentar qué se mide en "registro".
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK055</span>
+            <div class="item-question">¿No hay especificación de componentes a reutilizar (ListCardComponent, FormCardComponent) en el flujo de conteo?</div>
+            <div>
+                <span class="item-category">Gap</span>
+                <span class="item-category">Spec §Estructura Proyecto</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Revisar standards/frontend.md para componentes existentes (ListCardComponent, FormCardComponent, StatusBadgeComponent, etc.) y documentar en spec.md cómo se reutilizan en inventario. Si no existen, definir si crear o usar componentes base (Card, Button, Input).
+            </div>
+        </div>
+
+        <div class="item">
+            <span class="item-number">CHK056</span>
+            <div class="item-question">¿El nav-bar positioning "adecuado" no define qué significa "adecuado" (¿top, bottom, lateral, hamburger en móvil)?</div>
+            <div>
+                <span class="item-category">Clarity</span>
+                <span class="item-category">Gap</span>
+            </div>
+            <div class="recommendation">
+                <div class="rec-title">Recomendación:</div>
+                Definir explícitamente: Móvil = bottom nav (fijo al pie), Desktop = sidebar izquierda (fijo) o top bar. "Adecuado" = accesible con un pulgar en móvil, visible sin scroll en desktop.
+            </div>
+        </div>
+
+        <h2>Resumen Ejecutivo</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th>Items</th>
+                    <th>Prioridad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Mobile-First</td>
+                    <td>6</td>
+                    <td>🔴 ALTA</td>
+                </tr>
+                <tr>
+                    <td>Desktop</td>
+                    <td>4</td>
+                    <td>🔴 ALTA</td>
+                </tr>
+                <tr>
+                    <td>Fluidez Visual</td>
+                    <td>6</td>
+                    <td>🔴 ALTA</td>
+                </tr>
+                <tr>
+                    <td>Usabilidad Minimalista</td>
+                    <td>6</td>
+                    <td>🟠 MEDIA</td>
+                </tr>
+                <tr>
+                    <td>Flujo de Conteo</td>
+                    <td>5</td>
+                    <td>🔴 ALTA</td>
+                </tr>
+                <tr>
+                    <td>Nav-Bar</td>
+                    <td>6</td>
+                    <td>🟠 MEDIA</td>
+                </tr>
+                <tr>
+                    <td>Accesibilidad (WCAG)</td>
+                    <td>5</td>
+                    <td>🟠 MEDIA</td>
+                </tr>
+                <tr>
+                    <td>Estados y Feedback</td>
+                    <td>5</td>
+                    <td>🔴 ALTA</td>
+                </tr>
+                <tr>
+                    <td>Consistencia</td>
+                    <td>4</td>
+                    <td>🟠 MEDIA</td>
+                </tr>
+                <tr>
+                    <td>Edge Cases</td>
+                    <td>5</td>
+                    <td>🟠 MEDIA</td>
+                </tr>
+                <tr>
+                    <td>Ambigüedades</td>
+                    <td>4</td>
+                    <td>🔴 ALTA</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Próximos Pasos Recomendados</h3>
+        <ol>
+            <li><strong>Completar especificación UX</strong> — Responder todos los 56 puntos, priorizando categorías de ALTA prioridad (mobile, desktop, fluidez, flujo, estados, ambigüedades).</li>
+            <li><strong>Usar /speckit-clarify</strong> — Generar preguntas de aclaración para resolver los 4 conflictos/ambigüedades detectados (CHK053-CHK056).</li>
+            <li><strong>Validar contra standards</strong> — Revisar standards/frontend.md para garantizar consistencia con componentes transversales y reglas de accesibilidad (FE-COMP-01, FE-A11Y-01, FE-FORM-01).</li>
+            <li><strong>Re-ejecutar /speckit-implement</strong> — Una vez completado el checklist UX (todos los items ✓), proceder con implementación.</li>
+        </ol>
+    </div>
+</body>
+</html>
