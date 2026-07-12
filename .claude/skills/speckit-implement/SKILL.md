@@ -120,6 +120,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **IF EXISTS**: Read research.md for technical decisions and constraints
    - **IF EXISTS**: Read .specify/memory/constitution.md for governance constraints
    - **IF EXISTS**: Read quickstart.md for integration scenarios
+   - **REQUIRED — implementation standards**: Determine from plan.md's file structure which repos this feature touches. If it touches `loopi-web-v2`, read `.specify/memory/standards/frontend.md` in full **before writing or editing any component, template, route, or service**. If it touches `loopi-api-v2`, read `.specify/memory/standards/backend.md` in full **before writing or editing any handler, service, or repository**. Do this even if plan.md's Constitution Check already lists FE-*/BE-* rows as ✅ — that check may predate a later amendment to the standards file (compare plan.md's `Fecha` against each standards file's `Last Amended` footer; if the standard is newer, treat plan.md's checklist as unverified and re-derive from the current standards text). Never pattern-match a sibling feature's existing component as the source of truth for a UI/architecture decision — cite the standards rule ID instead; if no rule ID justifies the pattern, flag it for the user rather than copying it silently.
 
 4. **Project Setup Verification**:
    - **REQUIRED**: Create/verify ignore files based on actual project setup:

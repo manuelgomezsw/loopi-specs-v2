@@ -131,6 +131,13 @@ Load only the minimal necessary context from each artifact:
 
 - Load `.specify/memory/constitution.md` for principle validation
 
+**From implementation standards:**
+
+- Determine which repos the feature touches from plan.md's file structure / tech stack.
+- If it touches `loopi-web-v2`: load `.specify/memory/standards/frontend.md`, note its `Last Amended` date and the full list of `FE-*` rule IDs.
+- If it touches `loopi-api-v2`: load `.specify/memory/standards/backend.md`, note its `Last Amended` date and the full list of `BE-*` rule IDs.
+- Note plan.md's own `Fecha` (creation date, from the plan header) and whether its Constitution Check table contains any FE-*/BE-* rows at all.
+
 ### 3. Build Semantic Models
 
 Create internal representations (do not include raw artifacts in output):
@@ -165,6 +172,12 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Any requirement or plan element conflicting with a MUST principle
 - Missing mandated sections or quality gates from constitution
 
+#### D2. Implementation Standards Coverage & Staleness
+
+- **Missing standards rows**: If plan.md touches `loopi-web-v2` but its Constitution Check table has zero `FE-*` rows (or touches `loopi-api-v2` with zero `BE-*` rows), flag CRITICAL — the plan was never checked against the applicable standards file at all.
+- **Stale check**: If plan.md's `Fecha` predates the relevant standards file's `Last Amended` date, flag HIGH — the Constitution Check may have been evaluated against an older version of the rules (or before the rule existed) and needs a manual re-check against the current standards text, even if the row is currently marked ✅.
+- **Unattributed pattern copy**: If a task in tasks.md directs implementing a UI/architecture element (e.g., a new component, a new screen, a new navigation pattern) without citing a spec requirement or a standards rule ID, and an equivalent pattern already exists elsewhere in the codebase, flag MEDIUM — this is the common path by which sibling-feature copying silently overrides the current standards.
+
 #### E. Coverage Gaps
 
 - Requirements with zero associated tasks
@@ -182,9 +195,9 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 
 Use this heuristic to prioritize findings:
 
-- **CRITICAL**: Violates constitution MUST, missing core spec artifact, or requirement with zero coverage that blocks baseline functionality
-- **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion
-- **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case
+- **CRITICAL**: Violates constitution MUST, missing core spec artifact, requirement with zero coverage that blocks baseline functionality, or plan.md missing applicable FE-*/BE-* standards rows entirely
+- **HIGH**: Duplicate or conflicting requirement, ambiguous security/performance attribute, untestable acceptance criterion, or plan.md's Constitution Check predating a standards amendment
+- **MEDIUM**: Terminology drift, missing non-functional task coverage, underspecified edge case, or a UI/architecture task copying a sibling pattern without a spec/standards citation
 - **LOW**: Style/wording improvements, minor redundancy not affecting execution order
 
 ### 6. Produce Compact Analysis Report
