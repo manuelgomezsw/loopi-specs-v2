@@ -1,0 +1,32 @@
+schema_version: "1.0"
+
+extension:
+  id: "finalize"
+  name: "Finalize Extension"
+  version: "1.0.0"
+  description: "Close out a feature after implementation — cross-repo PR status, user-attested verification of environment-dependent tasks, branch cleanup, and closure report."
+  author: "Loopi v2"
+  repository: "internal"
+  license: "internal"
+
+requires:
+  speckit_version: ">=0.4.0"
+
+provides:
+  commands:
+    - name: "speckit.finalize.run"
+      file: "commands/run.md"
+      description: "Close out a feature after implementation: cross-repo PR status, user-attested verification, branch cleanup, closure report"
+
+hooks:
+  after_implement:
+    command: speckit.finalize.run
+    optional: true
+    prompt: "¿Ejecutar el cierre de la feature (estado de PRs, verificación de tareas pendientes, limpieza de branches)?"
+    description: "Sugerido una vez que el CI de los PRs de la feature está en verde y lista para cerrar — no inmediatamente después de /speckit-implement si los PRs aún están en revisión."
+
+tags:
+  - "closure"
+  - "post-implementation"
+  - "multi-repo"
+  - "workflow"

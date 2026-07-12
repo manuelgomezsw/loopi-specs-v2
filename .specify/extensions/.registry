@@ -63,6 +63,20 @@
       },
       "registered_skills": [],
       "installed_at": "2026-07-12T16:33:23.592907+00:00"
+    },
+    "finalize": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:07c5ae3d598868115fcc6a066538dba5efcf6cf369b4ab9f8cfa091ebf4f7892",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.finalize.run"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-07-12T17:29:07.670251+00:00"
     }
   }
 }
