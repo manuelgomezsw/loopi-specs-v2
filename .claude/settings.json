@@ -25,7 +25,21 @@
       "Bash(SPECIFY_FEATURE_DIRECTORY=specs/006-proveedores-catalogo .specify/scripts/bash/setup-tasks.sh --json)",
       "Bash(grep -c \"^| \\\\`Test\" /home/manuelgomezjp/repos/loopi-v2/loopi-specs-v2/specs/006-proveedores-catalogo/quickstart.md)",
       "Bash(bash .specify/extensions/git/scripts/bash/auto-commit.sh after_tasks)",
-      "Bash(python3 -c \"import json,sys; print\\(json.load\\(sys.stdin\\)['BRANCH']\\)\")"
+      "Bash(python3 -c \"import json,sys; print\\(json.load\\(sys.stdin\\)['BRANCH']\\)\")",
+      "Bash(git branch *)",
+      "Bash(xargs -I{} echo {})",
+      "Bash(ps -o pid,lstart,cmd -p 23496,24633,29650)",
+      "Bash(kill -TERM 23496 24633)",
+      "Bash(gofmt -l .)",
+      "Bash(gofmt -w internal/items/*.go)",
+      "Bash(gofmt -l internal/items/*.go)",
+      "Bash(timeout 60 bash -c 'go run github.com/gitleaks/gitleaks/v8@latest detect --no-git -v 2>&1')",
+      "Bash(timeout 90 bash -c 'go run github.com/zricethezav/gitleaks/v8@latest detect --no-git -v --source=. 2>&1')",
+      "Bash(git check-ignore *)",
+      "Bash(timeout 90 bash -c 'go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run ./internal/items/... 2>&1')",
+      "Bash(timeout 60 bash -c 'go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run ./internal/proveedores/... 2>&1')",
+      "Bash(CHROME_BIN=/usr/bin/chromium timeout 180 npx ng test --watch=false --browsers=ChromeHeadless --include='src/app/items/**/*.spec.ts')",
+      "Bash(CHROME_BIN=/usr/bin/chromium timeout 300 npx ng test --watch=false --browsers=ChromeHeadless)"
     ],
     "additionalDirectories": [
       "/home/manuelgomezjp/repos/loopi-v2/loopi-specs-v2/.specify/memory"
