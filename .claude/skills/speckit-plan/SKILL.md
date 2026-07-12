@@ -82,10 +82,11 @@ You **MUST** consider the user input before proceeding (if not empty).
 1. **Setup**: Run `.specify/scripts/bash/setup-plan.sh --json` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, SPECS_DIR, BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Load IMPL_PLAN template (already copied).
+   - **REQUIRED — implementation standards**: Determine which repos this feature touches (`loopi-web-v2`, `loopi-api-v2`, or both) from FEATURE_SPEC. Read the corresponding standards file(s) in full **before** filling the Constitution Check: `.specify/memory/standards/frontend.md` (FE-* rules) if the feature touches `loopi-web-v2`, `.specify/memory/standards/backend.md` (BE-* rules) if it touches `loopi-api-v2`. Read `.specify/memory/standards/environments-ci.md` always. These files are normative — same enforcement level as the constitution — not optional background reading.
 
 3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
    - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
-   - Fill Constitution Check section from constitution
+   - Fill Constitution Check section from constitution **and from the standards files loaded above** — every applicable FE-*/BE-* row must be marked from the actual rule text just read, never from memory of a sibling feature's plan.md
    - Evaluate gates (ERROR if violations unjustified)
    - Phase 0: Generate research.md (resolve all NEEDS CLARIFICATION)
    - Phase 1: Generate data-model.md, contracts/, quickstart.md
