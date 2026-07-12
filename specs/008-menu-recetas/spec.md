@@ -7,6 +7,29 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-07-12
+
+- Q: ¿El mismo producto de menú puede tener códigos POS distintos en cada tienda? →
+  A: No. El código POS es único global: un solo código por producto, igual en todas
+  las tiendas.
+- Q: ¿Qué alcance tiene 008 respecto al descuento de inventario por venta? →
+  A: Solo modelo. 008 implementa el CRUD de menú, categorías y recetas con versionado;
+  el motor de descuento completo se implementa en 012-ventas-integracion-pos.
+- Q: ¿Cuál es el ciclo de vida de una receta al crearla o modificarla? →
+  A: Activación inmediata, sin borradores. Guardar una receta válida la activa de
+  inmediato y archiva la versión anterior. Estados: activa → archivada.
+- Q: ¿Qué sucede cuando un insumo que forma parte de una receta activa se inactiva
+  en el catálogo? → A: La inactivación del item no se bloquea. La receta permanece
+  activa, pero la consulta del menú resalta las recetas con insumos inactivos. No se
+  genera ninguna alerta.
+- Q: ¿Se pueden inactivar las categorías de menú y bajo qué regla? → A: Sí, libremente.
+  Una categoría puede inactivarse en cualquier momento; sus productos activos dejan de
+  mostrarse en el menú hasta reasignarlos a otra categoría o reactivar la categoría.
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Crear un producto de menú simple (Prioridad: P1)
@@ -29,7 +52,7 @@ una venta de prueba, comprobando que el stock de los insumos disminuye según la
    **Cuando** guarda el producto,
    **Entonces** el producto queda activo en el menú compartido de todas las tiendas.
 
-2. **Dado** que ya existe un producto con el código POS `SAN-CAP` en la misma tienda,
+2. **Dado** que ya existe un producto con el código POS `SAN-CAP` en el menú,
    **Cuando** el admin intenta crear otro con el mismo código POS,
    **Entonces** el sistema rechaza la operación indicando que el código POS ya existe.
 
@@ -131,7 +154,7 @@ que el nuevo precio aplica en el siguiente registro de venta.
    el historial de ventas previas.
 
 2. **Dado** que el admin intenta cambiar el código POS de un producto,
-   **Cuando** el nuevo código ya existe en la misma tienda,
+   **Cuando** el nuevo código ya existe en el menú,
    **Entonces** el sistema rechaza el cambio con mensaje de código duplicado.
 
 ---
@@ -170,8 +193,8 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 - RF-MEN-01.2: Un producto simple requiere: nombre, categoría de menú, precio de venta y
   código POS. Un producto padre requiere solo: nombre y categoría de menú (sin precio ni
   código POS).
-- RF-MEN-01.3: El código POS es único por tienda (no globalmente, pues cada tienda puede
-  tener su propia codificación en el POS externo).
+- RF-MEN-01.3: El código POS es único global: cada producto tiene un solo código POS,
+  el mismo en todas las tiendas de la marca.
 - RF-MEN-01.4: Los productos de menú son compartidos entre todas las tiendas de la marca.
 - RF-MEN-01.5: No es posible eliminar un producto; solo inactivarlo.
 - RF-MEN-01.6: Para inactivar un producto padre, primero deben inactivarse todas sus
@@ -193,8 +216,12 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 - RF-MEN-03.1: La categoría de menú agrupa productos para la vista del punto de venta
   (ej: Bebidas, Sanduchería, Postres). Es independiente de las categorías del catálogo
   de items.
-- RF-MEN-03.2: El administrador puede crear y editar categorías de menú. No se precarga
-  ninguna categoría por defecto.
+- RF-MEN-03.2: El administrador puede crear, editar, inactivar y reactivar categorías de
+  menú. No se precarga ninguna categoría por defecto.
+- RF-MEN-03.3: Una categoría de menú puede inactivarse en cualquier momento, sin
+  restricción por productos asignados. Los productos activos de una categoría inactiva
+  dejan de mostrarse en el menú hasta que se reasignen a otra categoría o la categoría
+  se reactive; los productos conservan su estado y sus recetas.
 
 ### RF-REC-01: Gestión de recetas
 
@@ -203,12 +230,22 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
   Los productos padre no tienen receta.
 - RF-REC-01.3: Modificar una receta crea una nueva versión; la versión anterior queda
   archivada con su fecha de vigencia. El historial de versiones no se elimina.
-- RF-REC-01.4: Una receta debe tener al menos una línea de ingrediente para poder activarse.
-- RF-REC-01.5: Cada línea de receta requiere: insumo del catálogo (item activo), cantidad
-  mayor que cero y unidad de medida con equivalencia configurada respecto a la unidad de
-  medida del insumo.
+- RF-REC-01.4: No existen recetas en borrador. Guardar una receta válida la activa de
+  inmediato y archiva la versión anterior (si existe). Una receta solo puede guardarse
+  si tiene al menos una línea de ingrediente válida; los únicos estados posibles son
+  activa y archivada.
+- RF-REC-01.5: Cada línea de receta requiere: insumo del catálogo (item activo al momento
+  de guardar la receta), cantidad mayor que cero y unidad de medida con equivalencia
+  configurada respecto a la unidad de medida del insumo.
+- RF-REC-01.6: Si un insumo de una receta activa se inactiva posteriormente en el catálogo,
+  la inactivación no se bloquea y la receta permanece activa. La consulta del menú resalta
+  las recetas que contienen insumos inactivos; no se genera ninguna alerta.
 
-### RF-REC-02: Impacto en inventario
+### RF-REC-02: Impacto en inventario (implementado en 012-ventas-integracion-pos)
+
+El motor de descuento de inventario por venta **no se implementa en esta feature**; se
+implementa completo en `012-ventas-integracion-pos`. Los requisitos siguientes son la
+referencia del comportamiento esperado que las recetas de 008 deben habilitar:
 
 - RF-REC-02.1: Cuando se registra la venta de un producto con receta activa, el sistema
   descuenta automáticamente del inventario de la tienda las cantidades de cada insumo
@@ -234,7 +271,8 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
   tienen receta activa antes de iniciar operaciones; el sistema alerta sobre los que no.
 - **Exactitud del descuento**: El 100% de las ventas con receta activa descontaron
   exactamente las cantidades de insumos definidas en la receta, con conversión correcta
-  de unidades.
+  de unidades. (Se verifica de extremo a extremo junto con 012-ventas-integracion-pos;
+  008 garantiza que la receta activa y sus equivalencias de unidades estén bien definidas.)
 - **Trazabilidad de versiones**: Toda modificación de receta genera una nueva versión
   archivada; el 100% del historial de versiones es accesible para el admin.
 - **Control de acceso**: El 100% de los intentos de gestión del menú o recetas por roles
@@ -261,15 +299,16 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 - **004-unidades-medida**: Las unidades de medida de las líneas de receta deben tener
   equivalencia configurada con la unidad de medida del insumo correspondiente.
 - **007-items-catalogo**: Los ingredientes de las recetas son items activos del catálogo.
-- **015-pos** (posterior): El registro de ventas que activa el descuento de inventario por
-  receta corresponde al módulo POS.
+- **012-ventas-integracion-pos** (posterior): El registro de ventas que activa el descuento
+  de inventario por receta corresponde al módulo POS. El motor de descuento (RF-REC-02) se
+  implementa en esa feature.
 
 ### Suposiciones
 
 - Las categorías de menú (Bebidas, Sanduchería, etc.) son independientes de las categorías
   del catálogo de items; el admin las crea y gestiona en este módulo.
-- El código POS es único por tienda, no globalmente. Esto permite que la misma cadena use
-  códigos POS distintos en cada tienda si el sistema externo así lo requiere.
+- El código POS es único global: todas las tiendas de la marca usan el mismo código POS
+  para el mismo producto (formerly referred to as "único por tienda").
 - Un producto padre no genera ventas ni descuento de inventario; solo sus variantes lo hacen.
 - No existe un tercer nivel de variantes; la jerarquía máxima es producto padre → variante.
 - La receta define el consumo por unidad vendida. Si se venden 2 unidades del mismo producto,

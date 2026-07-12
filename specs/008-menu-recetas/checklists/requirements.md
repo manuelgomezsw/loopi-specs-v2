@@ -35,12 +35,12 @@
 
 ## Notas
 
-- RF-MEN-01.3 define que el código POS es único por tienda (no globalmente). Confirmar con
-  el equipo de negocio: ¿todos los locales usan el mismo código POS para el mismo producto
-  o pueden diferir? Si siempre es el mismo código, la unicidad debería ser global.
-- RF-REC-02.2 especifica que una venta sin receta activa genera alerta pero no bloquea la
-  venta. Verificar con el equipo si esto es aceptable o si la venta sin receta debería
-  bloquearse en el POS.
+- ~~RF-MEN-01.3 define que el código POS es único por tienda~~ **Resuelto en sesión de
+  clarificación 2026-07-12**: el código POS es único global (ver `## Clarifications` en
+  spec.md).
+- ~~RF-REC-02.2: verificar si la venta sin receta debería bloquearse~~ **Resuelto**: el
+  motor de descuento y su comportamiento ante ventas sin receta se implementan en
+  012-ventas-integracion-pos; RF-REC-02 queda como referencia informativa en 008.
 - Las recetas archivadas son de solo lectura (suposición). Si el negocio necesita restaurar
   recetas antiguas frecuentemente, considerar agregar un mecanismo de "clonar versión
   anterior" antes de planificar.
