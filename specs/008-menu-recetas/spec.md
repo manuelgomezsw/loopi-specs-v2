@@ -315,3 +315,41 @@ referencia del comportamiento esperado que las recetas de 008 deben habilitar:
   el descuento es el doble de la receta.
 - Las recetas anteriores (archivadas) son de solo lectura; no pueden reactivarse. Para volver
   a una composición anterior, el admin debe crear una nueva versión con esos ingredientes.
+
+---
+
+## Observabilidad
+
+### Trazas (Spans OTel)
+
+| Operación | Nombre del Span | Atributos Obligatorios |
+|---|---|---|
+| Crear producto de menú | `menu.productos.crear` | `resultado`, `producto.codigo_pos` |
+| Actualizar producto de menú | `menu.productos.actualizar` | `resultado`, `producto.id` |
+| Inactivar / reactivar producto | `menu.productos.cambiar_estado` | `resultado`, `producto.id`, `producto.estado` |
+| Crear categoría de menú | `menu.categorias.crear` | `resultado` |
+| Actualizar categoría de menú | `menu.categorias.actualizar` | `resultado`, `categoria.id` |
+| Inactivar / reactivar categoría | `menu.categorias.cambiar_estado` | `resultado`, `categoria.id`, `categoria.estado` |
+| Crear versión de receta | `recetas.crear_version` | `resultado`, `producto.id`, `receta.version` |
+
+### Métricas
+
+| Nombre | Tipo | Unidad | Descripción | Etiquetas |
+|---|---|---|---|---|
+| `menu.productos.creacion.duration` | Histograma | ms | Duración de la creación de un producto de menú | `resultado` |
+| `menu.productos.creacion.total` | Contador | — | Conteo de creaciones de producto por resultado | `resultado` |
+| `menu.productos.actualizacion.duration` | Histograma | ms | Duración de la actualización de un producto | `resultado` |
+| `menu.productos.actualizacion.total` | Contador | — | Conteo de actualizaciones de producto por resultado | `resultado` |
+| `recetas.version.creacion.duration` | Histograma | ms | Duración de la creación de una versión de receta | `resultado` |
+| `recetas.version.creacion.total` | Contador | — | Conteo de versiones de receta creadas por resultado | `resultado` |
+| `menu.listado.duration` | Histograma | ms | Latencia del listado del menú agrupado por categoría | — |
+
+**Valores de la etiqueta `resultado`**: `success`, `codigo_pos_duplicado`,
+`padre_con_variantes_activas`, `receta_en_producto_padre`, `sin_lineas`,
+`unidades_incompatibles`, `item_inactivo`, `validation_error`, `not_found`.
+
+**Nota de cardinalidad**: `user_id` nunca se incluye como etiqueta de métrica (alta
+cardinalidad); va como atributo del span. El menú y las recetas son catálogo compartido
+por marca (RF-MEN-01.4), por lo que ninguna operación de esta feature lleva `tienda_id`;
+el descuento de inventario por venta, que sí es por tienda, se instrumenta en
+`012-ventas-integracion-pos`.
