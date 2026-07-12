@@ -15,8 +15,11 @@
   A: No. El código POS es único global: un solo código por producto, igual en todas
   las tiendas.
 - Q: ¿Qué alcance tiene 008 respecto al descuento de inventario por venta? →
-  A: Solo modelo. 008 implementa el CRUD de menú, categorías y recetas con versionado;
-  el motor de descuento completo se implementa en 012-ventas-integracion-pos.
+  A: Solo modelo. 008 implementa el CRUD de menú, categorías y recetas con versionado.
+  El registro de ventas, el descuento de inventario y las alertas por venta sin receta
+  activa quedan completamente fuera de alcance de 008 y se implementan en
+  012-ventas-integracion-pos; esta spec no describe ese comportamiento ni siquiera como
+  referencia informativa.
 - Q: ¿Cuál es el ciclo de vida de una receta al crearla o modificarla? →
   A: Activación inmediata, sin borradores. Guardar una receta válida la activa de
   inmediato y archiva la versión anterior. Estados: activa → archivada.
@@ -36,14 +39,15 @@
 
 El administrador registra un producto que se vende al cliente (ej: "Sanduche Capresse")
 asignándole nombre, categoría de menú, precio de venta y código POS. Una vez creado,
-puede asociarle una receta para que las ventas descuenten automáticamente los insumos
-del inventario.
+puede asociarle una receta que quedará disponible como base para el descuento automático
+de inventario que ejecuta el módulo de ventas (012-ventas-integracion-pos).
 
-**Por qué esta prioridad**: Sin productos de menú con recetas no hay descuento automático
-de inventario por ventas, que es el propósito central del sistema POS de Loopi.
+**Por qué esta prioridad**: Sin productos de menú con receta activa no hay base para el
+descuento automático de inventario por ventas, que es el propósito central del sistema
+POS de Loopi.
 
-**Prueba Independiente**: Puede verificarse creando un producto con su receta y registrando
-una venta de prueba, comprobando que el stock de los insumos disminuye según la receta.
+**Prueba Independiente**: Puede verificarse creando un producto con su receta y comprobando
+que queda registrado con nombre, categoría, precio, código POS y receta activa consultables.
 
 **Escenarios de Aceptación**:
 
@@ -67,8 +71,8 @@ una venta de prueba, comprobando que el stock de los insumos disminuye según la
 
 El administrador registra un producto con múltiples presentaciones (ej: "Latte" en tamaños
 S, M y L), cada una con su propio precio, código POS y receta. El producto padre actúa
-como agrupador de menú; las variantes son los productos reales que se venden y descuentan
-inventario.
+como agrupador de menú; las variantes son los productos de menú reales, cada una con su
+propia receta.
 
 **Por qué esta prioridad**: La mayoría de los productos de cafetería tienen variantes por
 tamaño; sin este modelo, el admin tendría que crear productos completamente independientes
@@ -104,31 +108,28 @@ indicando cada insumo, la cantidad y la unidad de medida. Cuando la receta cambi
 de ingredientes, nueva proporción), crea una nueva versión que reemplaza a la anterior,
 la cual queda archivada para trazabilidad.
 
-**Por qué esta prioridad**: La receta es el puente entre ventas e inventario. Sin receta
-activa, las ventas no descuentan insumos y el sistema pierde trazabilidad de consumo.
+**Por qué esta prioridad**: La receta es el puente entre ventas e inventario: define qué
+insumos y en qué cantidad componen cada producto. Sin receta activa y bien definida, el
+módulo de ventas (012) no tiene base para descontar inventario ni el sistema tiene
+trazabilidad de consumo.
 
-**Prueba Independiente**: Puede verificarse registrando una venta del producto y confirmando
-que el stock de cada insumo de la receta disminuye en la cantidad exacta definida.
+**Prueba Independiente**: Puede verificarse creando la receta de un producto y confirmando
+que la explosión de ingredientes (cada insumo con su cantidad y unidad, convertida a la
+unidad de medida canónica del insumo) coincide exactamente con lo definido.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** que existe el producto "Sanduche Capresse",
    **Cuando** el admin crea la receta con los ingredientes (pan, tomate, lechuga, pollo,
    salsa pesto, salsa tomate) con sus cantidades y unidades,
-   **Entonces** la receta queda activa y las ventas de ese producto descuentan el inventario
-   según esas cantidades.
+   **Entonces** la receta queda activa como la receta vigente del producto.
 
 2. **Dado** que "Sanduche Capresse" tiene una receta activa (v1),
    **Cuando** el admin crea una receta modificada (v2) para el mismo producto,
    **Entonces** la receta v2 pasa a ser la activa, la v1 queda archivada y sigue visible en
    el historial para auditoría.
 
-3. **Dado** que un producto no tiene receta activa,
-   **Cuando** se registra una venta de ese producto,
-   **Entonces** el sistema registra la venta pero no descuenta inventario, y genera una
-   alerta visible para el admin indicando que el producto no tiene receta activa.
-
-4. **Dado** que el admin intenta crear una línea de receta con una unidad que no tiene
+3. **Dado** que el admin intenta crear una línea de receta con una unidad que no tiene
    equivalencia configurada con la unidad de medida del insumo,
    **Cuando** intenta guardar,
    **Entonces** el sistema rechaza la línea indicando que las unidades son incompatibles.
@@ -141,17 +142,17 @@ El administrador actualiza los datos de un producto existente cuando cambia el p
 el nombre o la categoría de menú. Los cambios aplican a todas las tiendas de inmediato.
 
 **Por qué esta prioridad**: Precios y nombres de productos cambian con el tiempo; el admin
-debe poder mantenerlos actualizados sin perder el historial de ventas ni las recetas.
+debe poder mantenerlos actualizados sin perder la receta asociada.
 
 **Prueba Independiente**: Puede verificarse editando el precio de un producto y comprobando
-que el nuevo precio aplica en el siguiente registro de venta.
+que el nuevo valor queda reflejado en el producto sin afectar su receta activa.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** que existe el producto "Latte M" con precio $8 000,
    **Cuando** el admin lo actualiza a $9 000 y guarda,
-   **Entonces** el nuevo precio aplica en los registros de venta posteriores sin afectar
-   el historial de ventas previas.
+   **Entonces** el producto queda actualizado con el nuevo precio de venta, sin afectar
+   su receta activa.
 
 2. **Dado** que el admin intenta cambiar el código POS de un producto,
    **Cuando** el nuevo código ya existe en el menú,
@@ -241,38 +242,23 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
   la inactivación no se bloquea y la receta permanece activa. La consulta del menú resalta
   las recetas que contienen insumos inactivos; no se genera ninguna alerta.
 
-### RF-REC-02: Impacto en inventario (implementado en 012-ventas-integracion-pos)
+### RF-REC-02: Listado y consulta
 
-El motor de descuento de inventario por venta **no se implementa en esta feature**; se
-implementa completo en `012-ventas-integracion-pos`. Los requisitos siguientes son la
-referencia del comportamiento esperado que las recetas de 008 deben habilitar:
-
-- RF-REC-02.1: Cuando se registra la venta de un producto con receta activa, el sistema
-  descuenta automáticamente del inventario de la tienda las cantidades de cada insumo
-  definidas en la receta, convirtiendo a la unidad de medida del insumo si es necesario.
-- RF-REC-02.2: Si un producto no tiene receta activa al momento de la venta, la venta
-  se registra pero no genera descuento de inventario. El sistema genera una alerta
-  visible para el admin.
-- RF-REC-02.3: El descuento de inventario por venta se registra con: producto vendido,
-  fecha, tienda y cantidad de cada insumo descontado, para trazabilidad completa.
-
-### RF-REC-03: Listado y consulta
-
-- RF-REC-03.1: El administrador puede consultar el menú completo agrupado por categoría
+- RF-REC-02.1: El administrador puede consultar el menú completo agrupado por categoría
   con indicación de si cada producto tiene receta activa.
-- RF-REC-03.2: Desde el detalle de un producto, el admin puede ver la receta activa, sus
+- RF-REC-02.2: Desde el detalle de un producto, el admin puede ver la receta activa, sus
   ingredientes y el historial de versiones anteriores con sus fechas de vigencia.
 
 ---
 
 ## Criterios de Éxito
 
-- **Cobertura de recetas**: El 100% de los productos activos del menú que generan ventas
-  tienen receta activa antes de iniciar operaciones; el sistema alerta sobre los que no.
-- **Exactitud del descuento**: El 100% de las ventas con receta activa descontaron
-  exactamente las cantidades de insumos definidas en la receta, con conversión correcta
-  de unidades. (Se verifica de extremo a extremo junto con 012-ventas-integracion-pos;
-  008 garantiza que la receta activa y sus equivalencias de unidades estén bien definidas.)
+- **Cobertura de recetas**: El listado del menú resalta el 100% de los productos activos
+  (simples y variantes) que no tienen receta activa, para que el admin los complete antes
+  de iniciar operaciones.
+- **Integridad de recetas**: El 100% de las líneas de receta guardadas tienen cantidad
+  mayor que cero y unidad de medida con equivalencia configurada respecto a la unidad del
+  insumo; el sistema rechaza cualquier línea que no la tenga.
 - **Trazabilidad de versiones**: Toda modificación de receta genera una nueva versión
   archivada; el 100% del historial de versiones es accesible para el admin.
 - **Control de acceso**: El 100% de los intentos de gestión del menú o recetas por roles
@@ -299,9 +285,9 @@ referencia del comportamiento esperado que las recetas de 008 deben habilitar:
 - **004-unidades-medida**: Las unidades de medida de las líneas de receta deben tener
   equivalencia configurada con la unidad de medida del insumo correspondiente.
 - **007-items-catalogo**: Los ingredientes de las recetas son items activos del catálogo.
-- **012-ventas-integracion-pos** (posterior): El registro de ventas que activa el descuento
-  de inventario por receta corresponde al módulo POS. El motor de descuento (RF-REC-02) se
-  implementa en esa feature.
+- **012-ventas-integracion-pos** (posterior): consume el menú y las recetas activas
+  definidas en esta feature para registrar ventas y ejecutar el descuento de inventario
+  correspondiente. El descuento de inventario por venta está fuera del alcance de 008.
 
 ### Suposiciones
 
@@ -309,10 +295,10 @@ referencia del comportamiento esperado que las recetas de 008 deben habilitar:
   del catálogo de items; el admin las crea y gestiona en este módulo.
 - El código POS es único global: todas las tiendas de la marca usan el mismo código POS
   para el mismo producto (formerly referred to as "único por tienda").
-- Un producto padre no genera ventas ni descuento de inventario; solo sus variantes lo hacen.
+- Un producto padre no es vendible directamente; solo sus variantes lo son.
 - No existe un tercer nivel de variantes; la jerarquía máxima es producto padre → variante.
-- La receta define el consumo por unidad vendida. Si se venden 2 unidades del mismo producto,
-  el descuento es el doble de la receta.
+- La receta define el consumo esperado por unidad vendida; la aplicación de ese consumo
+  al registrar ventas es responsabilidad de 012-ventas-integracion-pos.
 - Las recetas anteriores (archivadas) son de solo lectura; no pueden reactivarse. Para volver
   a una composición anterior, el admin debe crear una nueva versión con esos ingredientes.
 

@@ -19,10 +19,11 @@
 - [x] Criterios de éxito son agnósticos a tecnología (sin detalles de implementación)
 - [x] Todos los escenarios de aceptación están definidos
 - [x] Casos borde identificados (producto padre con variantes activas, receta sin unidades
-  compatibles, venta sin receta activa, versión anterior archivada no reactivable, código
-  POS duplicado por tienda)
+  compatibles, insumo inactivado con receta activa, versión anterior archivada no
+  reactivable, código POS duplicado globalmente)
 - [x] Alcance claramente delimitado (sin tercer nivel de variantes, recetas archivadas de
-  solo lectura, categorías de menú independientes de categorías de catálogo)
+  solo lectura, categorías de menú independientes de categorías de catálogo, descuento de
+  inventario por venta fuera de alcance — corresponde a 012-ventas-integracion-pos)
 - [x] Dependencias y suposiciones identificadas
 
 ## Preparación del Feature
@@ -38,9 +39,10 @@
 - ~~RF-MEN-01.3 define que el código POS es único por tienda~~ **Resuelto en sesión de
   clarificación 2026-07-12**: el código POS es único global (ver `## Clarifications` en
   spec.md).
-- ~~RF-REC-02.2: verificar si la venta sin receta debería bloquearse~~ **Resuelto**: el
-  motor de descuento y su comportamiento ante ventas sin receta se implementan en
-  012-ventas-integracion-pos; RF-REC-02 queda como referencia informativa en 008.
+- ~~RF-REC-02 (impacto en inventario por venta)~~ **Resuelto en sesión de clarificación
+  2026-07-12**: se eliminó por completo de 008. El motor de descuento, su comportamiento
+  ante ventas sin receta y las alertas correspondientes se implementan íntegramente en
+  012-ventas-integracion-pos; 008 no los describe ni como referencia informativa.
 - Las recetas archivadas son de solo lectura (suposición). Si el negocio necesita restaurar
   recetas antiguas frecuentemente, considerar agregar un mecanismo de "clonar versión
   anterior" antes de planificar.
