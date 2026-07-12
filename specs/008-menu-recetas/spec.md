@@ -30,6 +30,14 @@
 - Q: ¿Se pueden inactivar las categorías de menú y bajo qué regla? → A: Sí, libremente.
   Una categoría puede inactivarse en cualquier momento; sus productos activos dejan de
   mostrarse en el menú hasta reasignarlos a otra categoría o reactivar la categoría.
+- Q: ¿Dónde y cómo se gestionan las categorías de menú, dado que son independientes de
+  las categorías del catálogo de items? → A: Con una Historia de Usuario dedicada dentro
+  de 008 (crear, editar, inactivar, reactivar), con nombre único, siguiendo el mismo
+  patrón que 005-categorias-catalogo.
+- Q: ¿Qué debe mostrar el historial de versiones de una receta? → A: En el MVP, solo el
+  número de versión y las fechas de vigencia de cada versión archivada. El detalle
+  completo de ingredientes de una versión archivada queda documentado como Fuera de
+  Alcance para una iteración futura.
 
 ---
 
@@ -126,8 +134,8 @@ unidad de medida canónica del insumo) coincide exactamente con lo definido.
 
 2. **Dado** que "Sanduche Capresse" tiene una receta activa (v1),
    **Cuando** el admin crea una receta modificada (v2) para el mismo producto,
-   **Entonces** la receta v2 pasa a ser la activa, la v1 queda archivada y sigue visible en
-   el historial para auditoría.
+   **Entonces** la receta v2 pasa a ser la activa, y la v1 queda archivada con su fecha de
+   vigencia visible en el historial de versiones para auditoría.
 
 3. **Dado** que el admin intenta crear una línea de receta con una unidad que no tiene
    equivalencia configurada con la unidad de medida del insumo,
@@ -181,8 +189,50 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 
 2. **Dado** que el admin selecciona un producto con receta,
    **Cuando** accede a su detalle,
-   **Entonces** ve la receta activa con todos sus ingredientes (cantidad y unidad) y puede
-   acceder al historial de versiones anteriores.
+   **Entonces** ve la receta activa con todos sus ingredientes (cantidad y unidad) y el
+   historial de versiones anteriores con número y fechas de vigencia (el detalle de
+   ingredientes de versiones archivadas queda fuera de alcance del MVP).
+
+---
+
+### Historia de Usuario 6 — Gestionar categorías de menú (Prioridad: P1)
+
+El administrador crea, edita, inactiva y reactiva las categorías que agrupan los productos
+del menú (ej: Bebidas, Sanduchería, Postres), independientes de las categorías del
+catálogo de items.
+
+**Por qué esta prioridad**: Sin categorías de menú no es posible crear productos, ya que
+la categoría es un campo obligatorio (RF-MEN-01.2).
+
+**Prueba Independiente**: Puede verificarse creando una categoría, editando su nombre,
+inactivándola y comprobando que sus productos activos dejan de mostrarse en el menú, y
+reactivándola.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** que el admin crea la categoría "Bebidas",
+   **Cuando** guarda,
+   **Entonces** la categoría queda activa y disponible para asignar a productos de menú.
+
+2. **Dado** que ya existe una categoría "Bebidas",
+   **Cuando** el admin intenta crear otra categoría con el mismo nombre (sin distinguir
+   mayúsculas/minúsculas),
+   **Entonces** el sistema rechaza la operación indicando que el nombre ya existe.
+
+3. **Dado** que existe la categoría "Postres" con productos activos asignados,
+   **Cuando** el admin la inactiva,
+   **Entonces** la categoría queda inactiva y sus productos activos dejan de mostrarse en
+   el menú, sin cambiar el estado propio de esos productos.
+
+4. **Dado** que existe una categoría inactiva,
+   **Cuando** el admin la reactiva,
+   **Entonces** la categoría vuelve a estar disponible y sus productos activos vuelven a
+   mostrarse en el menú.
+
+5. **Dado** que un lider_tienda o barista intenta gestionar categorías de menú,
+   **Cuando** accede a esa sección,
+   **Entonces** el sistema deniega el acceso; solo el admin puede gestionar categorías
+   de menú.
 
 ---
 
@@ -223,6 +273,8 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
   restricción por productos asignados. Los productos activos de una categoría inactiva
   dejan de mostrarse en el menú hasta que se reasignen a otra categoría o la categoría
   se reactive; los productos conservan su estado y sus recetas.
+- RF-MEN-03.4: El nombre de la categoría de menú es único (insensible a
+  mayúsculas/minúsculas) entre todas las categorías de menú, activas e inactivas.
 
 ### RF-REC-01: Gestión de recetas
 
@@ -246,8 +298,11 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 
 - RF-REC-02.1: El administrador puede consultar el menú completo agrupado por categoría
   con indicación de si cada producto tiene receta activa.
-- RF-REC-02.2: Desde el detalle de un producto, el admin puede ver la receta activa, sus
-  ingredientes y el historial de versiones anteriores con sus fechas de vigencia.
+- RF-REC-02.2: Desde el detalle de un producto, el admin puede ver la receta activa con
+  todos sus ingredientes (item, cantidad y unidad), y el historial de versiones
+  anteriores con su número de versión y fechas de vigencia. Ver el detalle completo de
+  ingredientes de una versión archivada específica está fuera de alcance del MVP
+  (ver `## Fuera de Alcance`).
 
 ---
 
@@ -260,9 +315,12 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
   mayor que cero y unidad de medida con equivalencia configurada respecto a la unidad del
   insumo; el sistema rechaza cualquier línea que no la tenga.
 - **Trazabilidad de versiones**: Toda modificación de receta genera una nueva versión
-  archivada; el 100% del historial de versiones es accesible para el admin.
-- **Control de acceso**: El 100% de los intentos de gestión del menú o recetas por roles
-  no admin son bloqueados.
+  archivada; el 100% del historial (número de versión y fechas de vigencia) es accesible
+  para el admin.
+- **Unicidad de categorías**: El 100% de los intentos de crear o renombrar una categoría
+  de menú con un nombre ya existente son rechazados.
+- **Control de acceso**: El 100% de los intentos de gestión del menú, categorías o
+  recetas por roles no admin son bloqueados.
 
 ---
 
@@ -274,6 +332,17 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 | `CategoriaMenu` | nombre, activo |
 | `Receta` | producto_menu_id, version, activa_desde, activo |
 | `LineaReceta` | receta_id, item_id, cantidad, unidad_medida_id |
+
+---
+
+## Fuera de Alcance
+
+- **Detalle completo de versiones archivadas de receta**: el historial de versiones de
+  una receta (RF-REC-02.2) muestra únicamente el número de versión y las fechas de
+  vigencia de cada versión archivada. Consultar el detalle completo de ingredientes
+  (item, cantidad, unidad) de una versión archivada específica queda fuera de alcance
+  del MVP; se considera para una iteración futura. La versión activa sí expone su
+  detalle completo de ingredientes.
 
 ---
 
@@ -331,8 +400,8 @@ comprobando que el listado los diferencia visualmente y resalta los que no tiene
 | `menu.listado.duration` | Histograma | ms | Latencia del listado del menú agrupado por categoría | — |
 
 **Valores de la etiqueta `resultado`**: `success`, `codigo_pos_duplicado`,
-`padre_con_variantes_activas`, `receta_en_producto_padre`, `sin_lineas`,
-`unidades_incompatibles`, `item_inactivo`, `validation_error`, `not_found`.
+`nombre_categoria_duplicado`, `padre_con_variantes_activas`, `receta_en_producto_padre`,
+`sin_lineas`, `unidades_incompatibles`, `item_inactivo`, `validation_error`, `not_found`.
 
 **Nota de cardinalidad**: `user_id` nunca se incluye como etiqueta de métrica (alta
 cardinalidad); va como atributo del span. El menú y las recetas son catálogo compartido
