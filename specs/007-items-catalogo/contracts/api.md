@@ -5,7 +5,10 @@
 **Autorización**:
 
 - Solo `admin` puede crear, editar, inactivar, reactivar y gestionar costos por tienda.
-- Todos los roles autenticados pueden leer (el catálogo es de consulta para módulos consumidores).
+- Todos los roles autenticados pueden leer el catálogo de items (el catálogo es de consulta
+  para módulos consumidores), **excepto** el historial de costos por tienda: consultar
+  `GET /items/{id}/costos_tienda` es exclusivo de `admin`, según la matriz de permisos
+  `§2.5` ("Ver historial de costos") de [loopi-v2-funcional/spec.md](../../loopi-v2-funcional/spec.md).
 
 **Formato de error**:
 
@@ -299,6 +302,9 @@ GET /api/v1/items/{id}/costos_tienda
 Authorization: Bearer {token}
 ```
 
+> Exclusivo de rol `admin` — a diferencia del resto de endpoints de lectura del catálogo,
+> el historial de costos no es visible para `lider_tienda` ni `barista` (matriz `§2.5`).
+
 Retorna el historial completo de costos registrados para cada tienda, con el costo vigente
 identificado (primera entrada de cada tienda, ordenada por `vigente_desde DESC`).
 
@@ -342,6 +348,7 @@ identificado (primera entrada de cada tienda, ordenada por `vigente_desde DESC`)
 | Código HTTP | `error` | Situación |
 |-------------|---------|-----------|
 | 401 | `no_autenticado` | Token ausente o expirado |
+| 403 | `sin_permiso` | El rol no es `admin` |
 | 404 | `item_no_encontrado` | No existe un item con ese ID |
 
 ---
@@ -390,3 +397,4 @@ El `vigente_desde` es asignado por el servidor (`NOW()`).
 | 403 | `sin_permiso` | — | El rol no es `admin` |
 | 404 | `item_no_encontrado` | — | No existe un item con ese ID |
 | 404 | `tienda_no_encontrada` | `tienda_id` | No existe la tienda indicada |
+| 422 | `tienda_inactiva` | `tienda_id` | La tienda existe pero está inactiva |

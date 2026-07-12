@@ -134,6 +134,53 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 ---
 
+### Historia de Usuario 5 — Costos por tienda (Prioridad: P2)
+
+El administrador registra, para un item específico, un costo unitario propio de una tienda
+cuando este difiere del costo global por defecto (ej. por flete o condiciones locales del
+proveedor). Cada registro conserva el historial completo; no se sobreescribe el costo
+anterior. Solo el admin puede consultar y registrar este historial.
+
+**Por qué esta prioridad**: Permite reflejar diferencias reales de costo entre tiendas sin
+perder trazabilidad de precios, insumo clave para reportes financieros y para el costeo de
+recetas por tienda.
+
+**Prueba Independiente**: Puede verificarse registrando un costo por tienda para un item y
+comprobando que el historial muestra ambos valores (el nuevo como vigente) y que un rol
+distinto de admin no puede consultarlo.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** que el item "Leche Entera" tiene costo global $3200 y la tienda "Sede Norte" no
+   tiene costo propio registrado,
+   **Cuando** el admin registra un costo de $3400 para esa tienda,
+   **Entonces** el sistema crea un nuevo registro de historial con ese valor como vigente,
+   sin modificar el costo global ni los registros de otras tiendas.
+
+2. **Dado** que la tienda "Sede Norte" ya tiene un costo vigente de $3400 para un item,
+   **Cuando** el admin registra un nuevo costo de $3600 para la misma tienda,
+   **Entonces** el sistema agrega un nuevo registro histórico (no sobreescribe el anterior)
+   y el costo vigente pasa a ser $3600.
+
+3. **Dado** que el admin intenta registrar un costo con valor cero o negativo, o para una
+   tienda inexistente,
+   **Cuando** envía la solicitud,
+   **Entonces** el sistema rechaza la operación indicando la razón (`costo_invalido` o
+   `tienda_no_encontrada`).
+
+4. **Dado** que un lider_tienda o barista intenta consultar el historial de costos por
+   tienda de un item,
+   **Cuando** realiza la solicitud,
+   **Entonces** el sistema deniega el acceso; solo el admin puede ver este historial
+   (matriz de permisos `§2.5` — "Ver historial de costos").
+
+5. **Dado** que una tienda no tiene ningún costo propio registrado para un item,
+   **Cuando** el admin consulta el historial de costos de ese item,
+   **Entonces** esa tienda no aparece en el historial y el sistema indica que aplica el
+   costo global.
+
+---
+
 ## Requisitos Funcionales
 
 ### RF-ITEM-01: Creación de items
@@ -162,7 +209,9 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - RF-ITEM-02.2: Se pueden editar en cualquier momento: nombre, proveedor, costo unitario,
   stock de seguridad, tiempo de entrega y frecuencia de inventario.
 - RF-ITEM-02.3: El código del item puede editarse libremente mientras el item no tenga
-  ningún registro en inventarios, pedidos ni recetas. Una vez que existe al menos un uso
+  ningún registro en inventarios, pedidos ni recetas. Un item recién creado que aún no ha
+  sido contado ni usado (cero registros) puede editar su código sin restricción alguna,
+  sin importar el tiempo transcurrido desde su creación. Una vez que existe al menos un uso
   en cualquiera de estos módulos, el código queda bloqueado y no puede modificarse.
 - RF-ITEM-02.4: Cambiar la unidad de medida de un item con historial de stock requiere
   confirmación explícita del admin, quien asume la responsabilidad por la inconsistencia
@@ -172,6 +221,9 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
   cualquier item (`insumo`, `material_consumo` o `activo`) puede asignarse a cualquier
   subcategoría sin restricción de tipo.
 - RF-ITEM-02.6: La edición no afecta el historial de inventarios, pedidos ni recetas previos.
+- RF-ITEM-02.7: La edición usa estrategia last-write-wins: no existe control de concurrencia
+  optimista ni pesimista entre ediciones simultáneas del mismo item; el último `UPDATE` en
+  llegar prevalece, consistente con el resto del catálogo (004, 005, 006).
 
 ### RF-ITEM-03: Inactivación y reactivación
 
@@ -198,14 +250,35 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 
 ### RF-ITEM-05: Listado y consulta
 
-- RF-ITEM-05.1: El administrador puede consultar el catálogo completo de items con
-  código, nombre, tipo, frecuencia y estado.
+- RF-ITEM-05.1: Todos los roles autenticados (`admin`, `lider_compras`, `lider_tienda`,
+  `barista`) pueden consultar el catálogo completo de items con código, nombre, tipo,
+  frecuencia y estado, según la matriz de permisos `§2.5` ("Ver catálogo"). La gestión
+  (crear, editar, inactivar, reactivar) sigue siendo exclusiva del admin (RF-ITEM-01.1,
+  RF-ITEM-02.1, RF-ITEM-03.1). `lider_compras` consulta el catálogo en modo lectura para
+  su labor de planeación de demanda y generación de pedidos (ver Dependencias:
+  `012-pedidos`, `014-demanda`).
 - RF-ITEM-05.2: El listado permite filtrar por tipo, frecuencia y estado (activo/inactivo).
-- RF-ITEM-05.3: Desde el detalle de un item, el admin accede a todos sus atributos
-  incluyendo los parámetros de stock y el historial de costos por tienda. El historial
-  de costos muestra, para cada tienda, los valores de `costo_unitario` registrados en
-  `ItemCostoTienda` con su fecha de vigencia; si una tienda no ha sobreescrito el costo,
-  se muestra el valor por defecto global (`Item.costo_unitario`).
+- RF-ITEM-05.3: Desde el detalle de un item, cualquier rol autenticado accede a todos sus
+  atributos incluyendo los parámetros de stock, **excepto** el historial de costos por
+  tienda, que es exclusivo del admin (ver RF-ITEM-06).
+
+### RF-ITEM-06: Costos por tienda
+
+- RF-ITEM-06.1: Solo el administrador puede registrar y consultar el historial de costos
+  por tienda de un item (matriz `§2.5` — "Ver historial de costos"). Cualquier otro rol
+  recibe acceso denegado.
+- RF-ITEM-06.2: Registrar un nuevo costo para una tienda crea un registro histórico nuevo
+  (append-only); no se sobreescribe ni elimina ningún registro previo. El costo vigente de
+  una tienda es el registro más reciente (`vigente_desde` mayor).
+- RF-ITEM-06.3: El costo registrado debe ser mayor a cero (nunca cero ni negativo); si un
+  item no tiene costo real para una tienda, esta simplemente no registra override y aplica
+  el costo global (que sí puede ser nulo, ver RF-ITEM-01.3). La tienda debe existir
+  (`tienda_no_encontrada` si no existe) y estar activa (`tienda_inactiva` si existe pero
+  está inactiva); en ambos casos el sistema rechaza la operación con el error específico.
+- RF-ITEM-06.4: El historial de costos muestra, para cada tienda, los valores de
+  `costo_unitario` registrados en `ItemCostoTienda` con su fecha de vigencia; si una tienda
+  no ha registrado un costo propio, no aparece en el historial y aplica el valor por
+  defecto global (`Item.costo_unitario`).
 
 ---
 
@@ -255,6 +328,8 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
   de recetas corresponde a esa feature.
 - **012-pedidos** (posterior): El `tiempo_entrega_dias` y el `stock_seguridad` son insumos
   del algoritmo de planeación de demanda.
+- **014-demanda** (posterior): El rol `lider_compras` consulta el catálogo de items en modo
+  lectura (RF-ITEM-05.1) como parte de su labor de planeación y generación de pedidos.
 
 ### Suposiciones
 
@@ -268,7 +343,41 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - El `costo_unitario` global del item (`Item.costo_unitario`) es el valor por defecto para
   todas las tiendas que no hayan registrado un costo propio en `ItemCostoTienda`. El costo
   fijado al crear el item no se actualiza retroactivamente en recepciones ni módulos
-  posteriores (ver regla global de costo).
+  posteriores.
+
+---
+
+## Observabilidad
+
+### Trazas (Spans OTel)
+
+| Operación | Nombre del Span | Atributos Obligatorios |
+|---|---|---|
+| Crear item | `items.crear` | `resultado`, `item.codigo` |
+| Actualizar item | `items.actualizar` | `resultado`, `item.id` |
+| Inactivar / reactivar item | `items.cambiar_estado` | `resultado`, `item.id`, `item.estado` |
+| Registrar costo por tienda | `items.costos_tienda.registrar` | `resultado`, `item.id`, `tienda_id` |
+
+### Métricas
+
+| Nombre | Tipo | Unidad | Descripción | Etiquetas |
+|---|---|---|---|---|
+| `items.creacion.duration` | Histograma | ms | Duración del proceso de creación de un item | `resultado` |
+| `items.creacion.total` | Contador | — | Conteo de creaciones por resultado | `resultado` |
+| `items.actualizacion.duration` | Histograma | ms | Duración de la actualización de un item | `resultado` |
+| `items.actualizacion.total` | Contador | — | Conteo de actualizaciones por resultado | `resultado` |
+| `items.costos_tienda.registro.total` | Contador | — | Conteo de registros de costo por tienda | `resultado`, `tienda_id` |
+| `items.listado.duration` | Histograma | ms | Latencia del listado paginado del catálogo | — |
+
+**Valores de la etiqueta `resultado`**: `success`, `codigo_duplicado`, `nombre_duplicado`,
+`codigo_en_uso`, `cambio_unidad_requiere_confirmacion`, `subcategoria_inactiva`,
+`proveedor_inactivo`, `unidad_medida_inactiva`, `validation_error`, `not_found`.
+
+**Nota de cardinalidad**: `user_id` nunca se incluye como etiqueta de métrica (alta
+cardinalidad); va como atributo del span. `tienda_id` solo aplica a las operaciones de
+`items_costos_tienda` (el resto del catálogo es compartido por marca y no lleva `tienda_id`).
+
+---
 
 ## Clarifications
 
@@ -279,3 +388,10 @@ comprobando que el listado los muestra filtrados y con sus parámetros clave.
 - Q: ¿Se requiere importación masiva (CSV/Excel) para el setup inicial del catálogo? → A: No; la carga es exclusivamente manual (item por item) en esta versión. Importación masiva queda diferida.
 - Q: ¿Las subcategorías tienen restricción de tipo de item? → A: No; las subcategorías son independientes del tipo de item. Cualquier tipo puede asignarse a cualquier subcategoría.
 - Q: ¿El campo `stock_seguridad` es obligatorio para items de tipo `activo`? → A: Sí, es obligatorio para todos los tipos incluyendo `activo`; el admin ingresa `0` cuando no aplica operativamente.
+
+### Session 2026-07-11
+
+- Q: ¿Qué estrategia de concurrencia aplica cuando dos admins editan el mismo item casi simultáneamente? → A: Last-write-wins, sin control de concurrencia optimista ni pesimista; consistente con 004, 005 y 006.
+- Q: ¿Qué ocurre si el admin registra un costo por tienda para una tienda existente pero inactiva? → A: El sistema rechaza la operación con un error específico `tienda_inactiva` (422), distinto de `tienda_no_encontrada`.
+- Q: ¿Puede editarse libremente el código de un item creado pero nunca usado (cero registros en inventarios, pedidos o recetas), sin importar el tiempo transcurrido? → A: Sí, editable sin restricción; cero usos significa que `estaEnUso()` retorna `false` sin excepciones de plazo.
+- Q: ¿Puede un costo por tienda registrarse en cero para items sin costo real (ej. donaciones)? → A: No; el costo por tienda siempre debe ser mayor a cero. Si no hay costo real, la tienda no registra override y aplica el costo global (que sí puede ser nulo).

@@ -238,7 +238,12 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   tienda asignada (lider_tienda, barista) o permite selección (admin).
 - **002-gestion-tiendas**: El inventario pertenece a una tienda activa.
 - **007-items-catalogo**: Los items con su frecuencia de inventario determinan qué se
-  cuenta en cada tipo de conteo.
+  cuenta en cada tipo de conteo. **Pendiente de esta feature**: `007-items-catalogo` deja
+  un stub `tieneHistorialStock(itemID)` (`service.go`) que siempre retorna `false` porque
+  aún no existen tablas de conteo; al implementar 009 se debe reemplazar ese stub por una
+  consulta real (ej. `EXISTS` sobre `detalle_inventario`) para que RF-ITEM-02.4 (confirmación
+  obligatoria al cambiar la unidad de medida de un item con historial de stock) funcione
+  como está especificado en `007-items-catalogo/spec.md`.
 - **010-mermas** (posterior): Las mermas registradas entre conteos impactan el valor
   sugerido del siguiente inventario.
 - **008-menu-recetas** + **015-pos** (posterior): Las ventas procesadas entre conteos
