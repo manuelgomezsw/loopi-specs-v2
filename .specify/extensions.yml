@@ -1,5 +1,6 @@
 installed:
 - bugfix
+- finalize
 - fixit
 - iterate
 settings:
@@ -132,6 +133,17 @@ hooks:
     priority: 10
     prompt: Run bugfix consistency check after implementation?
     description: Verify spec artifact consistency after implementation completes
+    condition: null
+  - extension: finalize
+    command: speckit.finalize.run
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: ¿Ejecutar el cierre de la feature (estado de PRs, verificación de tareas
+      pendientes, limpieza de branches)?
+    description: Sugerido una vez que el CI de los PRs de la feature está en verde
+      y lista para cerrar — no inmediatamente después de /speckit-implement si los
+      PRs aún están en revisión.
     condition: null
   after_checklist:
   - extension: git
