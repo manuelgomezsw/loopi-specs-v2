@@ -1,0 +1,367 @@
+# Tasks: 009-inventario-conteo
+
+**Input**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [quickstart.md](quickstart.md)
+
+**Branch**: `feature/009-inventario-conteo` → `develop`
+
+**Fecha**: 2026-07-12
+
+---
+
+## Format: `[ID] [P?] [Story?] Description`
+
+- **[P]**: Parallelizable (different files, no dependencies)
+- **[Story]**: User story label (US1, US2, US3, US4)
+- **File paths**: Relative to repository root for both backend (`loopi-api-v2/`) and frontend (`loopi-web-v2/`)
+
+---
+
+## Phase 1: Setup (Shared Infrastructure)
+
+**Purpose**: Project initialization and database schema
+
+- [x] T001 Create Go module structure in `loopi-api-v2/internal/inventarios/` with models.go, handler.go, service.go, repository.go files (empty stubs)
+- [x] T002 Create database migrations directory and migration files: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.up.sql`, `.down.sql`, `NNNN+1_crear_tabla_detalle_inventario.up.sql`, `.down.sql`
+- [x] T003 [P] Create Angular module structure in `loopi-web-v2/src/app/inventario/` with routing, service stub, and component stubs (inventario-conteo, inventario-historial, inventario-detalle)
+- [x] T004 Implement database migrations: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.up.sql` per data-model.md (tabla `inventarios` + índices + columna generada `horario_norm`)
+- [x] T005 Implement database migrations: `loopi-api-v2/db/migrations/NNNN+1_crear_tabla_detalle_inventario.up.sql` per data-model.md (tabla `detalle_inventario` + índices + constraints)
+- [x] T006 [P] Add rollback migrations: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.down.sql`, `NNNN+1_crear_tabla_detalle_inventario.down.sql`
+
+**Checkpoint**: Database schema ready, Go module structure in place, frontend directory structure ready
+
+---
+
+## Phase 2: Foundational (Blocking Prerequisites)
+
+**Purpose**: Core models, service layer, and transversal component integration
+
+**⚠️ CRITICAL**: No user story work can begin until this phase is complete
+
+- [x] T007 [P] Create Go models in `loopi-api-v2/internal/inventarios/models.go`: `Inventario`, `DetalleInventario` structs + request/response DTOs (CreateInventarioReq, InventarioResp, ItemDetailResp, etc.)
+- [x] T008 [P] Create Go constants in `loopi-api-v2/internal/inventarios/models.go`: type enums (DiarioCEO, semanal, mensual, inicial), estado enums (en_progreso, completado), horario enums (apertura, mediodia, cierre)
+- [x] T009 Create Go service interface in `loopi-api-v2/internal/inventarios/service.go`: Service interface with method signatures (Iniciar, RegistrarValor, Confirmar, Listar, Buscar, Modificar, Eliminar) + basic validation methods (ValidarTipo, ValidarHorario)
+- [x] T010 Create Go repository interface in `loopi-api-v2/internal/inventarios/repository.go`: Repository interface with method signatures (CreateInventario, GetInventario, ListInventarios, UpdateDetalle, ConfirmarInventario, etc.) + helper methods for stock calculation
+- [x] T011 Create HTTP handler stubs in `loopi-api-v2/internal/inventarios/handler.go`: empty handler functions for 8 endpoints per contracts/api.md (GetSugerencia, PostInventario, GetInventario, PatchItemValor, PostConfirmar, DeleteInventario, GetHistorial, reutiliza GET{id})
+- [x] T012 [P] Create Angular service in `loopi-web-v2/src/app/inventario/inventario.service.ts`: HTTP client methods matching contracts/api.md endpoints + error handling per spec (error format: {error, mensaje, campo, detalles})
+- [x] T013 [P] Create Angular components (empty stubs) in `loopi-web-v2/src/app/inventario/`: inventario-conteo.component.ts + .html, inventario-historial.component.ts + .html, inventario-detalle.component.ts + .html
+- [x] T014 Configure Angular routing in `loopi-web-v2/src/app/inventario/inventario.routes.ts`: lazy-loaded routes for conteo, historial, detalle (path: /inventario)
+- [x] T015 [P] Integrate transversal components in Angular: import ListCardComponent, FilterBarComponent, PaginationComponent, FormCardComponent, StatusBadgeComponent per plan.md FE-COMP-01
+
+**Checkpoint**: Foundation ready - models, interfaces, routing complete. No database queries yet.
+
+---
+
+## Phase 3: User Story 1 - Iniciar Conteo (Priority: P1)
+
+**Goal**: Líder/barista can start an inventory count with type and schedule suggestions
+
+**Independent Test**: Run `/speckit-tasks` sample: POST /inventarios with type/horario → 201, status en_progreso, items list with valor_sugerido calculated
+
+### Tests for User Story 1 ⚠️
+
+- [ ] T016 [P] [US1] Contract test for GET /inventarios/sugerencia in `loopi-api-v2/internal/inventarios/handler_test.go`: verify time-based suggestion (06:00-10:59 → diario/apertura, etc.)
+- [ ] T017 [P] [US1] Contract test for POST /inventarios in `loopi-api-v2/internal/inventarios/handler_test.go`: 201 response, estado=en_progreso, items array
+- [ ] T018 [P] [US1] Unit test for `service.Iniciar()` in `loopi-api-v2/internal/inventarios/service_test.go`: valida tipo, valida horario null para semanal/mensual/inicial (RF-INV-01.3)
+- [ ] T019 [P] [US1] Unit test for duplicate check in `loopi-api-v2/internal/inventarios/repository_test.go`: error 409 si existe en_progreso o completado mismo tienda+tipo+horario+fecha (RF-INV-01.4)
+- [ ] T020 [US1] Integration test for stock_inventario_referencia calculation in `loopi-api-v2/internal/inventarios/repository_test.go`: respects tipo prioritario (diario→diario, respaldo a cualquier tipo) per RD-03
+
+### Implementation for User Story 1
+
+- [x] T021 [P] [US1] Implement service method `Iniciar()` in `loopi-api-v2/internal/inventarios/service.go`: orchestrate type/horario suggestion, validate input, call repository.CreateInventario + repository.GetInventarioDetalleWithValues
+- [x] T022 [P] [US1] Implement repository method `CreateInventario()` in `loopi-api-v2/internal/inventarios/repository.go`: INSERT inventarios row, return 409 si UNIQUE constraint violation (tienda_id, tipo, horario_norm, fecha)
+- [x] T023 [P] [US1] Implement repository method `CreateDetalleInventario()` in `loopi-api-v2/internal/inventarios/repository.go`: INSERT detalle_inventario rows (one per active item matching tipo frecuencia), calculate valor_sugerido per RF-INV-02.2 formula (stock_referencia + compras - ventas - mermas)
+- [x] T024 [P] [US1] Implement repository helper `GetStockReferenciaByTipo()` in `loopi-api-v2/internal/inventarios/repository.go`: query for most recent completado of same tipo, respaldo to any tipo (per RD-03), return valor_real or 0 if not found
+- [x] T025 [P] [US1] Implement repository helper `SumarComprasPeriodo()` in `loopi-api-v2/internal/inventarios/repository.go`: SUM from compras_caja_menor (011/013) with information_schema check for table existence (RD-04)
+- [x] T026 [P] [US1] Implement repository helper `SumarVentasPeriodo()` in `loopi-api-v2/internal/inventarios/repository.go`: SUM from ventas_lineas (012) with information_schema check for table existence (RD-04)
+- [x] T027 [P] [US1] Implement repository helper `SumarMermasPeriodo()` in `loopi-api-v2/internal/inventarios/repository.go`: SUM from mermas (010) with information_schema check for table existence (RD-04)
+- [x] T028 [US1] Implement HTTP handler `GetSugerencia()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT + call service.SuggestType(now) → 200 with {tipo, horario} per contracts/api.md endpoint 1
+- [x] T029 [US1] Implement HTTP handler `PostInventario()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, validate tienda_id authorization (P-II, P-III), call service.Iniciar() → 201 with full inventory + items per contracts/api.md endpoint 2; return 409 si conteo_duplicado, 400 si validation error
+- [x] T030 [P] [US1] Create Angular component `inventario-conteo.component.ts` step 1: Display form for type/schedule selection + GET /sugerencia on load, populate form defaults, allow manual override
+- [x] T031 [P] [US1] Create Angular component `inventario-conteo.component.html`: mobile-first layout (<640px) with form inputs, POST /inventarios button (disabled until form valid per FE-FORMSURF-01)
+- [x] T032 [US1] Implement Angular POST /inventarios call in `inventario-conteo.component.ts`: on form submit, POST to service, handle 201 (transition to step 2: register items), handle errors (409 conteo_duplicado, etc.) per spec error format
+
+**Checkpoint**: HU1 complete and testable. Verify: POST /inventarios creates inventory with correct suggestions, blocks duplicates, calculates valor_sugerido correctly, frontend form works on mobile
+
+---
+
+## Phase 4: User Story 2 - Registrar Valores del Conteo (Priority: P1)
+
+**Goal**: Líder/barista registers actual item counts and sees differences in real-time
+
+**Independent Test**: PATCH /inventarios/{id}/items/{item_id} with valor_real → 200, diferencia recalculated, frontend shows change within 300ms (RF-INV-02.3)
+
+### Tests for User Story 2 ⚠️
+
+- [ ] T033 [P] [US2] Contract test for PATCH /inventarios/{id}/items/{item_id} in `loopi-api-v2/internal/inventarios/handler_test.go`: 200 response with {item_id, valor_esperado, valor_real, diferencia}
+- [ ] T034 [P] [US2] Contract test for authorization check in PATCH handler: 403 `conteo_bloqueado` if user != responsable_id (RF-INV-02.5)
+- [ ] T035 [P] [US2] Unit test for diferencia calculation in `loopi-api-v2/internal/inventarios/service_test.go`: diferencia = valor_real - valor_esperado (including negative values)
+- [ ] T036 [US2] Integration test for item-level autosave in `loopi-api-v2/internal/inventarios/repository_test.go`: multiple PATCH calls persist each valor_real independently (RD-05)
+
+### Implementation for User Story 2
+
+- [x] T037 [P] [US2] Implement service method `RegistrarValor()` in `loopi-api-v2/internal/inventarios/service.go`: validate inventario exists, validate user is responsable_id, calculate diferencia, call repository.UpdateDetalle
+- [ ] T038 [P] [US2] Implement repository method `UpdateDetalle()` in `loopi-api-v2/internal/inventarios/repository.go`: UPDATE detalle_inventario SET valor_real, diferencia WHERE inventario_id + item_id; return updated row data
+- [x] T039 [US2] Implement HTTP handler `PatchItemValor()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, parse {valor_real}, validate user authorization (responsable_id check), call service.RegistrarValor() → 200 per contracts/api.md endpoint 4; return 403 si conteo_bloqueado, 404 si item not in count
+- [x] T040 [P] [US2] Create Angular component step 2 in `inventario-conteo.component.ts`: Display items list (valor_sugerido, valor_esperado) in FormCardComponent cards, render input fields for valor_real per item (mobile-first: single-column, one item per viewport row to minimize scroll)
+- [x] T041 [P] [US2] Create Angular component HTML for item registration: input type=number per item, show diferencia calculated locally (real - esperado) below each input, apply Tailwind classes for color (red if negative, green if positive per FE-RESP-01 mobile-first)
+- [x] T042 [US2] Implement Angular autosave in `inventario-conteo.component.ts`: on-blur (or debounce 500ms) emit PATCH /inventarios/{id}/items/{item_id}, update UI with response diferencia, handle 403 conteo_bloqueado (show error toast, lock form)
+- [ ] T043 [US2] Add error recovery in Angular: on autosave error, show inline error message, allow retry on same input field (do NOT clear field on temporary network failure)
+- [ ] T044 [US2] Implement session recovery in Angular (RF-INV-02.4): on component load, if inventario.id exists in URL params + estado=en_progreso, GET /inventarios/{id} and pre-fill ALL valor_real values from response
+
+**Checkpoint**: HU2 complete and testable. Verify: PATCH updates valor_real and diferencia, authorization enforced, frontend autosaves on blur, network interruption recovery works, single responsible can resume from another device
+
+---
+
+## Phase 5: User Story 3 - Confirmar Conteo (Priority: P1)
+
+**Goal**: Líder completes inventory count and stock is automatically adjusted
+
+**Independent Test**: POST /inventarios/{id}/confirmar with all items registered → 200, estado=completado, stock of items updated to valor_real values
+
+### Tests for User Story 3 ⚠️
+
+- [ ] T045 [P] [US3] Contract test for POST /inventarios/{id}/confirmar in `loopi-api-v2/internal/inventarios/handler_test.go`: 200 response with {id, estado=completado, completado_en timestamp}
+- [ ] T046 [P] [US3] Contract test for validation in POST confirmar: 422 `items_sin_registrar` if any item.valor_real IS NULL, include detalles with item_id list
+- [ ] T047 [P] [US3] Contract test for authorization: 403 `conteo_bloqueado` if user != responsable_id
+- [ ] T048 [US3] Integration test for atomic confirmation in `loopi-api-v2/internal/inventarios/repository_test.go`: BEGIN TRANSACTION → UPDATE estado to completado + SET completado_en → COMMIT; verify all-or-nothing semantics
+
+### Implementation for User Story 3
+
+- [x] T049 [P] [US3] Implement service method `Confirmar()` in `loopi-api-v2/internal/inventarios/service.go`: validate all items have valor_real, validate user is responsable_id, call repository.ConfirmarInventario (atomic transaction)
+- [x] T050 [P] [US3] Implement repository method `ConfirmarInventario()` in `loopi-api-v2/internal/inventarios/repository.go`: BEGIN TRANSACTION → UPDATE inventarios SET estado='completado', completado_en=NOW() → COMMIT; return updated inventario (per contracts/api.md, no separate stock adjustment write needed because stock is derived per RD-01)
+- [x] T051 [US3] Implement HTTP handler `PostConfirmar()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, validate responsable_id, call service.Confirmar() → 200 per contracts/api.md endpoint 5; return 422 si items_sin_registrar (include missing item_ids in detalles), 403 si conteo_bloqueado, 409 si already completado
+- [x] T052 [P] [US3] Add confirm button to Angular component `inventario-conteo.component.ts` step 3: Display summary of registered items (tabla o cards), show "Confirmar Conteo" button (only enabled if all items have valor_real), on click POST /inventarios/{id}/confirmar
+- [x] T053 [P] [US3] Implement Angular confirmation flow: on 200 response, transition to completion screen (show "Inventario Confirmado" message + timestamp), disable further input, show "Volver a Historial" button → navigate to historial component
+- [ ] T054 [US3] Implement Angular error handling for confirmation: on 422 items_sin_registrar, show modal/toast listing missing item IDs, allow user to "Volver a Registrar" to complete remaining items
+
+**Checkpoint**: HU3 complete and testable. Verify: POST confirmar transitions estado, calculates completado_en, blocks if items missing, atomic transaction tested, frontend shows confirmation screen, derived stock is correct for subsequent conteos
+
+---
+
+## Phase 6: User Story 4 - Consultar Historial (Priority: P2)
+
+**Goal**: Admin/lider reviews past inventory counts for audit and trend detection
+
+**Independent Test**: GET /inventarios?tienda_id=1&estado=completado → 200, lista ordenada fecha DESC (RF-INV-04.1, HU4 AC1)
+
+### Tests for User Story 4 ⚠️
+
+- [ ] T055 [P] [US4] Contract test for GET /inventarios historial in `loopi-api-v2/internal/inventarios/handler_test.go`: 200 response with {inventarios[], total, pagina, total_paginas} per contracts/api.md endpoint 7
+- [ ] T056 [P] [US4] Contract test for pagination: verify ?pagina=1&por_pagina=50 works, max por_pagina=200 enforced
+- [ ] T057 [P] [US4] Contract test for authorization: 403 `sin_permiso` if role=barista (not authorized); 403 `tienda_no_autorizada` if lider_tienda queries another tienda
+- [ ] T058 [P] [US4] Contract test for sorting: verify results ordered by fecha DESC (most recent first)
+- [ ] T059 [P] [US4] Contract test for filtering: GET /inventarios?tipo=diario&estado=completado works, filters correctly
+- [ ] T060 [US4] Integration test for detail endpoint reuse: GET /inventarios/{id} returns full item details with valor_sugerido, valor_esperado, valor_real, diferencia (endpoint 8 reuses endpoint 3 per contracts/api.md)
+
+### Implementation for User Story 4
+
+- [x] T061 [P] [US4] Implement repository method `ListInventarios()` in `loopi-api-v2/internal/inventarios/repository.go`: SELECT con paginación, WHERE tienda_id (if lider_tienda), optional filtros tipo/estado/fecha, ORDER BY fecha DESC, return {inventarios, total, pagina, total_paginas}
+- [x] T062 [P] [US4] Implement repository method `GetInventarioDetalle()` in `loopi-api-v2/internal/inventarios/repository.go`: SELECT inventario + all detalle_inventario rows for that inventario, return full objects with all values
+- [x] T063 [US4] Implement service method `Listar()` in `loopi-api-v2/internal/inventarios/service.go`: parse filters, validate authorization per role (admin any tienda, lider_tienda own tienda only, barista denied), call repository.ListInventarios
+- [x] T064 [US4] Implement service method `Buscar()` in `loopi-api-v2/internal/inventarios/service.go`: fetch inventario by ID + full detalle, validate authorization (same as Listar)
+- [x] T065 [US4] Implement HTTP handler `GetHistorial()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, parse query params (tienda_id, tipo, estado, desde, hasta, pagina, por_pagina), call service.Listar() → 200 per contracts/api.md endpoint 7; return 403 sin_permiso si barista, 403 tienda_no_autorizada si lider_tienda crosses boundaries
+- [x] T066 [US4] HTTP handler GET /inventarios/{id} serves both "detalle durante conteo" (HU1-HU3) y "detalle historial" (HU4): same endpoint per contracts/api.md, check if caller is responsable (if en_progreso) or authorized role (if completado)
+- [x] T067 [P] [US4] Create Angular component `inventario-historial.component.ts`: GET /inventarios on load with pagination, display ListCardComponent per item (fecha, tipo, horario, estado badge, responsable, iniciado_en, completado_en), clickable row → navigate to detalle
+- [x] T068 [P] [US4] Create Angular component `inventario-historial.component.html`: use ListCardComponent + FilterBarComponent (tipo, estado, desde, hasta filters), use PaginationComponent with ?pagina query param, mobile-first responsive layout per FE-RESP-01
+- [x] T069 [US4] Create Angular component `inventario-detalle.component.ts`: GET /inventarios/{id} on load, display inventario header + table/card list of items (valor_sugerido, valor_esperado, valor_real, diferencia per item)
+- [x] T070 [US4] Create Angular component `inventario-detalle.component.html`: responsive table (desktop ≥1024px) / card list (mobile <640px), show diferencia with color coding (red/green per FE-LISTFORM-01), read-only view (admin actions in separate section)
+
+**Checkpoint**: HU4 complete and testable. Verify: GET /inventarios lists with correct sorting/filtering/pagination, authorization enforced per role, GET /{id} detalle shows all fields with correct values, frontend historial responsive, admin can drill into details
+
+---
+
+## Phase 7: Admin Functions (Modify & Delete)
+
+**Goal**: Admin can correct completed counts and clean up abandoned in-progress counts
+
+### Tests for Phase 7 ⚠️
+
+- [ ] T071 [P] Admin modify test: PATCH /inventarios/{id}/items/{item_id} on completado inventory → 200, re-adjusts stock (RF-INV-03.3)
+- [ ] T072 [P] Admin modify authorization test: non-admin role attempting PATCH completado → 403 `sin_permiso`
+- [ ] T073 [P] Admin delete test: DELETE /inventarios/{id} on en_progreso → 204 No Content, liberates uniqueness constraint (RF-INV-05.2)
+- [ ] T074 [P] Admin delete authorization test: non-admin DELETE → 403 `sin_permiso`
+- [ ] T075 Admin delete blocked test: DELETE /inventarios/{id} on completado → 422 `eliminacion_no_permitida` (RF-INV-05.3)
+
+### Implementation for Phase 7
+
+- [x] T076 [P] Implement repository method `UpdateDetalleCompletado()` in `loopi-api-v2/internal/inventarios/repository.go`: UPDATE detalle_inventario valor_real + diferencia on completado inventario (same as RegistrarValor but for admin on completado state)
+- [x] T077 [P] Modify HTTP handler `PatchItemValor()` in `loopi-api-v2/internal/inventarios/handler.go`: add admin override logic: if inventario.estado=completado AND user.role=admin, call repository.UpdateDetalleCompletado instead of blocking; if inventario.estado=completado AND user.role!=admin, return 403 `sin_permiso`
+- [x] T078 [P] Implement service method `Eliminar()` in `loopi-api-v2/internal/inventarios/service.go`: validate user.role=admin, validate inventario.estado=en_progreso, call repository.DeleteInventario
+- [ ] T079 [P] Implement repository method `DeleteInventario()` in `loopi-api-v2/internal/inventarios/repository.go`: DELETE FROM detalle_inventario WHERE inventario_id; DELETE FROM inventarios WHERE id; per cascading delete pattern or explicit two-step deletion
+- [x] T080 Implement HTTP handler `DeleteInventario()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, validate role=admin, call service.Eliminar() → 204 No Content per contracts/api.md endpoint 6; return 403 sin_permiso, 422 eliminacion_no_permitida si completado
+- [ ] T081 [P] Add admin actions section to Angular `inventario-detalle.component.ts`: if estado=completado AND user.role=admin, enable "Modificar Valores" button → switch component to edit mode (PATCH each item)
+- [ ] T082 [P] Add admin delete section to Angular `inventario-historial.component.ts` or detail view: if estado=en_progreso AND user.role=admin, show "Eliminar Conteo" button with confirmation modal, DELETE /inventarios/{id} → remove from list
+- [ ] T083 Implement Angular edit mode for admin in `inventario-detalle.component.ts`: toggle edit/view mode, unlock inputs for admin on completado, on blur PATCH /inventarios/{id}/items/{item_id}, handle responses (same error handling as HU2)
+
+**Checkpoint**: Admin functions complete. Verify: admin can modify completed inventory valores, non-admin blocked, admin can delete en_progreso, delete fails on completado, frontend reflects state correctly
+
+---
+
+## Phase 8: Observabilidad & Polish
+
+**Purpose**: Monitoring, testing completeness, and final validation
+
+### Tests for Phase 8 ⚠️
+
+- [ ] T084 [P] Write comprehensive unit test suite for all service methods in `loopi-api-v2/internal/inventarios/service_test.go` (≥95% coverage per BE-TEST-01)
+- [ ] T085 [P] Write comprehensive unit test suite for all repository methods in `loopi-api-v2/internal/inventarios/repository_test.go` (≥90% infrastructure coverage per BE-TEST-01)
+- [ ] T086 Write end-to-end test for complete HU1→HU3 flow in `loopi-api-v2/internal/inventarios/integration_test.go`: POST /inventarios → PATCH items → POST confirmar → verify stock updated
+- [ ] T087 Write end-to-end test for HU4 list+detail flow in `loopi-api-v2/internal/inventarios/integration_test.go`: GET /inventarios (paginado) → GET /{id} detail → verify all fields
+- [ ] T088 [P] Write Angular unit tests for `inventario-conteo.component.spec.ts`: test form submission, autosave PATCH calls, error handling per component
+- [ ] T089 [P] Write Angular unit tests for `inventario-historial.component.spec.ts`: test list rendering, pagination, filtering, sorting (fecha DESC)
+- [ ] T090 [P] Write Angular unit tests for `inventario-detalle.component.spec.ts`: test detail rendering, admin edit mode, delete confirmation
+- [ ] T091 Angular E2E test skeleton (optional): smoke test complete flow in Cypress or Protractor if E2E suite exists
+
+### Implementation for Phase 8
+
+- [ ] T092 Add OpenTelemetry spans in `loopi-api-v2/internal/inventarios/handler.go`: instrument all 8 endpoint handlers with spans per spec.md Observabilidad section (inventario.conteos.* span names, atributos resultado/tienda_id/etc.)
+- [ ] T093 Add OpenTelemetry metrics in `loopi-api-v2/internal/inventarios/service.go`: instrument Iniciar, Registrar, Confirmar, Modificar, Eliminar, Listar operations with histogramas (duration) + counters (total) per spec.md metrics table
+- [ ] T094 Verify metric labels in `loopi-api-v2/internal/inventarios/service.go`: ALL metrics include tienda_id label (cardinalidad ≤20), user_id NEVER appears as label (only in span attributes per BE-OBS-01)
+- [ ] T095 Implement request logging in `loopi-api-v2/internal/inventarios/handler.go`: log all inventory operations with request/response shapes (use structured logging per existing project standards)
+- [ ] T096 Run database migrations locally in `loopi-api-v2/`: verify tables created correctly via `DESCRIBE inventarios`, `DESCRIBE detalle_inventario`, check indexes via `SHOW INDEX`
+- [ ] T097 Execute all tests: `go test ./internal/inventarios/... -v` in loopi-api-v2, `ng test` in loopi-web-v2 for Angular components
+- [ ] T098 [P] Run quickstart.md smoke tests: manual curl tests for flow (sugerencia → POST /inventarios → PATCH items → POST confirmar → GET historial) per quickstart.md § 4 (Smoke test manual)
+- [ ] T099 [P] Run quickstart.md authorization tests: verify 403/409 errors per quickstart.md § 4.2-4.3 (bloqueo acceso, eliminación, corrección admin)
+- [ ] T100 Verify Constitution compliance (BE-ARCH-01, BE-CACHE-01, BE-API-01, BE-DATA-01, BE-TEST-01, BE-OBS-01, FE-COMP-01, FE-RESP-01, FE-A11Y-01): per checklist in plan.md Constitution Check section
+- [ ] T101 Update stub in `loopi-api-v2/internal/items/service.go` (007 module): replace `tieneHistorialStock(itemID)` hardcoded `false` with EXISTS query on detalle_inventario per spec.md Dependencies section
+- [ ] T102 Final documentation: update README.md or API docs with 009-inventario-conteo endpoints + data model diagrams from data-model.md
+
+**Checkpoint**: All tests passing (≥95%/≥90% coverage), observabilidad instrumented, smoke tests green, Constitution verified, dependencies updated in 007
+
+---
+
+## Phase 9: Constitutional Compliance (Loopi v2 — OBLIGATORIO)
+
+**Purpose**: Verify adherence to constitution.md and standards/*.md rules
+
+*Reference*: plan.md § Constitution Check (all rows state ✅ PASA)
+
+- [ ] T103 Verify [P-I] Spec-First: Spec clarifications integrated, all RF-INV-01 to RF-INV-05 traced in code comments per plan.md
+- [ ] T104 Verify [P-II] Architecture Multi-Tienda: inventarios + detalle_inventario carry tienda_id, authorization per role (admin any tienda, lider_tienda/barista own only) enforced in handlers
+- [ ] T105 Verify [P-III] RBAC: 4 roles (admin, lider_compras, lider_tienda, barista) mapped correctly: POST inventario = admin/lider_tienda/barista (own tienda); modify completado/delete en_progreso = admin only; listar historial = admin/lider_tienda (barista denied)
+- [ ] T106 Verify [P-IV] Trazabilidad de Inventario: detalle_inventario records valor_esperado + valor_real + diferencia; completado never deleted (only en_progreso via RF-INV-05); all operations timestamped (iniciado_en, completado_en, creado_en, actualizado_en)
+- [ ] T107 Verify [P-V] Prevención de Pérdidas: duplicado blocking (tienda+tipo+horario+fecha constraint), confirmación requires all items (422 items_sin_registrar), admin-only modifications/deletions, derivado stock (no dual sources)
+- [ ] T108 Verify [P-VI] Monitoreo Preventivo: spec.md includes Observabilidad section with 6 spans + 7 métricas per table, all critical endpoints instrumented (iniciar, registrar, confirmar, modificar, eliminar, listar)
+- [ ] T109 Verify [BE-ARCH-01] Separación de capas: no SQL in handler.go, no *sql.DB in service.go, repository only file with database access; handler → service → repository dependency order
+- [ ] T110 Verify [BE-CACHE-01] Patrón decorador: ✅ N/A for 009 (dato operacional, no cached_repository.go needed per plan.md)
+- [ ] T111 Verify [BE-TEST-01] Cobertura: run `go test ./internal/inventarios/... -coverprofile=cov.out` → check ≥95% lógica, ≥90% infraestructura; use `go tool cover -func=cov.out | tail -1` to verify totals
+- [ ] T112 Verify [BE-API-01] Convenciones REST: prefix /api/v1/inventarios, query params (?tienda_id, ?tipo, ?estado, ?desde, ?hasta, ?pagina, ?por_pagina), error format {error, mensaje, campo, detalles}, status codes per contracts/api.md table (200, 201, 204, 400, 401, 403, 404, 409, 422)
+- [ ] T113 Verify [BE-DATA-01] Convenciones de datos: PKs = BIGINT UNSIGNED AUTO_INCREMENT, timestamps = DATETIME (creado_en, actualizado_en, + domain timestamps iniciado_en/completado_en), no soft delete (only en_progreso delete), nomenclatura snake_case (español), ENUM for tipo/estado/horario
+- [ ] T114 Verify [BE-OBS-01] Observabilidad: span names = `inventario.conteos.*` per RD naming scheme, ALL metrics include tienda_id label (never user_id as label), `resultado` label per spec table values (success, conteo_duplicado, etc.)
+- [ ] T115 Verify [FE-COMP-01] Usa catálogo transversal: ListCardComponent (historial), FilterBarComponent (filtros), PaginationComponent (paginado), FormCardComponent (registro), StatusBadgeComponent (badges) — audit Angular component imports
+- [ ] T116 Verify [FE-RESP-01] Mobile-first responsive: historial + registro testeo en <640px (single column, flex layout), desktop ≥1024px (table layout, multi-column) per audit in browser devtools
+- [ ] T117 Verify [FE-A11Y-01] Accesibilidad WCAG 2.1 AA: labels associated to inputs, keyboard navigation (Tab/Enter/Esc in forms), color not sole conveyor (red/green diferencia has icons or text labels), aria-live for autosave feedback
+- [ ] T118 Verify [CI-01] Gitflow: branch = feature/009-inventario-conteo, partió de develop, PR abierto a develop (not main), Markdown lint pass before all commits (`npx markdownlint-cli2 "**/*.md"`)
+
+**Checkpoint**: All constitutional rules verified, no violations remain
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Setup (Phase 1)**: No dependencies. Start immediately.
+- **Foundational (Phase 2)**: Depends on Setup completion. BLOCKS all user stories.
+- **User Stories (Phase 3-6)**: All depend on Foundational completion.
+  - HU1, HU2, HU3 (P1) should complete sequentially or in parallel (same responsable flow).
+  - HU4 (P2) can start after Foundational but does not block HU1-HU3.
+  - Admin functions (Phase 7) depend on HU1-HU3 completion for full integration testing.
+- **Observabilidad & Polish (Phase 8)**: Depends on Phases 3-7 completion.
+- **Constitutional Compliance (Phase 9)**: Final verification, depends on Phase 8 completion.
+
+### User Story Dependencies (within Phase 3-6)
+
+- **HU1** (Iniciar): No dependencies on other HUs. Can start after Foundational.
+- **HU2** (Registrar): Depends on HU1 completion (needs existing en_progreso inventario). Parallel task blocks: T021-T027 (service/repo for Iniciar must be done).
+- **HU3** (Confirmar): Depends on HU2 completion (needs registered items to confirm). Atomic transaction requires all prior repository/service setup.
+- **HU4** (Historial): No direct dependency on HU1-HU3 implementation (independent read-only flow), but depends on Foundational models/routing.
+
+### Parallel Opportunities within Each Phase
+
+**Phase 1 Setup**:
+
+- T001, T003 (directory structures) parallel
+- T002, T004, T005 (migrations) sequential (NNNN, NNNN+1)
+
+**Phase 2 Foundational**:
+
+- T007, T008 (models + constants) can run together
+- T012, T013 (Angular service + components) parallel
+- T014, T015 (routing + transversals) parallel
+
+**Phase 3 HU1**:
+
+- T016-T020 (all tests) parallel
+- T021-T027 (service + repo helpers) parallel
+- T030-T032 (Angular form) sequential (form → HTML → submit logic)
+
+**Phase 4 HU2**:
+
+- T033-T036 (tests) parallel
+- T037, T038 (service + repo) parallel
+- T040-T042 (Angular component + autosave) sequential
+
+**Phase 5 HU3**:
+
+- T045-T048 (tests) parallel
+- T049, T050 (service + repo) parallel
+- T052-T054 (Angular confirmation flow) sequential
+
+**Phase 6 HU4**:
+
+- T055-T060 (tests) parallel
+- T061-T064 (service + repo) parallel
+- T067-T070 (Angular historial + detalle) sequential
+
+## Parallel Example: Start HU1 and HU4 Together
+
+After Foundational completes:
+
+- Developer A starts Phase 3 (HU1): works on T021-T032
+- Developer B starts Phase 6 (HU4): works on T061-T070 (independently testable)
+- Both complete without blocking each other
+
+---
+
+## Implementation Strategy
+
+### MVP First: HU1-HU3 Only
+
+1. Complete Phase 1: Setup (1 day est.)
+2. Complete Phase 2: Foundational (2 days est.)
+3. Complete Phase 3: HU1 (2 days est.)
+4. Complete Phase 4: HU2 (2 days est.)
+5. Complete Phase 5: HU3 (2 days est.)
+6. **STOP AND VALIDATE**: Execute smoke tests § 4 in quickstart.md
+7. Deploy/demo MVP (conteo full flow works)
+8. **After MVP validated**:
+   - Phase 6: HU4 (2 days est.)
+   - Phase 7: Admin functions (1 day est.)
+   - Phase 8: Observabilidad (1 day est.)
+   - Phase 9: Constitutional verification (1 day est.)
+
+**Total Est.**: ~14 days sequential full-stack (Go + Angular), 10 days if parallelized (separate Go/Angular developers)
+
+### Incremental Delivery (Per User Story)
+
+Each user story is independently deployable:
+
+1. Deploy MVP (HU1-HU3) → Barista/líder can count items
+2. Deploy HU4 → Admin can review history
+3. Deploy Admin functions → Admin can clean up and correct
+4. Deploy Observabilidad → Ops can monitor
+
+Each iteration adds measurable business value without breaking prior stages.
+
+---
+
+## Notes
+
+- **[P] marker**: Different files, no blocking dependencies. Can parallelize within phase.
+- **[Story] label**: Maps task to HU1/HU2/HU3/HU4 for traceability.
+- **Setup phase paths**: Relative to each repo root (loopi-api-v2/ for Go, loopi-web-v2/ for Angular).
+- **Test tasks**: Included but optional — focus on P1 requirements (HU1-HU3) first; P2 (HU4) tests follow if time permits.
+- **Commit strategy**: Commit after each task or logical group (e.g., all T021-T027 after service + repo complete for HU1).
+- **Validation checkpoints**: After each phase, run relevant tests to confirm independence before moving to next.
+- **Quickstart.md validation**: Use as gate before declaring "feature ready for QA" — all smoke tests must pass.
