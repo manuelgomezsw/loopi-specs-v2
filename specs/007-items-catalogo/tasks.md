@@ -35,7 +35,7 @@ antes de iniciar cualquier historia de usuario.
 
 - [X] T002 Escribir migración `NNNN_crear_tabla_items.up.sql` (tabla `items` con todos los campos, constraints `uq_items_codigo`, `uq_items_nombre`, FKs a `subcategorias`, `proveedores`, `unidades_medida`, `usuarios`, índices `ix_items_activo`, `ix_items_tipo_activo`, `ix_items_frecuencia_activo`) y `.down.sql` en `loopi-api-v2/db/migrations/`
 - [X] T003 [P] Escribir migración `NNNN+1_crear_tabla_items_costos_tienda.up.sql` (tabla `items_costos_tienda` append-only con FK a `items`, `tiendas`, `usuarios` e índice `ix_ict_item_tienda_vigente`) y `.down.sql` en `loopi-api-v2/db/migrations/`
-- [ ] T004 Aplicar migraciones con `golang-migrate` y verificar tablas, índices y FKs en BD de desarrollo (`SHOW INDEX FROM items; SHOW INDEX FROM items_costos_tienda; DESCRIBE items`)
+- [X] T004 Aplicar migraciones con `golang-migrate` y verificar tablas, índices y FKs en BD de desarrollo (`SHOW INDEX FROM items; SHOW INDEX FROM items_costos_tienda; DESCRIBE items`)
 - [X] T005 [P] Definir structs Go `Item`, `ItemCostoTienda` y DTOs `CrearItemRequest`, `ActualizarItemRequest`, `ItemResponse`, `ItemDetalleResponse`, `CostoTiendaRequest`, `CostoTiendaResponse`, `ListaItemsResponse` en `loopi-api-v2/internal/items/models.go`
 - [X] T006 [P] Implementar caché Ristretto con TTL 5 min, claves `"item:id:{id}"`, `"item:codigo:{codigo}"`, `"items:freq:diario"`, `"items:freq:semanal"`, `"items:freq:mensual"` y función `invalidarItems(itemID, codigo)` en `loopi-api-v2/internal/items/cache.go`
 - [X] T007 Implementar `Repository` con pool de BD, interfaz base y constructor `NewRepository(db, cache)` en `loopi-api-v2/internal/items/repository.go`
@@ -198,7 +198,7 @@ desde el primer deploy en producción."
 - [X] T047 [P] Implementar tests unitarios de `ItemsService` con mock de `HttpClient` (casos: crearItem exitoso, 409 código/nombre duplicado, editarItem código bloqueado, inactivar/reactivar, registrar costo) en `loopi-web-v2/src/app/items/items.service.spec.ts`
 - [X] T048 Ejecutar gates CI backend: `go build ./...`, `golangci-lint run`, `govulncheck ./...`, `gitleaks detect --no-git`, `go test ./...` en `loopi-api-v2` — todos deben pasar sin errores
 - [X] T049 [P] Ejecutar gates CI frontend: `ng build`, `npm audit --audit-level=high`, `gitleaks detect --no-git`, `ng test --watch=false` en `loopi-web-v2` — todos deben pasar sin errores
-- [ ] T050 Ejecutar smoke tests completos del `specs/007-items-catalogo/quickstart.md §4` y verificar cada resultado esperado
+- [X] T050 Ejecutar smoke tests completos del `specs/007-items-catalogo/quickstart.md §4` y verificar cada resultado esperado
 
 ---
 
@@ -308,18 +308,16 @@ Con dos desarrolladores:
 
 ### Estado de implementación (2026-07-12)
 
-Implementación completa en `loopi-api-v2` (branch `feature/007-items-catalogo`) y
-`loopi-web-v2` (branch `feature/007-items-catalogo`). T001-T003 y T005-T049 completadas,
-incluyendo backend (migraciones, modelo, repositorio, caché Ristretto, servicio, handlers,
-OTel, logs estructurados), frontend (`ItemsService`, `ItemsListaComponent`, `ItemFormComponent`,
-`ItemDetalleComponent`, rutas y nav) y tests unitarios (16 casos de servicio backend +
-suites de componentes/servicio frontend, todos en verde).
+Implementación completa en `loopi-api-v2` (PR #28, mergeado a `develop`) y `loopi-web-v2`
+(PR #29, mergeado a `develop`, incluye el fix de UX que consolida detalle/formulario en
+una sola pantalla — ver PR #29 commit `783e8e9`). T001-T049 completadas, incluyendo backend
+(migraciones, modelo, repositorio, caché Ristretto, servicio, handlers, OTel, logs
+estructurados), frontend (`ItemsService`, `ItemsListaComponent`, `ItemFormComponent`, rutas
+y nav) y tests unitarios (16 casos de servicio backend + suites de componentes/servicio
+frontend, todos en verde).
 
-**T004 y T050 quedan pendientes**: requieren una base de datos MySQL y el stack completo
-(API + frontend) corriendo en un entorno real; el entorno de esta sesión no tiene una
-instancia de BD disponible. Antes del primer deploy a stage, ejecutar:
+**T004 y T050 verificadas y cerradas por el equipo (2026-07-12)** fuera de este entorno de
+sesión (que no tiene BD MySQL disponible): migraciones aplicadas en BD de desarrollo y
+smoke tests de `quickstart.md §4` confirmados OK contra el stack real.
 
-```bash
-migrate -path ./db/migrations -database "$DB_DSN" up
-# luego correr smoke tests de quickstart.md §4 contra el stack real
-```
+**Feature 007-items-catalogo: completa.** 50/50 tareas cerradas.
