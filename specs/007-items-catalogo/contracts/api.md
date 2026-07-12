@@ -397,3 +397,4 @@ El `vigente_desde` es asignado por el servidor (`NOW()`).
 | 403 | `sin_permiso` | — | El rol no es `admin` |
 | 404 | `item_no_encontrado` | — | No existe un item con ese ID |
 | 404 | `tienda_no_encontrada` | `tienda_id` | No existe la tienda indicada |
+| 422 | `tienda_inactiva` | `tienda_id` | La tienda existe pero está inactiva |

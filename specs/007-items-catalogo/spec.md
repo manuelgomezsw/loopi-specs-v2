@@ -209,7 +209,9 @@ distinto de admin no puede consultarlo.
 - RF-ITEM-02.2: Se pueden editar en cualquier momento: nombre, proveedor, costo unitario,
   stock de seguridad, tiempo de entrega y frecuencia de inventario.
 - RF-ITEM-02.3: El código del item puede editarse libremente mientras el item no tenga
-  ningún registro en inventarios, pedidos ni recetas. Una vez que existe al menos un uso
+  ningún registro en inventarios, pedidos ni recetas. Un item recién creado que aún no ha
+  sido contado ni usado (cero registros) puede editar su código sin restricción alguna,
+  sin importar el tiempo transcurrido desde su creación. Una vez que existe al menos un uso
   en cualquiera de estos módulos, el código queda bloqueado y no puede modificarse.
 - RF-ITEM-02.4: Cambiar la unidad de medida de un item con historial de stock requiere
   confirmación explícita del admin, quien asume la responsabilidad por la inconsistencia
@@ -219,6 +221,9 @@ distinto de admin no puede consultarlo.
   cualquier item (`insumo`, `material_consumo` o `activo`) puede asignarse a cualquier
   subcategoría sin restricción de tipo.
 - RF-ITEM-02.6: La edición no afecta el historial de inventarios, pedidos ni recetas previos.
+- RF-ITEM-02.7: La edición usa estrategia last-write-wins: no existe control de concurrencia
+  optimista ni pesimista entre ediciones simultáneas del mismo item; el último `UPDATE` en
+  llegar prevalece, consistente con el resto del catálogo (004, 005, 006).
 
 ### RF-ITEM-03: Inactivación y reactivación
 
@@ -265,8 +270,11 @@ distinto de admin no puede consultarlo.
 - RF-ITEM-06.2: Registrar un nuevo costo para una tienda crea un registro histórico nuevo
   (append-only); no se sobreescribe ni elimina ningún registro previo. El costo vigente de
   una tienda es el registro más reciente (`vigente_desde` mayor).
-- RF-ITEM-06.3: El costo registrado debe ser mayor a cero y la tienda debe existir y estar
-  activa; de lo contrario el sistema rechaza la operación.
+- RF-ITEM-06.3: El costo registrado debe ser mayor a cero (nunca cero ni negativo); si un
+  item no tiene costo real para una tienda, esta simplemente no registra override y aplica
+  el costo global (que sí puede ser nulo, ver RF-ITEM-01.3). La tienda debe existir
+  (`tienda_no_encontrada` si no existe) y estar activa (`tienda_inactiva` si existe pero
+  está inactiva); en ambos casos el sistema rechaza la operación con el error específico.
 - RF-ITEM-06.4: El historial de costos muestra, para cada tienda, los valores de
   `costo_unitario` registrados en `ItemCostoTienda` con su fecha de vigencia; si una tienda
   no ha registrado un costo propio, no aparece en el historial y aplica el valor por
@@ -380,3 +388,10 @@ cardinalidad); va como atributo del span. `tienda_id` solo aplica a las operacio
 - Q: ¿Se requiere importación masiva (CSV/Excel) para el setup inicial del catálogo? → A: No; la carga es exclusivamente manual (item por item) en esta versión. Importación masiva queda diferida.
 - Q: ¿Las subcategorías tienen restricción de tipo de item? → A: No; las subcategorías son independientes del tipo de item. Cualquier tipo puede asignarse a cualquier subcategoría.
 - Q: ¿El campo `stock_seguridad` es obligatorio para items de tipo `activo`? → A: Sí, es obligatorio para todos los tipos incluyendo `activo`; el admin ingresa `0` cuando no aplica operativamente.
+
+### Session 2026-07-11
+
+- Q: ¿Qué estrategia de concurrencia aplica cuando dos admins editan el mismo item casi simultáneamente? → A: Last-write-wins, sin control de concurrencia optimista ni pesimista; consistente con 004, 005 y 006.
+- Q: ¿Qué ocurre si el admin registra un costo por tienda para una tienda existente pero inactiva? → A: El sistema rechaza la operación con un error específico `tienda_inactiva` (422), distinto de `tienda_no_encontrada`.
+- Q: ¿Puede editarse libremente el código de un item creado pero nunca usado (cero registros en inventarios, pedidos o recetas), sin importar el tiempo transcurrido? → A: Sí, editable sin restricción; cero usos significa que `estaEnUso()` retorna `false` sin excepciones de plazo.
+- Q: ¿Puede un costo por tienda registrarse en cero para items sin costo real (ej. donaciones)? → A: No; el costo por tienda siempre debe ser mayor a cero. Si no hay costo real, la tienda no registra override y aplica el costo global (que sí puede ser nulo).

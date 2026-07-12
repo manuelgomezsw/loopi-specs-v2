@@ -171,7 +171,7 @@ Ver `quickstart.md §4.4`.
 ### Backend — US5
 
 - [ ] T038 [P] [US5] Implementar `Repository.InsertarCostoTienda(ctx, itemID, tiendaID, costoUnitario, creadoPor)` (INSERT con `vigente_desde=NOW()`) y `Repository.ListarCostosTienda(ctx, itemID)` (historial completo ordenado por `vigente_desde DESC`, agrupado por tienda) en `loopi-api-v2/internal/items/repository.go`
-- [ ] T039 [US5] Implementar `Service.RegistrarCostoTienda(ctx, itemID, req)` con validaciones: item existe y está activo, tienda existe, `costo_unitario > 0`, y `Service.ObtenerHistorialCostos(ctx, itemID)` que construye la respuesta agrupada con `costo_vigente` (primer elemento de cada tienda) y `costo_global` del item en `loopi-api-v2/internal/items/service.go`
+- [ ] T039 [US5] Implementar `Service.RegistrarCostoTienda(ctx, itemID, req)` con validaciones: item existe y está activo, tienda existe (404 `tienda_no_encontrada`) y está activa (422 `tienda_inactiva`), `costo_unitario > 0` (400 `costo_invalido`), y `Service.ObtenerHistorialCostos(ctx, itemID)` que construye la respuesta agrupada con `costo_vigente` (primer elemento de cada tienda) y `costo_global` del item en `loopi-api-v2/internal/items/service.go`
 - [ ] T040 [US5] Implementar handlers `POST /api/v1/items/{id}/costos_tienda` (201) y `GET /api/v1/items/{id}/costos_tienda` (200), ambos con guard de rol `admin` (403 `sin_permiso` para el resto de roles, según matriz `§2.5` "Ver historial de costos") en `loopi-api-v2/internal/items/handler.go`
 
 ### Frontend — US5

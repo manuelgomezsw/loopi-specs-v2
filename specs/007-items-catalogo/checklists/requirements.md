@@ -38,7 +38,7 @@
   Antes de planificar, el equipo debe decidir si este caso debe bloquearse completamente
   (más seguro) o solo advertir (más flexible). La spec actual opta por advertir + confirmar.
 - RF-ITEM-02.3 bloquea el cambio de código solo si el item está "en uso" (inventario, pedido
-  o receta). Verificar en QA el caso de un item creado pero nunca contado — ¿puede cambiar
-  su código?
+  o receta). **Resuelto** (Clarifications, sesión 2026-07-11): un item creado pero nunca
+  contado (cero usos) puede editar su código libremente, sin importar el tiempo transcurrido.
 - El costo de referencia es en COP entero (sin decimales), consistente con RF-ITEM-01.7.
   Confirmar con el equipo de negocio si se requieren decimales para items con costo muy bajo.
