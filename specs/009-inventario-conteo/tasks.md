@@ -298,6 +298,138 @@
 - **HU3** (Confirmar): Depends on HU2 completion (needs registered items to confirm). Atomic transaction requires all prior repository/service setup.
 - **HU4** (Historial): No direct dependency on HU1-HU3 implementation (independent read-only flow), but depends on Foundational models/routing.
 
+---
+
+## Phase 10: Bugfix and Remediation
+
+**Purpose**: Address all 16 bugs identified during review (2026-07-13)
+
+**Severity Breakdown**: 5 Critical Backend, 4 Critical Frontend, 4 High Backend, 3 High Frontend
+
+### Critical Backend Bugs (Bloqueadores)
+
+- [ ] T119 [P] **BUG-005** Fix JWT extraction hardcoding in `loopi-api-v2/internal/inventarios/handler.go`: parse actual userID and roleID from JWT token (via r.Context()) instead of hardcoding to 1; verify authorization per role in all 8 endpoints per BE-ARCH-01
+
+- [ ] T120 [P] **BUG-006** Fix path parameter parsing in `loopi-api-v2/internal/inventarios/handler.go`: extract inventarioID and itemID from mux.Vars() instead of hardcoding to 1; apply to all 8 endpoint handlers
+
+- [ ] T121 [P] **BUG-008** Implement RBAC validation in `loopi-api-v2/internal/inventarios/service.go`: remove all 7 TODOs and add role-based checks
+  - Iniciar: admin/lider_tienda/barista (own tienda) allowed
+  - Modificar completado: admin only
+  - Listar: admin (any tienda) or lider_tienda (own tienda); barista denied
+  - Per RF-INV-01.1, RF-INV-03.3, RF-INV-04.1/04.2
+
+- [ ] T122 [P] **BUG-009** Implement valor_sugerido calculation per RF-INV-02.2 in `loopi-api-v2/internal/inventarios/repository.go`
+  - Query most recent completado inventory (same tipo, or fallback to any tipo)
+  - Sum purchases_periodo from compras_caja_menor (table 011/013) via EXISTS check per RD-04
+  - Sum ventas_periodo from ventas_lineas (table 012) via EXISTS check
+  - Sum mermas_periodo from mermas (table 010) via EXISTS check
+  - Calculate: valor_sugerido = stock_ref + purchases - sales - waste per formula
+
+- [ ] T123 [P] **BUG-007** Fix HTTP status codes in `loopi-api-v2/internal/inventarios/handler.go`: replace all hardcoded 400s with correct codes per contracts/api.md
+  - 201 Created for successful POST /inventarios
+  - 204 No Content for successful DELETE
+  - 400 Bad Request for validation errors only
+  - 409 Conflict for duplicate conteo (UNIQUE constraint)
+  - 422 Unprocessable Entity for items_sin_registrar
+  - 403 Forbidden for authorization failures
+
+### Critical Frontend Bugs (Bloqueadores)
+
+- [ ] T124 [P] **FE-BUG-001** Fix memory leaks in `loopi-web-v2/src/app/inventario/inventario-conteo.component.ts`
+  - Replace all 8 subscriptions with proper unsubscribe via takeUntil(destroy$) pattern per FE-STACK-01
+  - Add private destroy$ = new Subject and ngOnDestroy() hook
+  - Apply to all subscriptions: getSugerencia(), POST /inventarios, PATCH autosave, session recovery, etc.
+
+- [ ] T125 [P] **FE-BUG-002** Remove NgModule mixing in `loopi-web-v2/src/app/inventario/inventario.module.ts`
+  - Delete inventario.module.ts entirely (eliminates NgModule)
+  - Update each component (inventario-conteo, inventario-historial, inventario-detalle) to include standalone: true and import all dependencies directly per FE-STACK-01
+  - Update app.routes.ts or parent route config to import components directly instead of via module
+
+- [ ] T126 [P] **FE-BUG-003** Replace hardcoded filters/table in `loopi-web-v2/src/app/inventario/inventario-historial.component.ts`
+  - Import FilterBarComponent (filtros tipo/estado/fecha) per FE-COMP-01
+  - Import DataTableComponent instead of manual table or replace with ListCardComponent
+  - Import PaginationComponent instead of manual pagination buttons
+  - Remove duplicate filter logic
+
+- [ ] T127 [P] **FE-BUG-004** Implement form validation in `loopi-web-v2/src/app/inventario/inventario-conteo.component.ts`
+  - Migrate from [(ngModel)] plain object to FormBuilder + FormGroup + Validators per FE-FORM-01
+  - Add required validator to tipo field (cannot be empty)
+  - Add conditional required: horario required if tipo='diario' or 'semanal'
+  - Add min="0" and required to valor_real inputs in item list
+  - Template: show error messages if field invalid + touched
+  - Disable "Iniciar" button if form.invalid
+
+### High Backend Bugs
+
+- [ ] T128 [P] **BUG-004** Return 409 instead of 400 for duplicate key in `loopi-api-v2/internal/inventarios/repository.go`
+  - In CreateInventario(), detect MySQL error 1062 (UNIQUE constraint) and return conteo_duplicado error
+  - Handler wraps this and returns HTTP 409 per contracts/api.md (not 400)
+
+- [ ] T129 [P] **BUG-010** Add complete logging in `loopi-api-v2/internal/inventarios/handler.go`
+  - All 8 endpoints must log: tienda_id, user_id, role, operation, result (success/failure), timestamp
+  - Use structured logging (slog) per project standards
+  - Include error codes and messages in logs
+
+- [ ] T130 [P] **BUG-011** Parse query parameters in `loopi-api-v2/internal/inventarios/handler.go` GetHistorial()
+  - Extract r.URL.Query() parameters: tienda_id, tipo, estado, desde, hasta, pagina, por_pagina
+  - Validate: pagina ≥ 1, por_pagina between 1-200
+  - Parse dates with time.Parse("2006-01-02", ...)
+  - Pass to service.Listar(ctx, filtros) per RF-INV-04
+
+- [ ] T131 [P] **BUG-012** Implement observability in `loopi-api-v2/internal/inventarios/handler.go` and `service.go`
+  - Add 6 spans: inventario.conteos.iniciar, .registrar, .confirmar, .modificar, .eliminar, .listar
+  - Add 7 metrics (Prometheus histograms + counters): InitDuration, RegisterDuration, ConfirmDuration, ModifyDuration, DeleteDuration, ListDuration, ErrorCount, SuccessCount
+  - All metrics include tienda_id label (never user_id as label per BE-OBS-01)
+  - Fix ptrHorario() helper in tests (move to shared helper_test.go)
+  - Fix mock errors in repository_test.go (ErrNoRows to appropriate error type)
+  - Expand unit tests to 20+ test cases covering error paths (404, 409, 403, 422, validation)
+
+### High Frontend Bugs
+
+- [ ] T132 [P] **FE-BUG-005** Fix WCAG 2.1 AA violations in `loopi-web-v2/src/app/inventario/*.component.html`
+  - Replace text-green-600/text-red-600 with text-green-700/text-red-700 (higher contrast 4.5:1 minimum)
+  - Add background colors (bg-green-50/bg-red-50) to support color-blind users
+  - Add icons/checkmarks instead of relying on color alone
+  - Add aria-live="polite" to item.diferencia display and error messages
+  - Associate all inputs with labels using label with for attribute
+  - Test with Chrome DevTools Lighthouse Accessibility and pa11y
+
+- [ ] T133 [P] **FE-BUG-006** Create E2E tests for 4 happy path flows in `loopi-web-v2/e2e/`
+  - HU1 test: Navigate to auto-suggest tipo/horario, POST /inventarios, verify items load
+  - HU2 test: Enter valores_reales, verify diferencia updates, PATCH autosave works
+  - HU3 test: Confirm, verify estado=completado, navigate to historial
+  - HU4 test: View historial, filter by tipo, paginate, click detail
+  - Use Playwright per bug report examples
+
+- [ ] T134 [P] **FE-BUG-007** Optimize rendering in `loopi-web-v2/src/app/inventario/*.component.ts`
+  - Add changeDetection: ChangeDetectionStrategy.OnPush to inventario-conteo, inventario-historial, inventario-detalle
+  - Update template to use responsive breakpoints: mobile (<640px cards) vs desktop (≥1024px tables) per FE-RESP-01
+  - In inventario-detalle.component.html, use responsive Tailwind breakpoints (md:hidden / hidden md:block)
+
+**Checkpoint**: All 16 bugs remediated. Re-run unit tests (95%+ backend coverage), E2E tests pass (4+ tests), WCAG audit passes, Gitflow compliance verified, ready for final merge to develop.
+
+---
+
+## Execution Summary
+
+**Total Tasks**: 134 (9 phases + 10 bugfixes)
+
+**Parallelizable**: Tasks marked [P] can run in parallel (different files, no blocking dependencies)
+
+**Critical Path**:
+
+- Phase 1 (Setup): 3 days
+- Phase 2 (Foundational): 5 days [BLOCKS all user stories]
+- Phases 3-6 (User Stories 1-4): 12 days [parallel by story]
+- Phase 7 (Admin): 3 days
+- Phase 8 (Observability): 5 days
+- Phase 9 (Constitutional): 2 days [verification only]
+- Phase 10 (Bugfixes): 8 days [critical bugs first, parallel where possible]
+
+**Estimated Total**: 38 days (with parallelization, 3-4 weeks real time)
+
+**Git Integration**: All commits tagged with feat(009): or fix(009): per Gitflow conventions, push to feature/009-inventario-conteo branch, PR to develop
+
 ### Parallel Opportunities within Each Phase
 
 **Phase 1 Setup**:

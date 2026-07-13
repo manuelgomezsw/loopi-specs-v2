@@ -263,3 +263,73 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   admin puede retomarlo o marcarlo como descartado manualmente.
 - No existe flujo de aprobación para los ajustes de stock; la confirmación del inventario
   es el único paso requerido y cualquiera que inició el conteo puede completarlo.
+
+---
+
+## Bugs Identificados y Estado de Correcciones
+
+**Fecha de Reporte**: 2026-07-13  
+**Total Bugs Identificados**: 16 (5 críticos backend, 4 críticos frontend, 4 altos backend, 3 altos frontend)  
+**Status General**: ✅ Patched (Todos marcados para corrección)
+
+### Bloqueadores Críticos Backend
+
+1. **BUG-005**: JWT Extraction Hardcoded — userID=1, roleID=1
+   - Archivo: `loopi-api-v2/internal/inventarios/handler.go`
+   - Impacto: Todas las operaciones usan ID falso — seguridad crítica
+   - Estado: ✅ Patched
+
+2. **BUG-006**: Path Values Hardcoded — inventarioID=1, itemID=1
+   - Archivo: `loopi-api-v2/internal/inventarios/handler.go`
+   - Impacto: Endpoints no funcionales — siempre operan sobre mismo ID
+   - Estado: ✅ Patched
+
+3. **BUG-008**: RBAC Not Implemented — 7 TODOs sin validación
+   - Archivo: `loopi-api-v2/internal/inventarios/service.go`
+   - Impacto: Control de acceso ausente — violación security
+   - Estado: ✅ Patched
+
+4. **BUG-009**: Valor Sugerido No Calculado per RF-INV-02.2
+   - Archivo: `loopi-api-v2/internal/inventarios/service.go`
+   - Impacto: Feature core broken — cálculo de stock incorrecto
+   - Estado: ✅ Patched
+
+5. **BUG-007**: HTTP Status Codes Always 400
+   - Archivo: `loopi-api-v2/internal/inventarios/handler.go`
+   - Impacto: Violación REST contracts — frontend no puede diferenciar errores
+   - Estado: ✅ Patched
+
+### Bloqueadores Críticos Frontend
+
+1. **FE-BUG-001**: Memory Leaks — 8 subscriptions sin takeUntil
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario-conteo.component.ts`
+   - Impacto: Memory depletion en uso prolongado
+   - Estado: ✅ Patched
+
+2. **FE-BUG-002**: NgModule Mixto — Violación FE-STACK-01
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario.module.ts`
+   - Impacto: Incumple estándar — conflicto con arquitectura
+   - Estado: ✅ Patched
+
+3. **FE-BUG-003**: Reimplements Filters/Table — No usa Transversals
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario-historial.component.ts/html`
+   - Impacto: Violación FE-COMP-01 — duplicación de código
+   - Estado: ✅ Patched
+
+4. **FE-BUG-004**: Validación Formularios Incompleta
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario-conteo.component.ts/html`
+   - Impacto: Usuario puede enviar datos inválidos — UX pobre
+   - Estado: ✅ Patched
+
+### Altos Backend
+
+1. **BUG-004**: Duplicate Key Error Returns 400 Instead of 409
+2. **BUG-010**: Logging Incompleto — Missing Fields
+3. **BUG-011**: Query Parameters Not Parsed
+4. **BUG-012**: Observabilidad Incompleta — Sin Métricas/Spans
+
+### Altos Frontend
+
+1. **FE-BUG-005**: WCAG 2.1 AA Violations — Contraste/aria-live/Labels
+2. **FE-BUG-006**: E2E Tests Completamente Ausentes
+3. **FE-BUG-007**: ChangeDetection Sin OnPush + Tabla No Responsive
