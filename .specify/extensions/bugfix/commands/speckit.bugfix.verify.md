@@ -55,7 +55,26 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
    - Task dependencies form a valid DAG (no circular dependencies)
    - Wave DAG (if present) includes all new tasks
 
-6. **Output verification report**:
+6. **Verify Markdown and Constitutional Compliance** (NEW):
+
+   Run lint validation on all patched artifacts (see `lint-validator.md`):
+
+   | Check | Pass Condition | Details |
+   |-------|---|---|
+   | **Markdown Syntax** | No MD001-MD051 violations | Per `.markdownlint-cli2.jsonc` rules |
+   | **Constitution Check table** | Valid format if plan.md modified | 4 columns, valid IDs, correct Estado values |
+   | **Rule ID validity** | All P-*/BE-*/FE-*/CI-01 IDs exist | Check against constitution.md, standards/*.md |
+   | **Phase 9 task citations** | All tasks cite [ID] in brackets | Exactly one ID per task, valid format |
+   | **Bugfix note format** | Date YYYY-MM-DD, BUG-NNN format | If spec/plan/tasks modified |
+   | **No orphaned references** | All mentioned bug IDs have report files | Cross-check specs/ with bugs/ directory |
+
+   **Failure examples**:
+   - ❌ Constitution Check has typo: "BE-ARCH-001" (should be BE-ARCH-01)
+   - ❌ Phase 9 task missing [ID]: "Verificar Separación de capas" (needs [BE-ARCH-01])
+   - ❌ Markdown: trailing whitespace on line 45
+   - ❌ Bugfix note: "BUG-01" (should be BUG-001 or consistent sequential)
+
+7. **Output verification report**:
 
    ```markdown
    # Bugfix Verification Report
@@ -80,6 +99,7 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
    | Task IDs sequential | ✅ Pass / ⚠️ Fail | [Last ID: TNNN] |
    | No circular dependencies | ✅ Pass / ⚠️ Fail | [DAG valid] |
    | Cross-artifact traceability | ✅ Pass / ⚠️ Fail | [All specs → plan → tasks] |
+   | **Markdown & Constitutional Compliance** | ✅ Pass / ⚠️ Fail | **NEW**: Syntax, rule IDs, Phase 9 citations valid |
 
    ## Recommended Actions
    - [List any issues found and how to fix them]

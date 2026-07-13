@@ -11,6 +11,8 @@ When bugs surface during implementation, the SDD workflow breaks down:
 - Developers fix code without updating spec, plan, or tasks — causing artifact drift
 - Tasks marked complete turn out to be wrong, but there is no reopen mechanism
 - No way to verify that bugfix changes are consistent across all artifacts
+- **[Loopi-specific]** Patched specs may violate constitutional principles (P-I to P-VI) or standards (BE-*, FE-*) without detection
+- **[Loopi-specific]** Markdown linting errors in patches cause pre-commit hook failures downstream, requiring re-work cycles
 
 ## Solution
 
@@ -80,6 +82,16 @@ Surgically updates spec artifacts based on a bug report:
 - Updates Wave DAG if present
 - Tracks all changes with bugfix notes and dates
 
+**[NEW]** Validates markdown & constitutional compliance before writing to disk:
+
+- ✅ Markdown syntax check (.markdownlint-cli2.jsonc rules)
+- ✅ Constitutional rule ID validation (P-*, BE-*, FE-*, CI-01)
+- ✅ Constitution Check table format validation (if plan.md modified)
+- ✅ Phase 9 task citations validation (all tasks cite [ID])
+- ✅ Bugfix note format validation
+- ✅ Reports specific violations before saving (eliminates pre-commit hook failures)
+- See `lint-validator.md` for complete validation rules
+
 ### `/speckit.bugfix.verify`
 
 Read-only consistency check after patching:
@@ -104,6 +116,8 @@ The extension registers an optional hook:
 - **Reopen, don't delete tasks** — falsely completed tasks are reopened with annotation
 - **Bug report files** — each bug gets its own file for traceability and history
 - **Consistent with Spec Kit patterns** — uses the same refinement note format and staleness tracking
+- **[Loopi v2]** **Lint validation before save** — patches are validated against markdown linting and constitutional compliance rules before writing to disk, eliminating downstream pre-commit failures
+- **[Loopi v2]** **Constitutional awareness** — bugfix patches verify that modified specs, plans, and tasks respect Loopi v2 principles (P-I to P-VI) and standards (BE-*, FE-*, CI-01)
 
 ## Requirements
 

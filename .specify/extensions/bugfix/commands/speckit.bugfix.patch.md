@@ -67,16 +67,56 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
      **Bugfix**: [DATE] — [BUG-NNN] Updated from bugfix patch
      ```
 
-6. **Update bug report**: Mark the bug report file as patched:
+6. **Markdown Lint Validation** (NEW — Step 3.5):
+
+   *GATE: Validates patches before writing to disk*
+
+   Before proceeding to save files, validate markdown syntax and constitutional compliance:
+
+   1. **Run lint validation** (see `lint-validator.md` for full details):
+      ```
+      Lint patched spec.md, plan.md, tasks.md against:
+      - .markdownlint-cli2.jsonc rules (MD001-MD051)
+      - Constitution Check table format (if plan.md modified)
+      - Rule ID validity (all P-*, BE-*, FE-*, CI-01 exist in standards/)
+      - Phase 9 task citations (all tasks cite [ID] in brackets)
+      - Bugfix note format (date, BUG-NNN, description)
+      ```
+
+   2. **Handle violations**:
+      - **Markdown syntax errors**: Offer auto-fix for fixable issues (whitespace, alignment)
+        - Accept auto-fix → proceed to save
+        - Reject auto-fix → abort patch, suggest `/speckit.bugfix.report` for clarification
+      - **Constitutional violations** (invalid IDs, missing citations, orphaned references):
+        - Report specific violations (which line, which rule ID)
+        - Do NOT auto-fix (requires human judgment)
+        - Suggest correction and abort → require user to fix and re-patch
+
+   3. **Success criteria**:
+      ```
+      ✅ Markdown Lint Validation PASSED
+      
+      All patches validated:
+        • spec.md: Syntax ✅, Constitutional compliance ✅
+        • plan.md: Syntax ✅, Constitution Check valid ✅, Rule IDs valid ✅
+        • tasks.md: Syntax ✅, Phase 9 citations valid ✅, No orphaned IDs ✅
+      
+      Ready to proceed with save step.
+      ```
+
+   **Impact**: Eliminates pre-commit hook failures downstream. All files written to disk are guaranteed markdown-compliant and constitutionally-aligned.
+
+7. **Update bug report**: Mark the bug report file as patched:
    ```
    **Status**: Patched
    **Patched**: [DATE]
    ```
 
-7. **Report**: Output a summary:
+8. **Report**: Output a summary:
    - What changed in each artifact
    - How many requirements were added or updated
    - How many tasks were added or reopened
+   - Lint validation result (pass/fail + specific issues fixed)
    - Suggest next step: `/speckit.bugfix.verify` to confirm consistency, then `/speckit.implement` to apply the code fix
 
 ## Rules
