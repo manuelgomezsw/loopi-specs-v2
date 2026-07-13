@@ -23,13 +23,13 @@
 - [x] T001 Create Go module structure in `loopi-api-v2/internal/inventarios/` with models.go, handler.go, service.go, repository.go files (empty stubs)
 - [x] T002 Create database migrations directory and migration files: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.up.sql`, `.down.sql`, `NNNN+1_crear_tabla_detalle_inventario.up.sql`, `.down.sql`
 - [x] T003 [P] Create Angular module structure in `loopi-web-v2/src/app/inventario/` with routing, service stub, and component stubs (inventario-conteo, inventario-historial, inventario-detalle)
-- [x] T004 Implement database migrations: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.up.sql` per data-model.md (tabla `inventarios` + índices + columna generada `horario_norm`)
-- [x] T005 Implement database migrations: `loopi-api-v2/db/migrations/NNNN+1_crear_tabla_detalle_inventario.up.sql` per data-model.md (tabla `detalle_inventario` + índices + constraints)
+- [ ] ⚠️ T004 (reopened — BUG-003) Implement database migrations: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.up.sql` per data-model.md (tabla `inventarios` + índices + columna generada `horario_norm`) — **CORRECCIÓN APLICADA**: FK responsable_id referencia `empleados (id)`, no `usuarios (id)` (que no existe)
+- [ ] ⚠️ T005 (reopened — BUG-003) Implement database migrations: `loopi-api-v2/db/migrations/NNNN+1_crear_tabla_detalle_inventario.up.sql` per data-model.md (tabla `detalle_inventario` + índices + constraints) — bloqueado hasta que T004 se verifique correctamente
 - [x] T006 [P] Add rollback migrations: `loopi-api-v2/db/migrations/NNNN_crear_tabla_inventarios.down.sql`, `NNNN+1_crear_tabla_detalle_inventario.down.sql`
 
 **Checkpoint**: Database schema ready, Go module structure in place, frontend directory structure ready
 
-**Bugfix**: 2026-07-13 — BUG-001 Module initialization missing from main.go (see Phase 2)
+**Bugfix**: 2026-07-13 — BUG-001 Module initialization missing from main.go (see Phase 2); BUG-003 Migration T004 foreign key `responsable_id` referenced non-existent table `usuarios` instead of `empleados` — corrected in migration file
 
 ---
 

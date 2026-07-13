@@ -43,7 +43,7 @@ mysql -u usuario -p nombre_bd < migration_completa.sql
    - Campos afectados:
      - `nombre_contacto`: "Contacto Dummy N"
      - `telefono_contacto`: "0-N" (donde N es el ID del proveedor)
-     - `email_contacto`: "dummyN@supplier.com"
+     - `email_contacto`: "<dummyN@supplier.com>"
 
 3. **Stock de Seguridad**: Todos los items se insieren con `stock_seguridad = 0`
    - ✏️ Ajustar valores reales según política de cada item
@@ -103,7 +103,7 @@ mysql -u usuario -p nombre_bd < migration_completa.sql
 
 ## 🔍 Campos Auditados
 
-### Campos Requeridos (NOT NULL) que se rellenaron con Dummies:
+### Campos Requeridos (NOT NULL) que se rellenaron con Dummies
 
 - **proveedores.nombre_contacto**: "Contacto Dummy N"
 - **proveedores.telefono_contacto**: "0-N"
@@ -112,7 +112,7 @@ mysql -u usuario -p nombre_bd < migration_completa.sql
 - **items.creado_por**: 1 (usuario admin)
 - **items.actualizado_por**: 1 (usuario admin)
 
-### Campos que Usan los Valores Originales:
+### Campos que Usan los Valores Originales
 
 - **proveedores.razon_social**: del v1 `business_name`
 - **proveedores.nit**: del v1 `tax_id` (o "DUMMY-N" si estaba vacío)

@@ -228,6 +228,8 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 | `Inventario` | tienda_id, fecha, tipo, horario, estado, responsable_id, iniciado_en, completado_en |
 | `DetalleInventario` | inventario_id, item_id, inventario_referencia_id, valor_sugerido, valor_esperado, valor_real, diferencia |
 
+**Nota**: `responsable_id` es una clave foránea que referencia `empleados (id)`. El responsable de un conteo debe ser un empleado autenticado con rol `admin`, `lider_tienda` o `barista`.
+
 ---
 
 ## Dependencias y Suposiciones
