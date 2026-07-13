@@ -29,6 +29,8 @@
 
 **Checkpoint**: Database schema ready, Go module structure in place, frontend directory structure ready
 
+**Bugfix**: 2026-07-13 — BUG-001 Module initialization missing from main.go (see Phase 2)
+
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
@@ -47,7 +49,16 @@
 - [x] T014 Configure Angular routing in `loopi-web-v2/src/app/inventario/inventario.routes.ts`: lazy-loaded routes for conteo, historial, detalle (path: /inventario)
 - [x] T015 [P] Integrate transversal components in Angular: import ListCardComponent, FilterBarComponent, PaginationComponent, FormCardComponent, StatusBadgeComponent per plan.md FE-COMP-01
 
-**Checkpoint**: Foundation ready - models, interfaces, routing complete. No database queries yet.
+### Phase 2 — Bugfix Tasks (BUG-001: Endpoints Not Registered)
+
+**Blocker**: Handlers implemented but not wired to HTTP router — all Phase 3+ user stories blocked
+
+- [x] T015a [P] Implement `RegisterRoutes()` method in `loopi-api-v2/internal/inventarios/handler.go`: wire all 8 endpoints (GET sugerencia, POST inventario, GET /{id}, PATCH /{id}/items/{item_id}, POST /{id}/confirmar, DELETE /{id}, GET historial) to mux, apply jwtMiddleware where required per contracts/api.md authorization rules
+- [x] T015b Initialize and register inventarios module in `loopi-api-v2/cmd/api/main.go` (line ~180, after items module): create NewRepository(db), NewService(repo), NewHandler(service), call handler.RegisterRoutes(mux, jwtMiddleware) per pattern of existing modules
+
+**Checkpoint**: Foundation ready - models, interfaces, routing complete. **Endpoints now accessible via HTTP** (was blocker, now resolved).
+
+**Bugfix**: 2026-07-13 — BUG-001 Endpoints not wired to HTTP router
 
 ---
 
@@ -80,7 +91,17 @@
 - [x] T031 [P] [US1] Create Angular component `inventario-conteo.component.html`: mobile-first layout (<640px) with form inputs, POST /inventarios button (disabled until form valid per FE-FORMSURF-01)
 - [x] T032 [US1] Implement Angular POST /inventarios call in `inventario-conteo.component.ts`: on form submit, POST to service, handle 201 (transition to step 2: register items), handle errors (409 conteo_duplicado, etc.) per spec error format
 
-**Checkpoint**: HU1 complete and testable. Verify: POST /inventarios creates inventory with correct suggestions, blocks duplicates, calculates valor_sugerido correctly, frontend form works on mobile
+### Phase 3 — Bugfix Tasks (BUG-002: Suggestion Not Loading / No Error Recovery)
+
+**Blocker**: Suggestion auto-load fails silently, leaving form empty; user must manually input tipo/horario
+
+- [x] T030a [P] [US1] ⚠️ Reopened — Enhance `inventario-conteo.component.ts` error recovery in `loadSugerencia()`: catch getSugerencia() errors, set fallback defaults (tipo='diario', horario=undefined), log to console but do NOT block form submission (BUG-002)
+- [x] T030b [P] [US1] Add visual feedback to `inventario-conteo.component.html`: show loading spinner while suggestion loading, show error message if GET /sugerencia fails (user can override manually)
+- [x] T028a [P] [US1] Verify `service.Sugerir()` in `loopi-api-v2/internal/inventarios/service.go`: implement correct time-of-day logic (06:00–10:59 → apertura, 11:00–14:59 → mediodia, 15:00–23:59 → cierre), return 'diario' tipo always per RF-INV-01.2
+
+**Checkpoint**: HU1 complete and testable. Verify: POST /inventarios creates inventory with correct suggestions, blocks duplicates, calculates valor_sugerido correctly, frontend form works on mobile, **suggestion auto-loads or gracefully degrades with fallback**, **all endpoints now accessible via HTTP (BUG-001 resolved)**
+
+**Bugfix**: 2026-07-13 — BUG-001 (T015a-b) Endpoints registered in router; BUG-002 (T030a-b, T028a) Suggestion error handling and backend logic verification
 
 ---
 
