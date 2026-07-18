@@ -159,7 +159,8 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 
 - RF-INV-02.1: Para cada item del conteo, el sistema muestra: valor sugerido (stock
   proyectado), valor esperado y un campo para ingresar el valor real.
-- RF-INV-02.2: El valor sugerido de cada item se calcula con la siguiente fórmula:
+- RF-INV-02.2: El valor sugerido de cada item es un **snapshot inmutable** del stock
+  tomado en el momento exacto de inicio del conteo, calculado con la siguiente fórmula:
 
   `valor_sugerido = stock_inventario_referencia + compras_periodo − ventas_periodo − mermas_periodo`
 
@@ -168,11 +169,16 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   - `stock_inventario_referencia`: valor real contado en el inventario completado más
     reciente de la tienda (de cualquier tipo y horario).
   - `compras_periodo`: unidades recibidas por recepciones de pedido y compras de caja
-    menor confirmadas desde ese inventario hasta el inicio del conteo actual.
+    menor confirmadas desde ese inventario hasta el **inicio del conteo actual** (momento
+    exacto de ejecución de POST /inventarios).
   - `ventas_periodo`: unidades descontadas por ventas procesadas desde ese inventario
-    hasta el inicio del conteo actual.
+    hasta el **inicio del conteo actual**.
   - `mermas_periodo`: unidades registradas como merma desde ese inventario hasta el
-    inicio del conteo actual.
+    **inicio del conteo actual**.
+
+  Este snapshot se registra en la tabla `stock_actual` y **no cambia** durante toda la
+  duración del conteo, ya que no se permiten movimientos (compras, mermas, ventas)
+  mientras el conteo está en progreso (ver RF-INV-05).
 
   Para el inventario de tipo `inicial`, el valor sugerido de todos los items es cero,
   ya que no existe inventario de referencia previo.
@@ -203,6 +209,30 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   tienda.
 - RF-INV-04.3: Desde el detalle de un inventario completado, se pueden ver los valores
   esperado, real y diferencia por cada item contado.
+
+### RF-INV-05: Bloqueo de Movimientos Durante Conteo Activo
+
+- RF-INV-05.1: Mientras existe un inventario con estado `en_progreso` en una tienda,
+  **no se permiten** las siguientes operaciones:
+  - Registrar compras de caja menor o recepciones de pedido (feature 010).
+  - Registrar mermas (feature 010).
+  - Procesar archivo de venta en batch (feature 015) — la validación ocurre **antes** de
+    permitir el upload del archivo.
+
+- RF-INV-05.2: Si se intenta registrar cualquiera de estas operaciones, el sistema retorna
+  **HTTP 409 Conflict** con:
+  - Código de error: `inventario_activo`
+  - Mensaje: "No se pueden registrar movimientos mientras hay un conteo en progreso.
+    Contacte al líder de tienda o administrador para completar o cancelar el conteo
+    actual."
+  - Detalles opcionales: ID del inventario activo, responsable, hora de inicio.
+
+- RF-INV-05.3: El propósito de este bloqueo es garantizar que el `valor_sugerido` (RF-INV-02.2)
+  permanece estable e inmutable durante todo el conteo, eliminando inconsistencias por
+  movimientos concurrentes.
+
+- RF-INV-05.4: Las **consultas de stock** (lecturas, sin cambios) sí funcionan normalmente
+  mientras hay un conteo en progreso.
 
 ---
 
@@ -263,6 +293,10 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   admin puede retomarlo o marcarlo como descartado manualmente.
 - No existe flujo de aprobación para los ajustes de stock; la confirmación del inventario
   es el único paso requerido y cualquiera que inició el conteo puede completarlo.
+- **Mientras un conteo está `en_progreso` en una tienda, no se permiten movimientos de
+  stock** (compras, mermas, ventas en batch) en esa tienda. Esto garantiza que el
+  `valor_sugerido` (snapshot tomado al inicio) permanece inmutable e impide inconsistencias
+  por operaciones concurrentes. El bloqueo se levanta al confirmar o eliminar el conteo.
 
 ---
 

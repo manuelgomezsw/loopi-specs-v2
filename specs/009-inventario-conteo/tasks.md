@@ -406,13 +406,131 @@
   - Update template to use responsive breakpoints: mobile (<640px cards) vs desktop (≥1024px tables) per FE-RESP-01
   - In inventario-detalle.component.html, use responsive Tailwind breakpoints (md:hidden / hidden md:block)
 
+---
+
+## Phase 11: Arquitectura "Block During Count" (RF-INV-05 Implementation)
+
+**Purpose**: Implement blocking of all movements while inventory count is active per RF-INV-05
+
+**Architectural Decision**: valor_sugerido becomes an **immutable snapshot** taken at count start time. No compras, mermas, or venta batch processing allowed while inventario.estado = en_progreso in a tienda.
+
+### Infrastructure Tasks
+
+- [ ] T135 [P] **BUG-009 Refactor** Create migration for `stock_actual` table in `loopi-api-v2/db/migrations/`:
+  - Table structure: tienda_id, item_id, inventario_id, valor_snapshot, tomado_en (DATETIME), creado_en
+  - PKs: (tienda_id, item_id, inventario_id) or tienda_id + item_id + fecha
+  - Index: (tienda_id, inventario_id) for quick lookups
+  - Purpose: Persist snapshot of stock at exact moment POST /inventarios is called
+  - Used to replace dynamic calculation in RF-INV-02.2
+
+- [ ] T136 [P] **BUG-009 Refactor** Create migration for `stock_movimientos` audit table in `loopi-api-v2/db/migrations/`:
+  - Table structure: tienda_id, item_id, tipo_movimiento (ENUM: compra, merma, venta_batch, ajuste_conteo), cantidad_antes, cantidad_despues, cantidad_delta, referencia_id (ID from source table), usuario_id, creado_en (DATETIME), motivo (nullable)
+  - PKs: id (BIGINT AUTO_INCREMENT)
+  - Index: (tienda_id, creado_en) for audit trail queries, (referencia_id) for traceability
+  - Purpose: Complete audit trail for stock changes; enables reconciliation and debugging
+
+- [ ] T137 Implement repository method `SnapshotStockActual()` in `loopi-api-v2/internal/inventarios/repository.go`:
+  - Called when POST /inventarios is executed (Iniciar)
+  - Inserts row into stock_actual table with current stock values from stock_movimientos or derived table
+  - Returns: map[int64]float64 (item_id → valor_sugerido)
+  - Error handling: If snapshot fails, log WARNING (non-blocking) and use 0 as fallback per RD-04
+
+- [ ] T138 Implement repository method `RecordMovimiento()` in `loopi-api-v2/internal/inventarios/repository.go`:
+  - Called by compras (010), mermas (010), and venta batch (015) services AFTER recording the movement
+  - Inserts row into stock_movimientos with before/after values, type, and reference ID
+  - On error: Log with full context (tienda_id, item_id, usuario_id, error stack) for audit trail debugging
+  - Does NOT block the movement; movement is already recorded, this is audit-only
+
+### Validation & Blocking Tasks
+
+- [ ] T139 [P] Implement repository method `CanRecordMovimiento()` in `loopi-api-v2/internal/inventarios/repository.go`:
+  - Signature: `(canRecord bool, activeCountID *int64, err error)`
+  - Query: SELECT id FROM inventarios WHERE tienda_id = ? AND estado = 'en_progreso' LIMIT 1
+  - Returns: (false, activeCountID, nil) if count active; (true, nil, nil) if allowed; (false, nil, err) on DB error
+  - Called by: compras (010), mermas (010), venta batch (015) before INSERT/UPDATE operations
+
+- [ ] T140 [P] **RF-INV-05.1** Document integration point in `loopi-api-v2/internal/compras/service.go` (or equivalent 010 module):
+  - **TODO**: Before registering compra (INSERT compras_caja_menor), call inventarios.CanRecordMovimiento(ctx, tienda_id)
+  - If canRecord=false: Return NewError("inventario_activo", "No se pueden registrar movimientos...")
+  - Handler wraps and returns HTTP 409 Conflict per RF-INV-05.2
+  - Add test case: POST /compras with active count → 409 inventario_activo
+
+- [ ] T141 [P] **RF-INV-05.1** Document integration point in `loopi-api-v2/internal/mermas/service.go` (or equivalent 010 module):
+  - **TODO**: Before registering merma (INSERT mermas), call inventarios.CanRecordMovimiento(ctx, tienda_id)
+  - If canRecord=false: Return NewError("inventario_activo", "...")
+  - Handler wraps and returns HTTP 409 Conflict
+  - Add test case: POST /mermas with active count → 409 inventario_activo
+
+- [ ] T142 [P] **RF-INV-05.1** Document integration point in `loopi-api-v2/internal/pos/service.go` (or venta batch handler):
+  - **TODO**: Before processing venta batch file (POST /ventas/batch or equivalent), call inventarios.CanRecordMovimiento(ctx, tienda_id)
+  - Validation happens **BEFORE** parsing/uploading file per RF-INV-05.1
+  - If canRecord=false: Return NewError("inventario_activo", "...") with no file processing
+  - Handler returns HTTP 409 Conflict
+  - Add test case: POST /ventas/batch with active count → 409 inventario_activo (no file processed)
+
+### Frontend Tasks
+
+- [ ] T143 [P] Create Angular interceptor or service to check inventory status in `loopi-web-v2/src/app/inventario/inventario.service.ts`:
+  - Add method: `getEstadoInventarioActivo(tienda_id: number): Observable<{activo: boolean, inventario?: InventarioResp}>`
+  - Calls backend endpoint (create if needed: GET /inventarios/estado?tienda_id=X)
+  - Used by compras, mermas, venta components to display/block UI
+
+- [ ] T144 [P] **RF-INV-05.3** Add badge/warning in compras component (loopi-web-v2):
+  - **TODO**: Before form input, check if inventario activo in tienda
+  - If active: Show banner/toast: "⚠️ Hay un conteo en progreso. No se pueden registrar movimientos. Contacte al líder de tienda."
+  - Include badge with count details (ID, responsable, inicio time)
+  - Disable form inputs or show read-only state
+
+- [ ] T145 [P] **RF-INV-05.3** Add badge/warning in mermas component (loopi-web-v2):
+  - Same as T144 but for mermas module
+  - Show "⚠️ Hay un conteo en progreso" message
+  - Disable inputs if count active
+
+- [ ] T146 **RF-INV-05.1** Block venta batch file upload in loopi-web-v2:
+  - **TODO**: Before displaying file input for venta batch (POST /ventas/batch), call getEstadoInventarioActivo()
+  - If active: Disable file input + show message: "No se pueden procesar ventas mientras hay un conteo en progreso."
+  - If not active: Enable file input normally
+  - On upload, if 409 returned: Show error toast with same message
+
+### Testing Tasks
+
+- [ ] T147 [P] Integration test: Bloqueo de Compras in `loopi-api-v2/internal/compras/*_test.go`:
+  - Setup: Iniciar conteo en tienda
+  - Action: POST /compras en misma tienda
+  - Expected: HTTP 409, error code inventario_activo
+  - Teardown: Confirmar o eliminar conteo
+
+- [ ] T148 [P] Integration test: Bloqueo de Mermas in `loopi-api-v2/internal/mermas/*_test.go`:
+  - Setup: Iniciar conteo en tienda
+  - Action: POST /mermas en misma tienda
+  - Expected: HTTP 409, error code inventario_activo
+
+- [ ] T149 Integration test: Bloqueo de Venta Batch in `loopi-api-v2/internal/pos/*_test.go`:
+  - Setup: Iniciar conteo en tienda
+  - Action: POST /ventas/batch con archivo en misma tienda
+  - Expected: HTTP 409, error code inventario_activo (no file processed)
+
+- [ ] T150 [P] E2E test: Complete flow with blocking in `loopi-web-v2/e2e/inventario-blocking.e2e.ts`:
+  - HU5 test (new): Iniciar conteo → Navegar a compras → Verificar badge "Inventario activo" → Intentar guardar compra → Verificar error toast 409
+  - HU6 test (new): Iniciar conteo → Navegar a mermas → Verificar badge → Intentar guardar merma → Error 409
+  - HU7 test (new): Iniciar conteo → Navegar a venta batch → Verificar file input deshabilitado → Confirmar conteo → File input habilitado
+  - Use Page Object Model from T151 below
+
+- [ ] T151 [P] Create E2E Page Object in `loopi-web-v2/e2e/support/blocking-page.ts`:
+  - Selectors: inventory-active-banner, inventory-active-badge, file-input (venta batch), disable-overlay
+  - Methods: verifyInventoryActiveBanner(), verifyFileInputDisabled(), verifyFileInputEnabled(), attemptSaveMovimiento()
+
+**Checkpoint**: RF-INV-05 fully implemented. Movements blocked while count active, auditable via stock_movimientos table, E2E tests verify blocking behavior per feature, frontend informs users, 409 errors returned correctly.
+
+---
+
 **Checkpoint**: All 16 bugs remediated. Re-run unit tests (95%+ backend coverage), E2E tests pass (4+ tests), WCAG audit passes, Gitflow compliance verified, ready for final merge to develop.
 
 ---
 
 ## Execution Summary
 
-**Total Tasks**: 134 (9 phases + 10 bugfixes)
+**Total Tasks**: 151 (11 phases including new RF-INV-05 architecture phase)
 
 **Parallelizable**: Tasks marked [P] can run in parallel (different files, no blocking dependencies)
 
@@ -425,8 +543,9 @@
 - Phase 8 (Observability): 5 days
 - Phase 9 (Constitutional): 2 days [verification only]
 - Phase 10 (Bugfixes): 8 days [critical bugs first, parallel where possible]
+- Phase 11 (Block During Count - RF-INV-05): 5 days [infrastructure tables + validation + frontend + E2E]
 
-**Estimated Total**: 38 days (with parallelization, 3-4 weeks real time)
+**Estimated Total**: 43 days (with parallelization, 3-4 weeks real time)
 
 **Git Integration**: All commits tagged with feat(009): or fix(009): per Gitflow conventions, push to feature/009-inventario-conteo branch, PR to develop
 

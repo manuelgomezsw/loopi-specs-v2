@@ -171,6 +171,17 @@ la suma de (cantidad × costo_unitario) por cada merma.
 - RF-MERM-05.2: Si una merma es eliminada, el sistema revierte su contribución a
   `mermas_periodo`, actualizando el valor sugerido del próximo inventario.
 
+### RF-MERM-06: Bloqueo de Mermas Durante Conteo Activo (RF-INV-05 Compliance)
+
+- RF-MERM-06.1: **Mientras existe un inventario con estado `en_progreso` en una tienda,
+  NO se permite registrar nuevas mermas en esa tienda.** El sistema retorna HTTP 409 Conflict
+  con código de error `inventario_activo`.
+- RF-MERM-06.2: Mensaje de error: "No se pueden registrar movimientos mientras hay un
+  conteo en progreso. Contacte al líder de tienda o administrador para completar o cancelar
+  el conteo actual."
+- RF-MERM-06.3: Esta restricción garantiza que el `valor_sugerido` (snapshot tomado al
+  inicio del conteo en 009) permanece estable e inmutable durante toda su duración.
+
 ---
 
 ## Criterios de Éxito

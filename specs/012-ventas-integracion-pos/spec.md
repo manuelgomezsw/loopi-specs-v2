@@ -107,6 +107,18 @@ El admin y el líder de tienda consultan el listado de lotes importados y el det
 - **RF-021**: El líder de tienda DEBE poder ver el historial de ventas únicamente de su tienda asignada (RN-TDA-05).
 - **RF-022**: El sistema DEBE permitir filtrar ventas por estado, fecha y tienda.
 
+#### Bloqueo de Ventas Durante Conteo Activo (RF-INV-05 Compliance de 009-inventario-conteo)
+
+- **RF-023**: Mientras existe un inventario con estado `en_progreso` en una tienda,
+  **NO se permite iniciar la importación de ventas por archivo plano en esa tienda.**
+  La validación ocurre **ANTES** de permitir la carga o procesamiento del archivo.
+- **RF-024**: Si se intenta cargar un archivo de ventas cuando hay conteo activo,
+  el sistema retorna HTTP 409 Conflict con código de error `inventario_activo` y
+  mensaje: "No se pueden procesar ventas mientras hay un conteo en progreso.
+  Contacte al líder de tienda o administrador para completar o cancelar el conteo actual."
+- **RF-025**: Esta restricción garantiza que el `valor_sugerido` (snapshot tomado al
+  inicio del conteo en 009) permanece estable durante la duración del conteo.
+
 ### Entidades Clave
 
 - **LoteImportacion**: Agrupación de ventas procesadas en una sesión de importación. Atributos clave: tienda, fecha_reporte, fecha_importacion, estado_lote, total_líneas, procesadas, duplicadas, pendiente_receta, error.
