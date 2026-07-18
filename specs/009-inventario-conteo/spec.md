@@ -45,6 +45,14 @@ que el sistema sugiere `diario / apertura` y presenta solo los items con frecuen
    **Entonces** el sistema presenta todos los items activos con valor sugerido en cero,
    estableciendo el stock inaugural de la tienda.
 
+5. **Dado** que la tienda tiene items con frecuencia_inventario=diario,
+   **Cuando** se inicia conteo diario,
+   **Entonces** se retornan todos los items diarios con valor_sugerido desde stock_actual sin necesidad de consulta manual.
+
+6. **Dado** que NO hay items con frecuencia_inventario=tipo seleccionado,
+   **Cuando** se intenta iniciar conteo,
+   **Entonces** retorna HTTP 422 `sin_items_contabilizar` con mensaje descriptivo del tipo.
+
 ---
 
 ### Historia de Usuario 2 — Registrar el conteo físico item por item (Prioridad: P1)
@@ -184,6 +192,16 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   ya que no existe inventario de referencia previo.
 - RF-INV-02.3: La diferencia (real − esperado) se recalcula y muestra en pantalla en
   tiempo real al ingresar cada valor.
+- RF-INV-02.3: **Determinación Automática de Items**: El sistema determina automáticamente
+  los items a contar en 5 pasos:
+  1. Consulta items activos con frecuencia_inventario = tipo seleccionado
+  2. Valida que existan items para contar; si no hay, retorna 422 `sin_items_contabilizar`
+  3. Crea registro en inventarios (estado=en_progreso)
+  4. Cruza items con stock_actual para obtener valor_sugerido de cada item
+  5. Crea registros en detalle_inventario con valor_sugerido mapeado
+  
+  Este flujo garantiza que POST /inventarios SIEMPRE retorna 201 con items listos para contar
+  (nunca con lista vacía) o retorna 422 si no hay items para el tipo seleccionado.
 - RF-INV-02.4: Un conteo en progreso puede ser retomado por el mismo responsable si fue
   interrumpido; los valores ya ingresados se conservan.
 - RF-INV-02.5: Solo el responsable que inició el conteo puede retomarlo y completarlo.
@@ -300,11 +318,41 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 
 ---
 
+## Iteraciones de Diseño
+
+### Iteration 2026-07-18: Corrección de Flujo Conceptual (BUG-016)
+
+**Change**: Invertir orden de operaciones en Service.Iniciar(): consultar items ANTES de crear inventario, validar hay items, cruzar con stock_actual, LUEGO crear inventario y detalles.
+
+**Scope**: Feature-wide (arquitectura central)
+
+**Artifacts Updated**:
+
+- spec.md: Agregada RF-INV-02.3 (Determinación Automática de Items) + escenarios 5-6
+- plan.md: Creado (fases, arquitectura, stack tech)
+- data-model.md: Creado (5-step flow, entities, constraints)
+- tasks.md: Reabiertos T021-T023 (fase 2 refactor), Agregadas T154-T163 (nuevas funciones + tests)
+- bugs/BUG-016.md: Reconceptualizado de "items no se crean" a "flujo orden invertido" (Patched)
+
+**Impact**:
+
+- POST /inventarios ahora **siempre** retorna 201 con items (nunca 0) O retorna 422 si no hay items
+- Requiere 2 nuevas funciones repository (GetItemsActivosPorTipo, GetStockSnapshot)
+- Service.Iniciar() refactorización de 3 pasos (query → validate → create)
+- Error code nuevo: sin_items_contabilizar (422)
+- Frontend ErrorMapperService necesita mapeo nuevo
+
+**Risk**: Breaking change en API (POST /inventarios response format), pero frontend ya está preparado.
+
+---
+
 ## Bugs Identificados y Estado de Correcciones
 
 **Fecha de Reporte**: 2026-07-13  
 **Total Bugs Identificados**: 16 (5 críticos backend, 4 críticos frontend, 4 altos backend, 3 altos frontend)  
 **Status General**: ✅ Patched (Todos marcados para corrección)
+
+**Update 2026-07-18**: BUG-016 Reconceptualizado e iteración 2026-07-18 aplicada (ver sección Iteraciones arriba)
 
 ### Bloqueadores Críticos Backend
 
