@@ -1,0 +1,37 @@
+# Speckit
+/.claude/projects/*/a*/scratchpad/
+pending-iteration.md
+
+# IDE & Editor
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Node.js (for tools like markdownlint)
+node_modules/
+npm-debug.log
+.npmrc
+
+# Logs
+*.log
+logs/
+
+# OS files
+.env
+.env.local
+*.tmp
+
+# Generated files
+coverage/
+dist/
+build/
+
+# Temporary
+__pycache__/
+*.pyc
+.pytest_cache/

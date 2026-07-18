@@ -259,13 +259,13 @@
 
 ### Nuevas Funciones Repository
 
-- [ ] T154 [P] [US1] Implementar repository method `GetItemsActivosPorTipo()` en `loopi-api-v2/internal/inventarios/repository.go`:
+- [x] T154 [P] [US1] Implementar repository method `GetItemsActivosPorTipo()` en `loopi-api-v2/internal/inventarios/repository.go`:
   - Signature: `(itemIDs []int64, err error)`
   - Query: `SELECT id FROM items WHERE tienda_id=? AND activo=1 AND frecuencia_inventario=?`
   - Retorna: Lista de item IDs para el tipo seleccionado
   - Si 0 items: Retornar lista vacía (validation en service)
 
-- [ ] T155 [P] [US1] Implementar repository method `GetStockSnapshot()` en `loopi-api-v2/internal/inventarios/repository.go`:
+- [x] T155 [P] [US1] Implementar repository method `GetStockSnapshot()` en `loopi-api-v2/internal/inventarios/repository.go`:
   - Signature: `(stocks map[int64]float64, err error)`
   - Query: `SELECT item_id, valor_snapshot FROM stock_actual WHERE tienda_id=? AND item_id IN (...)`
   - Retorna: Mapa {item_id → valor_snapshot}
@@ -274,36 +274,36 @@
 
 ### Refactorización Service.Iniciar (3 pasos secuenciales)
 
-- [ ] T156 [P] [US1] Refactorizar Service.Iniciar() - Paso 1: Query items ANTES de crear inventario
+- [x] T156 [P] [US1] Refactorizar Service.Iniciar() - Paso 1: Query items ANTES de crear inventario
   - Llamar repo.GetItemsActivosPorTipo(ctx, tiendaID, tipo)
   - Si len(itemIDs) == 0: Retornar NewError("sin_items_contabilizar", msg) (será 422 en handler)
   - Continuar al paso 2
 
-- [ ] T157 [P] [US1] Refactorizar Service.Iniciar() - Paso 2: Cruzar con stock snapshot
+- [x] T157 [P] [US1] Refactorizar Service.Iniciar() - Paso 2: Cruzar con stock snapshot
   - Llamar repo.GetStockSnapshot(ctx, tiendaID, itemIDs)
   - Mapear valores para cada item en stockSnapshot
   - Continuar al paso 3
 
-- [ ] T158 [P] [US1] Refactorizar Service.Iniciar() - Paso 3: Crear inventario + detalles (AHORA, después de validaciones)
+- [x] T158 [P] [US1] Refactorizar Service.Iniciar() - Paso 3: Crear inventario + detalles (AHORA, después de validaciones)
   - Llamar repo.CreateInventario(ctx, &CreateInventarioReq{...})
   - Llamar repo.CreateDetalleInventario(ctx, inventario.ID, itemIDs, stockSnapshot)
   - Llamar repo.GetInventarioDetalle(ctx, inventario.ID) para retornar respuesta completa
 
 ### Tests para Nuevas Funciones
 
-- [ ] T159 [P] [US1] Unit test GetItemsActivosPorTipo() en `loopi-api-v2/internal/inventarios/repository_test.go`
+- [x] T159 [P] [US1] Unit test GetItemsActivosPorTipo() en `loopi-api-v2/internal/inventarios/repository_test.go`
   - Mock DB: retorna items con frecuencia_inventario='diario'
   - Verifica: retorna solo items activos del tipo correcto
   - Verifica: excluye items inactivos
   - Verifica: retorna lista vacía si no hay items
 
-- [ ] T160 [P] [US1] Unit test GetStockSnapshot() en `loopi-api-v2/internal/inventarios/repository_test.go`
+- [x] T160 [P] [US1] Unit test GetStockSnapshot() en `loopi-api-v2/internal/inventarios/repository_test.go`
   - Mock DB: retorna valores desde stock_actual
   - Verifica: mapeo correcto de items → valores
   - Verifica: default 0 para items no en stock_actual
   - Verifica: maneja tabla inexistente gracefully (return 0 para todos)
 
-- [ ] T161 [US1] Integration test Service.Iniciar() - flujo completo en `loopi-api-v2/internal/inventarios/integration_test.go`
+- [x] T161 [US1] Integration test Service.Iniciar() - flujo completo en `loopi-api-v2/internal/inventarios/integration_test.go`
   - Setup: Crear tienda, items, stock_actual
   - Action: POST /inventarios con tipo='diario'
   - Verify: HTTP 201, inventario.items.length > 0, cada item.valor_sugerido mapeado correcto
@@ -311,14 +311,14 @@
 
 ### Error Code Mapping
 
-- [ ] T162 [P] [US1] Handler: Mapear error code `sin_items_contabilizar` a HTTP 422 en `loopi-api-v2/internal/inventarios/handler.go`
+- [x] T162 [P] [US1] Handler: Mapear error code `sin_items_contabilizar` a HTTP 422 en `loopi-api-v2/internal/inventarios/handler.go`
   - En PostInventario() handler, si service.Iniciar() retorna error code `sin_items_contabilizar`
   - Retornar HTTP 422 con error body `{error: "sin_items_contabilizar", mensaje: "No hay items activos para contabilizar en esta tienda para el tipo {tipo}"}`
   - Actualizar mapErrorToStatus() function
 
 ### Frontend Compatibility
 
-- [ ] T163 [P] [US1] Actualizar Angular error handling en `loopi-web-v2/src/app/inventario/error-mapper.service.ts`
+- [x] T163 [P] [US1] Actualizar Angular error handling en `loopi-web-v2/src/app/inventario/error-mapper.service.ts`
   - Agregar mapeo para código `sin_items_contabilizar` (422) → mensaje descriptivo
   - Verifica: extractErrorMessage() maneja respuesta 422 correctamente
 
