@@ -33,9 +33,7 @@ Corregir el orden conceptual del flujo de iniciar conteo: debe consultar items A
 | **spec.md** | Modificar + Agregar | Agregar RF-INV-02.3 "Determinación de Items" con paso a paso de consulta, validación y mapeo de stock |
 | **plan.md** | Crear + Modificar | NO EXISTE ACTUALMENTE - Crear plan.md con fases y arquitectura; actualizar con reordenamiento de lógica en Service |
 | **tasks.md** | Modificar + Agregar | Reabrir T021 (Service.Iniciar refactor), T023 (CreateDetalleInventario debe crearse aquí), agregar T0XX para nuevas funciones repository |
-
 | **data-model.md** | Modificar | Agregar diagrama de flujo: items → detalle_inventario → stock_actual, indicando dónde obtiene valor_sugerido |
-| **docs/ERROR-CODES.md** | Modificar | Agregar código nuevo `sin_items_contabilizar` (422) |
 | **BUG-016.md** | Actualizar | Reconceptualizar de "items no se crean" a "flujo tiene orden invertido" con diagrama antes/después |
 
 ---
@@ -103,8 +101,8 @@ Corregir el orden conceptual del flujo de iniciar conteo: debe consultar items A
    - **T035 [P] [US1] Unit test GetStockSnapshot()**: Verificar mapeo correcto de items a valores, maneja items inexistentes en stock_actual (default 0).
    - **T036 [P] [US1] Integration test Service.Iniciar() - flujo completo**: Crear tienda+items+stock_actual, iniciar conteo, verificar 201 con N items y valor_sugerido mapeado correctamente.
 
-3. **Agregar Error Code**:
-   - **T037 [P] [US1] Handler: Mapear error code sin_items_contabilizar a 422**: En handler.go, mapear `sin_items_contabilizar` → HTTP 422. Actualizar ErrorResp.
+3. **Agregar Error Code en Handler**:
+   - **T037 [P] [US1] Handler: Mapear error code sin_items_contabilizar a 422**: En handler.go, mapear `sin_items_contabilizar` → HTTP 422. Actualizar ErrorResp y mapErrorToStatus().
 
 ### data-model.md (CREAR/ACTUALIZAR)
 
@@ -159,11 +157,7 @@ Agregar en tabla **POST /api/v1/inventarios (Iniciar Conteo)**:
 
 ### Frontend ErrorMapperService
 
-Agregar código error:
-
-```typescript
-sin_items_contabilizar: "No hay items activos para contabilizar en esta tienda para el tipo {tipo}"
-```
+Actualizar: Agregar mapeo para código `sin_items_contabilizar` (422) con mensaje descriptivo.
 
 ---
 
