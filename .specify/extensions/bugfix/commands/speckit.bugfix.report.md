@@ -22,11 +22,22 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
 
 ## Outline
 
-1. **Load artifacts**: Read from the current feature directory:
+1. **[NEW] Load bug history and run constitutional check**:
+   - Load all previous bug reports: `specs/{feature}/bugs/BUG-*.md` for context
+   - Run `/speckit.bugfix.constitution-check <bug-description>` to validate against:
+     - constitution.md (P-I to P-VI)
+     - standards/backend.md (BE-ARCH-01 to BE-OBS-01, if backend)
+     - standards/frontend.md (FE-STACK-01 to FE-CI-01, if frontend)
+     - standards/environments-ci.md (ENV-01, CI-01, CI-02)
+   - If CRITICAL violations: Recommend escalation before proceeding
+   - If WARNING: Document violations for Complexity Tracking
+   - If OK: Proceed with confidence
+
+2. **Load artifacts**: Read from the current feature directory:
    - **Required**: `spec.md` (the specification)
    - **Optional**: `plan.md`, `tasks.md`, `research.md`, `data-model.md`
 
-2. **Analyze the bug**: From the user's description, classify the bug:
+3. **Analyze the bug**: From the user's description, classify the bug:
 
    | Bug Type | Description | Example |
    |----------|-------------|---------|
@@ -36,12 +47,13 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
    | Untested flow | Edge case not covered in success criteria | Concurrent user updates not handled |
    | Dependency issue | External dependency behaves differently than assumed | API response format changed |
 
-3. **Trace to artifacts**: Map the bug to specific sections in each artifact:
+4. **Trace to artifacts**: Map the bug to specific sections in each artifact:
    - **spec.md**: Which user story, requirement, or success criterion is affected?
    - **plan.md**: Which plan section covers this area?
    - **tasks.md**: Which task(s) relate to this area? Are any marked complete that shouldn't be?
+   - **Related bugs**: Reference any previous BUG-NNN that this is related to
 
-4. **Generate bug report**: Output a structured report:
+5. **Generate bug report**: Output a structured report:
 
    ```markdown
    # Bug Report: [Short Title]
@@ -53,6 +65,44 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
 
    ## Description
    [User's bug description, clarified and structured]
+
+   ## Constitutional & Standards Compliance (from /speckit.bugfix.constitution-check)
+
+   ### Principle Impact (constitution.md)
+   | Principle | Status | Details |
+   |-----------|--------|---------|
+   | P-I: Spec-First | ✅/⚠️/❌ | [From constitution-check output] |
+   | P-II: Multi-Tienda | ✅/⚠️/❌ | [From constitution-check output] |
+   | P-III: RBAC | ✅/⚠️/❌ | [From constitution-check output] |
+   | P-IV: Trazabilidad | ✅/⚠️/❌ | [From constitution-check output] |
+   | P-V: Prevención Pérdidas | ✅/⚠️/❌ | [From constitution-check output] |
+   | P-VI: Monitoreo | ✅/⚠️/❌ | [From constitution-check output] |
+
+   ### Backend Standards Impact (standards/backend.md) [IF APPLICABLE]
+   | Standard | Status | Details |
+   |----------|--------|---------|
+   | BE-ARCH-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | BE-CACHE-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | BE-TEST-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | BE-API-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | [... other BE-* as applicable] | | |
+
+   ### Frontend Standards Impact (standards/frontend.md) [IF APPLICABLE]
+   | Standard | Status | Details |
+   |----------|--------|---------|
+   | FE-STACK-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | FE-RESP-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | FE-A11Y-01 | ✅/⚠️/❌ | [From constitution-check output] |
+   | [... other FE-* as applicable] | | |
+
+   ### CI/Environment Impact (standards/environments-ci.md)
+   | Standard | Status | Details |
+   |----------|--------|---------|
+   | CI-01: Gitflow | ✅/⚠️/❌ | [From constitution-check output] |
+   | CI-02: Security | ✅/⚠️/❌ | [From constitution-check output] |
+
+   ### Overall Risk Level
+   **🔴 CRITICAL / 🟡 WARNING / 🟢 OK** — [From constitution-check output]
 
    ## Artifact Traceability
 
@@ -70,13 +120,18 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
    - **False completions**: [Tasks marked done that need reopening]
    - **Missing tasks**: [New tasks needed to fix the bug]
 
+   ### Related Previous Bugs
+   - **BUG-NNN**: [Status] [Description] — [Relationship: "same root cause" / "regression risk" / "dependency"]
+
    ## Root Cause Analysis
    [Why this bug exists — was it a spec oversight, changed requirement, or implementation error?]
 
    ## Recommended Fix
-   1. Run `/speckit.bugfix.patch` to update spec artifacts
-   2. Run `/speckit.bugfix.verify` to confirm consistency
-   3. Resume `/speckit.implement` to apply the code fix
+   1. If CRITICAL violations: Escalate to product/legal before proceeding
+   2. If WARNING violations: Document in Complexity Tracking before patching
+   3. Run `/speckit.bugfix.patch` to update spec artifacts with standards compliance
+   4. Run `/speckit.bugfix.verify` to confirm consistency and standards alignment
+   5. Resume `/speckit.implement` to apply the code fix
    ```
 
 5. **Save report**: Write the bug report to `specs/{feature}/bugs/BUG-{NNN}.md` where `{NNN}` is the next sequential bug number. Create the `bugs/` directory if it does not exist.

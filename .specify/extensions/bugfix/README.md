@@ -48,19 +48,59 @@ The extension classifies bugs into five categories:
 Bug discovered during /speckit.implement
        │
        ▼
-/speckit.bugfix.report     ← Capture bug, trace to artifacts, classify
+/speckit.bugfix.constitution-check  ← [NEW] Analyze against all normative docs
+       │                              (constitution.md + 3 standards/*.md)
+       │ (Risk: CRITICAL/WARNING/OK)
        │
        ▼
-/speckit.bugfix.patch      ← Surgically update spec, plan, tasks
+/speckit.bugfix.report              ← Capture bug, trace to artifacts, classify
+       │                              (Report includes standards compliance)
        │
        ▼
-/speckit.bugfix.verify     ← Confirm all artifacts are consistent
+/speckit.bugfix.patch               ← [ENHANCED] Verify patch compliance (Level 2)
+       │                              then surgically update spec, plan, tasks
+       │                              (Step 2.2: Constitution & standards gate)
+       │                              (Step 3.5: Markdown lint gate)
        │
        ▼
-/speckit.implement         ← Resume implementation with corrected specs
+/speckit.bugfix.verify              ← Confirm consistency + standards alignment
+       │                              (Includes historical bug relationships)
+       │
+       ▼
+/speckit.implement                  ← Resume implementation with corrected specs
 ```
 
+## Loopi v2: Four Normative Documents
+
+Every bug is validated against Loopi v2's governance framework:
+
+| Document | Scope | Rules | Updated |
+|----------|-------|-------|---------|
+| **constitution.md** | Principles | P-I, P-II, P-III, P-IV, P-V, P-VI | ✅ v2.0.0 |
+| **standards/backend.md** | Backend implementation | BE-ARCH-01 to BE-OBS-01 (8 rules) | ✅ v1.0.0 |
+| **standards/frontend.md** | Frontend implementation | FE-STACK-01 to FE-CI-01 (20 rules) | ✅ v1.0.0 |
+| **standards/environments-ci.md** | Environments & CI | ENV-01, CI-01, CI-02 | ✅ v1.0.0 |
+
+**All bugs are validated against all applicable documents**:
+- Always check: P-I to P-VI + CI-01 (Gitflow)
+- If backend: Check BE-* rules
+- If frontend: Check FE-* rules
+- If environment-related: Check ENV-*, CI-02
+
+See `/speckit.bugfix.constitution-check` for detailed validation matrix.
+
 ## Commands
+
+### `/speckit.bugfix.constitution-check` (NEW)
+
+Analyze bug against ALL four normative documents **before** reporting it.
+
+- Validates against constitution.md (P-I to P-VI)
+- Validates against standards/backend.md (if backend)
+- Validates against standards/frontend.md (if frontend)
+- Validates against standards/environments-ci.md (CI/environment)
+- Output: Risk assessment (CRITICAL/WARNING/OK) + affected standards
+- **Recommendation**: Run this FIRST, before /speckit.bugfix.report
 
 ### `/speckit.bugfix.report`
 

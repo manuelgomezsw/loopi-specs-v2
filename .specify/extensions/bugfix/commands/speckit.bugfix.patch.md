@@ -38,6 +38,67 @@ You **MUST** consider the user input before proceeding (if not empty). The user 
    | Untested flow | Add success criterion for the edge case | Add edge case to complexity tracking | Add verification task |
    | Dependency issue | Update assumption about external dependency | Update technical context | Add dependency investigation task |
 
+2.2. **[NEW - Level 2] Verify patches against all normative documents BEFORE proceeding**:
+
+   *GATE: Validate patch compliance before designing implementation*
+
+   Before proceeding to Step 3, verify the patch against:
+   - ✅ **constitution.md** (P-I to P-VI): Does patch violate any principle?
+   - ✅ **standards/backend.md** (BE-ARCH-01 to BE-OBS-01, if backend): Does patch comply?
+   - ✅ **standards/frontend.md** (FE-STACK-01 to FE-CI-01, if frontend): Does patch comply?
+   - ✅ **standards/environments-ci.md** (ENV-01, CI-01, CI-02): Does patch comply?
+
+   **Checks**:
+   1. **Constitutional violations**: Does patch violate P-III (RBAC), P-IV (Trazabilidad), P-V (Prevención)?
+      - If YES → ABORT: Report constitutional violation to user
+      - If NO → Continue
+   
+   2. **Backend standard impact** (if backend scope):
+      - Will patch require new BE-* tasks for Phase 9 (Cumplimiento Constitucional)?
+      - Will patch require changes to BE-ARCH-01 (layer separation)?
+      - Will patch affect BE-TEST-01 (coverage thresholds)?
+      - Add citations to affected BE-* IDs in new tasks
+   
+   3. **Frontend standard impact** (if frontend scope):
+      - Will patch require new FE-* tasks for Phase 9?
+      - Will patch affect FE-COMP-01 (transversal components)?
+      - Will patch affect FE-RESP-01 (responsive design)?
+      - Add citations to affected FE-* IDs in new tasks
+   
+   4. **CI/Environment impact**:
+      - Does patch affect CI-01 (Gitflow procedures)?
+      - Does patch introduce security concerns (CI-02)?
+
+   **Regression check** (IF loading previous bugs):
+   - For each previously patched BUG: Does this patch break or contradict the previous fix?
+   - If potential regression: ABORT and flag
+
+   **If violations detected**:
+   ```
+   ❌ CONSTITUTION VIOLATION DETECTED
+
+   Patch violates: [List P-*, BE-*, FE-* IDs]
+   
+   ACTION: Do not proceed. Choose one:
+   1. Modify patch to align with standards (and re-run this step)
+   2. Document violation in Complexity Tracking (requires approval)
+   3. Escalate to product team for constitutional amendment decision
+   ```
+
+   **If OK**:
+   ```
+   ✅ CONSTITUTION & STANDARDS VERIFIED
+
+   Patch is compliant with:
+   - All applicable principles (P-I to P-VI)
+   - All applicable standards (BE-*, FE-*, CI-*)
+   
+   Standards affected that MUST be cited in Phase 9:
+   - [List which BE-*, FE-*, CI-* the patch addresses]
+   
+   Proceed to Step 3 (Patch spec.md, plan.md, tasks.md)
+   ```
+
 3. **Patch spec.md**:
    - Add missing requirements under the affected user story
    - Mark conflicting text with `~~strikethrough~~` and reason
