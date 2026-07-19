@@ -204,11 +204,16 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   Para el inventario de tipo `inicial`, el valor sugerido de todos los items es cero,
   ya que no existe inventario de referencia previo.
 - RF-INV-02.3: La diferencia (real − esperado) se recalcula y muestra en pantalla en
-  tiempo real al ingresar cada valor. La visualización debe mostrar:
+  tiempo real al ingresar cada valor. La visualización debe mostrar un **badge/etiqueta en la esquina
+  superior derecha** con:
+  - **Patrón de mensaje**: Según el valor de la diferencia:
+    - Si diferencia < 0: `⚠️ Faltante: {valor_numérico}` con **fondo rojo** (ej: "⚠️ Faltante: -8")
+    - Si diferencia > 0: `ℹ️ Exceso: {valor_numérico}` con **fondo verde** (ej: "ℹ️ Exceso: +2")
+    - Si diferencia = 0: `✓ Correcto` con **fondo gris** (ej: "✓ Correcto")
   - **Valor numérico de la diferencia** con su unidad de medida (ej: "-400 ml", "+2 unidades", "0")
-  - **Color condicional**: rojo para diferencias negativas (pérdida), verde para positivas (ganancia), gris para cero
-  - **Indicador visual opcional**: ⚠️ si diferencia ≠ 0, ✓ si diferencia = 0, para máxima claridad
-  - El objetivo es que el operador vea claramente si hay discrepancias sin confundir el indicador con un estado de éxito/fallo
+  - **Indicadores visuales**: Símbolo (⚠️/ℹ️/✓) + color + texto para máxima claridad
+  - El objetivo es que el operador vea claramente qué tipo de discrepancia existe SIN confundir con un estado de éxito/fallo
+  - **Accesibilidad**: Símbolo + color + mensaje de texto = WCAG 2.1 AA compliant (no solo color)
 - RF-INV-02.3: **Determinación Automática de Items**: El sistema determina automáticamente
   los items a contar en 5 pasos:
   1. Consulta items activos con frecuencia_inventario = tipo seleccionado
@@ -511,3 +516,12 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
    - Requisito afectado: RF-INV-01.3, RF-INV-01.5, HU1 Escenario 4
    - Estado: ✅ Patched (Spec gap: Agregada sección "Algoritmo de Determinación Automática de Tipo de Conteo")
    - Tareas impactadas: T029-T031 (reabiertos), T164-T171 (nuevas Phase 12-bis)
+
+2. **BUG-018**: Indicador Visual de Diferencias — Ambigüedad en Mensaje de Etiqueta (Medium)
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario-conteo.component.html/ts`
+   - Impacto: Patrón "'⚠️ Pérdida' : '✓ Ganancia'" es ambiguo; operador confunde discrepancias con estados de éxito/fallo
+   - Requisito afectado: RF-INV-02.3 (define color + símbolo pero NO mensaje explícito)
+   - Root Cause: Spec gap — RF-INV-02.3 no especificaba el TEXTO de la etiqueta en esquina superior derecha
+   - Solución: Cambiar a patrón operativo neutral: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0)
+   - Estado: ✅ Patched (Spec gap: RF-INV-02.3 actualizado con patrón explícito de mensaje + color + símbolo)
+   - Tareas impactadas: T041, T042 (reabiertos para refactorizar HTML/TS con nuevo patrón)

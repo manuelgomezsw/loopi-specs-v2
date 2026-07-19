@@ -6,7 +6,7 @@
 
 **Fecha**: 2026-07-12
 
-**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend).
+**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend). BUG-018 Indicador visual de diferencias — patrón de mensaje ambiguo. Reabiertos T041-T042 para refactorizar con nuevo patrón de badge: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0) per RF-INV-02.3 actualizado.
 
 ---
 
@@ -126,8 +126,12 @@
 - [x] T038 [P] [US2] Implement repository method `UpdateDetalle()` in `loopi-api-v2/internal/inventarios/repository.go`: UPDATE detalle_inventario SET valor_real, diferencia WHERE inventario_id + item_id; return updated row data — implemented with TestUpdateDetalle_Success
 - [x] T039 [US2] Implement HTTP handler `PatchItemValor()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, parse {valor_real}, validate user authorization (responsable_id check), call service.RegistrarValor() → 200 per contracts/api.md endpoint 4; return 403 si conteo_bloqueado, 404 si item not in count
 - [x] T040 (reopened — FE-BUG-008) [P] [US2] Create Angular component step 2 in `inventario-conteo.component.ts`: Display items list (SHOW item.nombre NOT item.id per RF-INV-02.1), valor_sugerido, valor_esperado in FormCardComponent cards, render input fields for valor_real per item (mobile-first: single-column, one item per viewport row to minimize scroll) — ✅ Updated DTO with nombre field, HTML binding changed to {{ item.nombre }}
-- [x] T041 (reopened — FE-BUG-008, FE-BUG-009) [P] [US2] Create Angular component HTML for item registration: SHOW item.nombre NOT item.id (FE-BUG-008), show diferencia as VALUE (not checkmark icon) calculated locally (real - esperado) with color conditional styling (red if <0, green if >0, gray if =0) and unit display (FE-BUG-009), apply Tailwind classes per FE-RESP-01 mobile-first — ✅ HTML refactored to display nombre and difference as value with conditional colors
-- [x] T042 (reopened — FE-BUG-009) [US2] Implement Angular autosave in `inventario-conteo.component.ts`: on-blur (or debounce 500ms) emit PATCH /inventarios/{id}/items/{item_id}, update UI with response diferencia (DISPLAY AS VALUE WITH CONDITIONAL COLOR per RF-INV-02.3, not checkmark), handle 403 conteo_bloqueado (show error toast, lock form) — ✅ HTML refactored to display difference as value; autosave will update diferencia which renders correctly
+- [x] ✅ T041 (reopened — FE-BUG-008, FE-BUG-009, BUG-018) [P] [US2] Create Angular component HTML for item registration: SHOW item.nombre NOT item.id (FE-BUG-008), show diferencia with badge/etiqueta en esquina superior derecha (FE-BUG-009, **BUG-018**) usando nuevo patrón per RF-INV-02.3:
+  - Si diferencia < 0: `⚠️ Faltante: {valor}` con fondo rojo (ej: "⚠️ Faltante: -8")
+  - Si diferencia > 0: `ℹ️ Exceso: {valor}` con fondo verde (ej: "ℹ️ Exceso: +2")
+  - Si diferencia = 0: `✓ Correcto` con fondo gris
+  - Aplicar Tailwind classes per FE-RESP-01 mobile-first, incluir valor_sugerido, valor_esperado, valor_real — ✅ Implementado: badge con patrón operativo neutral (Faltante/Exceso/Correcto), Tailwind styling (bg-red-100/green-100/gray-100), border + color de texto, aria-live para accesibilidad
+- [x] ✅ T042 (reopened — FE-BUG-009, BUG-018) [US2] Implement Angular autosave en `inventario-conteo.component.ts`: on-blur (or debounce 500ms) emit PATCH /inventarios/{id}/items/{item_id}, update UI with response diferencia usando nuevo patrón de badge (Faltante/Exceso/Correcto per BUG-018 + RF-INV-02.3), handle 403 conteo_bloqueado (show error toast, lock form), ensure badge updates inmediatamente en pantalla — ✅ Implementado: autosave on-blur dispara registrarValor(), badge se actualiza inmediatamente cuando servidor responde con nuevo diferencia
 - [x] T043 [US2] Add error recovery in Angular: on autosave error, show inline error message, allow retry on same input field (do NOT clear field on temporary network failure) — implemented in registrarValor with itemErrors map
 - [x] T044 [US2] Implement session recovery in Angular (RF-INV-02.4): on component load, if inventario.id exists in URL params + estado=en_progreso, GET /inventarios/{id} and pre-fill ALL valor_real values from response — implemented via recuperarSesion() + precargarvValoresReales()
 
