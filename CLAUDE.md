@@ -54,19 +54,42 @@ git checkout -b <tipo>/<nombre-descriptivo>
 - Los `release/*` parten desde `develop` y se mergean a `main` **y** `develop`.
 - Nunca hagas `git push --force` en `main` o `develop`.
 
-## Markdown Lint — regla obligatoria antes de cada commit
+## Validación pre-push — regla obligatoria antes de hacer push
 
-**Antes de ejecutar cualquier `git commit` en este repositorio**, corre:
+**Antes de ejecutar `git push` en este repositorio**, debes ejecutar las siguientes validaciones:
+
+### Markdown Lint
+
+Valida que todos los archivos markdown cumplan con los estándares de linting:
 
 ```bash
 npx markdownlint-cli2 "**/*.md"
 ```
 
-Si hay errores, corrígelos antes de commitear. No uses `--no-verify` para saltarte esta validación.
+Si hay errores, corrígelos antes de hacer push.
 
-El hook `.githooks/pre-commit` automatiza esto para clientes git locales.
-Tras clonar el repositorio, actívalo una sola vez:
+### Pruebas unitarias — Backend (Go)
+
+Ejecuta todas las pruebas unitarias en modo estricto:
 
 ```bash
-git config core.hooksPath .githooks
+go test ./... -v
 ```
+
+El comando debe completarse exitosamente sin errores. Si alguna prueba falla, corrígela antes de hacer push.
+
+### Pruebas unitarias — Frontend
+
+Levanta chromium en local y ejecuta todas las pruebas unitarias:
+
+```bash
+npm run test:unit
+```
+
+Este comando debe ejecutar el 100% de las pruebas y todas deben pasar exitosamente. Si alguna prueba falla, corrígela antes de hacer push.
+
+### Reglas de validación
+
+- **No hagas `git push`** si alguna validación falla.
+- No uses flags para saltarte o ignorar errores.
+- Estas validaciones son críticas para mantener la integridad del código.
