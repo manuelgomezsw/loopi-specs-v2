@@ -6,7 +6,7 @@
 
 **Fecha**: 2026-07-12
 
-**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend). BUG-018 Indicador visual de diferencias — patrón de mensaje ambiguo. Reabiertos T041-T042 para refactorizar con nuevo patrón de badge: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0) per RF-INV-02.3 actualizado.
+**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend). BUG-018 Indicador visual de diferencias — patrón de mensaje ambiguo. Reabiertos T041-T042 para refactorizar con nuevo patrón de badge: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0) per RF-INV-02.3 actualizado. BUG-020 Validación faltante — valores negativos en conteo. Reabiertos T037-T039 para validación de rango. Agregadas T172-T175 (nueva fase Phase 12 para validación backend + frontend + tests) per RF-INV-02.1.
 
 ---
 
@@ -122,9 +122,9 @@
 
 ### Implementation for User Story 2
 
-- [x] T037 [P] [US2] Implement service method `RegistrarValor()` in `loopi-api-v2/internal/inventarios/service.go`: validate inventario exists, validate user is responsable_id, calculate diferencia, call repository.UpdateDetalle
+- [x] ⚠️ T037 (reopened — BUG-020) [P] [US2] Implement service method `RegistrarValor()` in `loopi-api-v2/internal/inventarios/service.go`: validate inventario exists, validate user is responsable_id, **validate valor_real >= 0 per RF-INV-02.1 (BUG-020) — return 400 `valor_invalido` if negative**, calculate diferencia, call repository.UpdateDetalle — ✅ Implementado: validación agregada que rechaza valores < 0
 - [x] T038 [P] [US2] Implement repository method `UpdateDetalle()` in `loopi-api-v2/internal/inventarios/repository.go`: UPDATE detalle_inventario SET valor_real, diferencia WHERE inventario_id + item_id; return updated row data — implemented with TestUpdateDetalle_Success
-- [x] T039 [US2] Implement HTTP handler `PatchItemValor()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, parse {valor_real}, validate user authorization (responsable_id check), call service.RegistrarValor() → 200 per contracts/api.md endpoint 4; return 403 si conteo_bloqueado, 404 si item not in count
+- [x] ⚠️ T039 (reopened — BUG-020) [US2] Implement HTTP handler `PatchItemValor()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, parse {valor_real}, validate user authorization (responsable_id check), call service.RegistrarValor() → 200 per contracts/api.md endpoint 4; return 403 si conteo_bloqueado, 404 si item not in count, **map error code `valor_invalido` from service → HTTP 400 response per BUG-020** — ✅ Implementado: mapeo explícito agregado a mapErrorToStatus()
 - [x] T040 (reopened — FE-BUG-008) [P] [US2] Create Angular component step 2 in `inventario-conteo.component.ts`: Display items list (SHOW item.nombre NOT item.id per RF-INV-02.1), valor_sugerido, valor_esperado in FormCardComponent cards, render input fields for valor_real per item (mobile-first: single-column, one item per viewport row to minimize scroll) — ✅ Updated DTO with nombre field, HTML binding changed to {{ item.nombre }}
 - [x] ✅ T041 (reopened — FE-BUG-008, FE-BUG-009, BUG-018) [P] [US2] Create Angular component HTML for item registration: SHOW item.nombre NOT item.id (FE-BUG-008), show diferencia with badge/etiqueta en esquina superior derecha (FE-BUG-009, **BUG-018**) usando nuevo patrón per RF-INV-02.3:
   - Si diferencia < 0: `⚠️ Faltante: {valor}` con fondo rojo (ej: "⚠️ Faltante: -8")
@@ -667,13 +667,28 @@
 
 ---
 
-**Checkpoint**: All 16 bugs remediated. Re-run unit tests (95%+ backend coverage), E2E tests pass (4+ tests), WCAG audit passes, Gitflow compliance verified, ready for final merge to develop.
+## Phase 12: Bugfix - BUG-020 Validación de Valores Negativos
+
+**Purpose**: Implement validation to reject negative values in inventory count registration (security + internal control)
+
+**Blocker**: Users can register negative quantities → fraud risk, violates RF-INV-02.1
+
+- [x] T172 [P] **BUG-020** Add input validation in Angular `inventario-conteo.component.ts`: FormControl for valor_real must have `Validators.min(0)` + custom error message "La cantidad no puede ser negativa" — apply to all valor_real inputs — ✅ Implementado: min="0" + step="any" en HTML, validación en TS con mensaje personalizado
+- [x] T173 [P] **BUG-020** Add unit tests in `loopi-api-v2/internal/inventarios/service_test.go`: TestRegistrarValor_RejectedNegative (valor_real < 0 → error `valor_invalido`), TestRegistrarValor_AcceptedZero (valor_real = 0 → OK), TestRegistrarValor_AcceptedPositive (valor_real > 0 → OK) — ✅ Implementado: 3 tests nuevos, todos pasando
+- [x] T174 **BUG-020** Add integration test in `loopi-api-v2/internal/inventarios/handler_test.go`: TestPatchItemValor_RejectedNegative (PATCH with {"valor_real": -500} → HTTP 400, error_code=`valor_invalido`) — ✅ Implementado: test verificando HTTP 400 + error code correcto
+- [x] T175 **BUG-020** Add E2E test in `loopi-web-v2/e2e/inventario-hu2-register.e2e.ts`: User attempts to register negative value → input field validation prevents submission OR backend error message shown — ✅ Implementado: 3 E2E tests (rechazo negativo, aceptación cero, validación min)
+
+**Checkpoint**: BUG-020 fully patched. Negative values rejected at both frontend (input validation) and backend (service validation). Unit + integration + E2E tests verify.
+
+---
+
+**Checkpoint**: All 20 bugs remediated. Re-run unit tests (95%+ backend coverage), E2E tests pass (4+ tests), WCAG audit passes, Gitflow compliance verified, ready for final merge to develop.
 
 ---
 
 ## Execution Summary
 
-**Total Tasks**: 151 (11 phases including new RF-INV-05 architecture phase)
+**Total Tasks**: 175 (12 phases including RF-INV-05 architecture phase + BUG-020 validation phase)
 
 **Parallelizable**: Tasks marked [P] can run in parallel (different files, no blocking dependencies)
 

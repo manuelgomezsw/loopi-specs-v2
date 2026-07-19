@@ -181,6 +181,10 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   valor esperado (stock proyectado) y un campo para ingresar el valor real.
   El nombre debe ser legible para que el operador pueda identificar claramente qué item está contando
   sin necesidad de consultar el catálogo.
+  
+  **Restricción de valores**: El valor real debe ser un número entero o decimal **≥ 0**. No se aceptan
+  cantidades negativas. Si el usuario intenta ingresar un valor negativo, el sistema retorna **HTTP 400**
+  con código de error `valor_invalido` y mensaje: *"La cantidad no puede ser negativa. Ingrese un valor mayor o igual a 0."*
 - RF-INV-02.2: El valor esperado de cada item es un **snapshot inmutable** del stock
   tomado en el momento exacto de inicio del conteo, calculado con la siguiente fórmula:
 
@@ -535,3 +539,12 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
    - Solución: Eliminar `valor_sugerido` completamente; mantener solo `valor_esperado` (snapshot inmutable de stock)
    - Estado: ✅ Patched (Spec gap: RF-INV-02.1/2.2 actualizado, data-model.md simplificado, backend refactorizado, frontend actualizado)
    - Tareas impactadas: Refactorización completada en backend (models.go, repository.go, service.go) y frontend (service.ts, specs)
+
+4. **BUG-020**: Validación Faltante — Valores Negativos en Conteo (High)
+   - Archivo: Backend (service.go), Frontend (formulario), Spec
+   - Impacto: Usuario puede ingresar valores negativos en cantidad contada → riesgo de fraude y control interno débil
+   - Requisito afectado: RF-INV-02.1 (no valida que valor_real >= 0)
+   - Root Cause: Spec gap — RF-INV-02 asume implícitamente valores positivos, pero no lo explicita
+   - Solución: Agregar validación explícita: `valor_real >= 0`, retornar HTTP 400 `valor_invalido` si es negativo
+   - Estado: 🔧 Pendiente patch (Spec gap: RF-INV-02.1 necesita aclaración de rango de valores válidos)
+   - Tareas impactadas: T061 (RegistrarValor), T062 (Pruebas), Frontend (validación en formulario)

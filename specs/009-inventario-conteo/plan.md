@@ -174,6 +174,7 @@ func (s *Service) Iniciar(ctx, tiendaID, tipo, horario) (*InventarioResp, error)
 - Verificar permisos (responsable_id match, role checks)
 - Calcular diferencias (valor_real - valor_esperado)
 - Implementar sugerencias automáticas de tipo/horario
+- **Validación de entrada**: Rechazar valores negativos en `RegistrarValor()` — si `valor_real < 0` retornar 400 `valor_invalido` (RF-INV-02.1 BUG-020)
 - **NUEVO (BUG-017)**: Determinar automáticamente tipo de conteo según historial:
   - Si usuario envía `tipo == 'inicial'` → retornar 400 `tipo_inicial_no_permitido`
   - Si NO existe historial completado → determinar `tipo_real = 'inicial'`
@@ -316,6 +317,6 @@ func (s *Service) Iniciar(ctx, tiendaID, tipo, horario) (*InventarioResp, error)
 
 ---
 
-**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo (inicial vs otros). Agregada lógica en Service layer para validar que usuario no selecciona "inicial" y sistema determina tipo según historial.
+**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo (inicial vs otros). Agregada lógica en Service layer para validar que usuario no selecciona "inicial" y sistema determina tipo según historial. BUG-020 Validación de valores negativos en conteo — agregada restricción de rango en RF-INV-02.1 y validación en Service.RegistrarValor().
 
-**Última actualización**: 2026-07-19 — Bugfix BUG-017 + Iteration BUG-016
+**Última actualización**: 2026-07-19 — Bugfix BUG-017 + BUG-020 + Iteration BUG-016
