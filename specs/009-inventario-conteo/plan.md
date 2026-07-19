@@ -79,16 +79,26 @@ Data (MySQL):
 
 ---
 
-### Fase 3: Registrar Valores & Confirmar (Pendiente)
+### Fase 3: Selección Tipo/Horario & Registrar Valores (Pendiente)
 
-**Propósito**: Permitir al líder ingresar cantidad real de cada item y confirmar conteo
+**Propósito**: Permitir al usuario seleccionar tipo/horario de forma reactiva, luego ingresar cantidad real de cada item y confirmar conteo
+
+**Bugfix**: 2026-07-19 — BUG-021 Validación de Horario Incompleta en Cambio de Tipo + Determinación Automática
+
+- **BUG-021-A (Frontend)**: Campo horario retiene valor anterior cuando tipo cambia a semanal/mensual → envía datos inválidos al backend. Fix: Limpiar valor en `valueChanges` subscriber cuando tipo != 'diario'
+- **BUG-021-B (Backend)**: Validación de horario ocurre ANTES de determinar tipoReal. Si tipo=diario→inicial, guarda con horario (viola RF-INV-01.2). Fix: Revalidar horario DESPUÉS de determinar tipoReal, O forzar horario=null cuando tipoReal==inicial
+
+**Frontend Reactivity**:
+
+- Cuando usuario cambia tipo a semanal/mensual/inicial: limpiar/resetear campo horario (T030 reopened)
+- Cuando usuario cambia tipo a diario: horario se hace requerido (T031 reopened)
 
 - PATCH /inventarios/{id}/items/{item_id} con autosave
 - POST /inventarios/{id}/confirmar con validación
 - Manejo de interrupciones (recuperar sesión)
 - Cálculo de diferencias en tiempo real
 
-**Deliverable**: Conteo completo de item a item hasta confirmación
+**Deliverable**: UI reactiva para selección tipo/horario + Conteo completo de item a item hasta confirmación
 
 ---
 

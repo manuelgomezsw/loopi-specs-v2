@@ -6,7 +6,7 @@
 
 **Fecha**: 2026-07-12
 
-**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend). BUG-018 Indicador visual de diferencias — patrón de mensaje ambiguo. Reabiertos T041-T042 para refactorizar con nuevo patrón de badge: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0) per RF-INV-02.3 actualizado. BUG-020 Validación faltante — valores negativos en conteo. Reabiertos T037-T039 para validación de rango. Agregadas T172-T175 (nueva fase Phase 12 para validación backend + frontend + tests) per RF-INV-02.1.
+**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend). BUG-018 Indicador visual de diferencias — patrón de mensaje ambiguo. Reabiertos T041-T042 para refactorizar con nuevo patrón de badge: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0) per RF-INV-02.3 actualizado. BUG-020 Validación faltante — valores negativos en conteo. Reabiertos T037-T039 para validación de rango. Agregadas T172-T175 (nueva fase Phase 12 para validación backend + frontend + tests) per RF-INV-02.1. BUG-021 Validación de Horario Incompleta en Cambio de Tipo + Determinación Automática. Reabiertos T030-T031 (frontend horario field cleanup on tipo change). Agregadas T176-T179 (frontend test + backend revalidation + test) per BUG-021-A y BUG-021-B.
 
 ---
 
@@ -89,8 +89,8 @@
 - [x] T027 [P] [US1] Implement repository helper `SumarMermasPeriodo()` in `loopi-api-v2/internal/inventarios/repository.go`: SUM from mermas (010) with information_schema check for table existence (RD-04)
 - [x] T028 [US1] Implement HTTP handler `GetSugerencia()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT + call service.SuggestType(now) → 200 with {tipo, horario} per contracts/api.md endpoint 1
 - [x] ⚠️ T029 (reopened — BUG-017) [US1] Implement HTTP handler `PostInventario()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, validate tienda_id authorization (P-II, P-III), call service.Iniciar() → 201 with full inventory + items per contracts/api.md endpoint 2; return 409 si conteo_duplicado, 400 si validation error. **NEW**: Validate error code `tipo_inicial_no_permitido` (400) returned from service and pass to response per BUG-017
-- [x] ⚠️ T030 (reopened — BUG-017) [P] [US1] Create Angular component `inventario-conteo.component.ts` step 1: Display form for type/schedule selection + GET /sugerencia on load, populate form defaults, allow manual override. **CHANGE**: Remove "Inicial" from tipoOptions dropdown; only show diario/semanal/mensual per BUG-017
-- [x] ⚠️ T031 (reopened — BUG-017) [P] [US1] Create Angular component `inventario-conteo.component.html`: mobile-first layout (<640px) with form inputs (tipoOptions excluding "Inicial"), POST /inventarios button (disabled until form valid per FE-FORMSURF-01)
+- [x] ⚠️ T030 (reopened — BUG-017, BUG-021) [P] [US1] Create Angular component `inventario-conteo.component.ts` step 1: Display form for type/schedule selection + GET /sugerencia on load, populate form defaults, allow manual override. **CHANGE BUG-017**: Remove "Inicial" from tipoOptions dropdown; only show diario/semanal/mensual. **CHANGE BUG-021**: Add reactive horario field cleanup when tipo changes to semanal/mensual/inicial — when tipo changes from diario to non-diario, call `horarioControl?.setValue(null)` in valueChanges subscriber (línea 75) ✅ Implemented via T176
+- [x] ⚠️ T031 (reopened — BUG-017, BUG-021) [P] [US1] Create Angular component `inventario-conteo.component.html`: mobile-first layout (<640px) with form inputs (tipoOptions excluding "Inicial"), POST /inventarios button (disabled until form valid per FE-FORMSURF-01). **CHANGE BUG-021**: Verify horario field is hidden/shown conditionally only when tipo='diario' (already in HTML via `@if`), and field value clears when tipo changes ✅ Verified — field clears via T176
 - [x] T032 (reopened — FE-BUG-010) [US1] Implement Angular POST /inventarios call in `inventario-conteo.component.ts`: on form submit, POST to service, handle 201 (transition to step 2: register items), handle errors (409 conteo_duplicado — DIFFERENTIATE MESSAGE BY STATE: en_progreso vs completado per RF-INV-01.4, etc.) per spec error format and FE-ERR-01 standards — ✅ BE updated to include conflicting_state in error detalles, FE error-mapper updated to differentiate messages
 
 ### Phase 3 — Bugfix Tasks (BUG-002: Suggestion Not Loading / No Error Recovery)
@@ -104,6 +104,24 @@
 **Checkpoint**: HU1 complete and testable. Verify: POST /inventarios creates inventory with correct suggestions, blocks duplicates, calculates valor_sugerido correctly, frontend form works on mobile, **suggestion auto-loads or gracefully degrades with fallback**, **all endpoints now accessible via HTTP (BUG-001 resolved)**
 
 **Bugfix**: 2026-07-13 — BUG-001 (T015a-b) Endpoints registered in router; BUG-002 (T030a-b, T028a) Suggestion error handling and backend logic verification
+
+### Phase 3 — Bugfix Tasks (BUG-021: Validación de Horario Incompleta)
+
+**Blocker**: (A) Frontend retiene horario cuando tipo cambia a semanal/mensual → usuario recibe error "horario_not_allowed" aunque no especificó horario. (B) Backend valida horario ANTES de determinar tipoReal → si tipo=diario→inicial, guarda con horario (viola RF-INV-01.2)
+
+**Frontend Fixes**:
+
+- [x] T176 [P] [US1] Fix `inventario-conteo.component.ts` reactive horario cleanup (BUG-021-A): In valueChanges subscriber for tipo (línea ~75), when tipo changes to 'semanal'/'mensual'/'inicial', add `horarioControl?.setValue(null)` to clear field value. Update T030 to mark this change as complete.
+- [ ] T177 [P] [US1] Test `inventario-conteo.component.ts` form state transitions (BUG-021-A): Unit test that when tipo changes diario→semanal, horarioControl.value becomes null and subsequent form submission sends horario=undefined to backend
+
+**Backend Fixes**:
+
+- [x] T178 [US1] Fix `service.Iniciar()` horario revalidation (BUG-021-B): After determining tipoReal (línea ~152), add revalidation: `if err := s.ValidarHorario(req.Horario, tipoReal); err != nil { return nil, err }` (línea ~220 before creating inventory). Ensures tipo=diario→inicial doesn't retain horario.
+- [ ] T179 [US1] Test `service.Iniciar()` automatic type determination with horario (BUG-021-B): Unit test POST /inventarios with `{tipo:"diario", horario:"apertura"}` on first count (no historial), verify response has `tipo:"inicial"` and `horario:null` (not "apertura")
+
+**Checkpoint**: Frontend form reactivity complete. Verify: T030/T031 pass with horario cleanup, T032 still works for both diario (horario required) and semanal/mensual (horario cleared), backend tests T178-T179 pass
+
+**Bugfix**: 2026-07-19 — BUG-021 (T176-T179) Horario validation reactivity and revalidation per determinación automática
 
 ---
 

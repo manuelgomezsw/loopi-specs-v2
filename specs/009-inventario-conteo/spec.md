@@ -548,3 +548,15 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
    - Solución: Agregar validación explícita: `valor_real >= 0`, retornar HTTP 400 `valor_invalido` si es negativo
    - Estado: 🔧 Pendiente patch (Spec gap: RF-INV-02.1 necesita aclaración de rango de valores válidos)
    - Tareas impactadas: T061 (RegistrarValor), T062 (Pruebas), Frontend (validación en formulario)
+
+5. **BUG-021**: Validación de Horario Incompleta en Cambio de Tipo + Determinación Automática (High)
+   - Archivo: Frontend `loopi-web-v2/src/app/inventario/inventario-conteo.component.ts` (línea 68-78) + Backend `loopi-api-v2/internal/inventarios/service.go` (línea 100, 149-152)
+   - Impacto: Dos problemas correlacionados — (A) Usuario no puede iniciar semanal/mensual sin error, (B) Backend puede guardar inventario "inicial" CON horario (viola RF-INV-01.2)
+   - **Variante A (Frontend)**: Usuario cambia tipo diario→semanal, campo horario retiene valor anterior 'apertura', envía {tipo:'semanal', horario:'apertura'}, backend rechaza
+   - **Variante B (Backend)**: Usuario envía {tipo:'diario', horario:'apertura'} en primer conteo (sin historial), ValidarHorario pasa porque usa req.Tipo='diario', pero luego se determina automáticamente tipoReal='inicial' y se guarda con horario (viola RF-INV-01.2 y BUG-017)
+   - Requisito afectado: RF-INV-01.2, RF-INV-01.3, BUG-017 (determinación automática de inicial)
+   - Root Cause: (A) Frontend — validadores se limpian pero NO el valor, (B) Backend — validación de horario ocurre ANTES de determinar tipo real
+   - Solución A: Agregar `horarioControl?.setValue(null)` línea 75 cuando tipo cambia a semanal/mensual
+   - Solución B: Revalidar horario DESPUÉS de determinar tipoReal, O forzar horario=null cuando tipoReal=TipoInicial
+   - Estado: 🔧 Pendiente patch (Frontend fix simple + Backend lógica de revalidación)
+   - Tareas impactadas: T030, T031 (Frontend UI), T029-T031 (Backend per BUG-017), T164-T171 (determinación automática)
