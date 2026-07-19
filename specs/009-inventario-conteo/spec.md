@@ -533,5 +533,5 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
    - Requisito afectado: RF-INV-02.1, RF-INV-02.2 (mencionan ambos campos sin justificación diferenciada)
    - Root Cause: Spec gap — Diseño inicial incluyó dos campos sin aclarar propósito diferenciado
    - Solución: Eliminar `valor_sugerido` completamente; mantener solo `valor_esperado` (snapshot inmutable de stock)
-   - Estado: ✅ Patched (Spec gap: RF-INV-02.1/2.2 actualizado, data-model.md simplificado, campo removido de BD)
-   - Tareas impactadas: Refactorización backend/frontend para remover referencias a `valor_sugerido`
+   - Estado: ✅ Patched (Spec gap: RF-INV-02.1/2.2 actualizado, data-model.md simplificado, backend refactorizado, frontend actualizado)
+   - Tareas impactadas: Refactorización completada en backend (models.go, repository.go, service.go) y frontend (service.ts, specs)
