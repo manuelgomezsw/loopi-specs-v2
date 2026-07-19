@@ -673,7 +673,7 @@
 
 **Blocker**: Users can register negative quantities → fraud risk, violates RF-INV-02.1
 
-- [x] T172 [P] **BUG-020** Add input validation in Angular `inventario-conteo.component.ts`: FormControl for valor_real must have `Validators.min(0)` + custom error message "La cantidad no puede ser negativa" — apply to all valor_real inputs — ✅ Implementado: min="0" + step="any" en HTML, validación en TS con mensaje personalizado
+- [x] T172 [P] **BUG-020** Add input validation in Angular `inventario-conteo.component.ts`: FormControl for valor_real must have `Validators.min(0)` + custom error message "La cantidad no puede ser negativa" — apply to all valor_real inputs — ✅ Implementado: min="0" + step="any" en HTML, validación en TS con mensaje personalizado, todosRegistrados() actualizado para bloquear confirmación si hay negativos
 - [x] T173 [P] **BUG-020** Add unit tests in `loopi-api-v2/internal/inventarios/service_test.go`: TestRegistrarValor_RejectedNegative (valor_real < 0 → error `valor_invalido`), TestRegistrarValor_AcceptedZero (valor_real = 0 → OK), TestRegistrarValor_AcceptedPositive (valor_real > 0 → OK) — ✅ Implementado: 3 tests nuevos, todos pasando
 - [x] T174 **BUG-020** Add integration test in `loopi-api-v2/internal/inventarios/handler_test.go`: TestPatchItemValor_RejectedNegative (PATCH with {"valor_real": -500} → HTTP 400, error_code=`valor_invalido`) — ✅ Implementado: test verificando HTTP 400 + error code correcto
 - [x] T175 **BUG-020** Add E2E test in `loopi-web-v2/e2e/inventario-hu2-register.e2e.ts`: User attempts to register negative value → input field validation prevents submission OR backend error message shown — ✅ Implementado: 3 E2E tests (rechazo negativo, aceptación cero, validación min)
