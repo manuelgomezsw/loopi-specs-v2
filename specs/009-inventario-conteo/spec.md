@@ -153,8 +153,13 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   - 15:00–23:59 → `diario / cierre`
 - RF-INV-01.3: El usuario puede cambiar el tipo manualmente a `diario`, `semanal`,
   `mensual` o `inicial` sin restricción de horario.
-- RF-INV-01.4: Solo puede existir un inventario `en_progreso` por tienda, tipo y horario
-  en la misma fecha. El sistema bloquea intentos duplicados.
+- RF-INV-01.4: No se puede crear un nuevo inventario para la misma tienda, tipo, horario y fecha
+  si ya existe uno (independientemente de su estado: `en_progreso` o `completado`). El sistema retorna
+  **HTTP 409 Conflict** con `error_code=conteo_duplicado`. El mensaje de error debe indicar claramente:
+  - Si el duplicado está `en_progreso`: "Ya existe un conteo en progreso... Usa Reanudar para continuar"
+  - Si el duplicado está `completado`: "Ya existe un conteo completado para este tipo/horario en esta fecha.
+    No se pueden crear conteos duplicados en el mismo día"
+  El operador debe entender que no puede proceder con el mismo parámetros en la misma fecha.
 - RF-INV-01.5: El tipo `inicial` se usa exclusivamente para la carga inaugural de stock
   de la tienda. No requiere inventario de referencia previo.
 - RF-INV-01.6: Los items presentados en el conteo dependen del tipo:
@@ -165,8 +170,10 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 
 ### RF-INV-02: Registro del conteo
 
-- RF-INV-02.1: Para cada item del conteo, el sistema muestra: valor sugerido (stock
-  proyectado), valor esperado y un campo para ingresar el valor real.
+- RF-INV-02.1: Para cada item del conteo, el sistema muestra: **nombre del item** (nombre, no ID),
+  valor sugerido (stock proyectado), valor esperado y un campo para ingresar el valor real.
+  El nombre debe ser legible para que el operador pueda identificar claramente qué item está contando
+  sin necesidad de consultar el catálogo.
 - RF-INV-02.2: El valor sugerido de cada item es un **snapshot inmutable** del stock
   tomado en el momento exacto de inicio del conteo, calculado con la siguiente fórmula:
 
@@ -191,7 +198,11 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   Para el inventario de tipo `inicial`, el valor sugerido de todos los items es cero,
   ya que no existe inventario de referencia previo.
 - RF-INV-02.3: La diferencia (real − esperado) se recalcula y muestra en pantalla en
-  tiempo real al ingresar cada valor.
+  tiempo real al ingresar cada valor. La visualización debe mostrar:
+  - **Valor numérico de la diferencia** con su unidad de medida (ej: "-400 ml", "+2 unidades", "0")
+  - **Color condicional**: rojo para diferencias negativas (pérdida), verde para positivas (ganancia), gris para cero
+  - **Indicador visual opcional**: ⚠️ si diferencia ≠ 0, ✓ si diferencia = 0, para máxima claridad
+  - El objetivo es que el operador vea claramente si hay discrepancias sin confundir el indicador con un estado de éxito/fallo
 - RF-INV-02.3: **Determinación Automática de Items**: El sistema determina automáticamente
   los items a contar en 5 pasos:
   1. Consulta items activos con frecuencia_inventario = tipo seleccionado
@@ -199,7 +210,7 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   3. Crea registro en inventarios (estado=en_progreso)
   4. Cruza items con stock_actual para obtener valor_sugerido de cada item
   5. Crea registros en detalle_inventario con valor_sugerido mapeado
-  
+
   Este flujo garantiza que POST /inventarios SIEMPRE retorna 201 con items listos para contar
   (nunca con lista vacía) o retorna 422 si no hay items para el tipo seleccionado.
 - RF-INV-02.4: Un conteo en progreso puede ser retomado por el mismo responsable si fue
@@ -348,8 +359,8 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 
 ## Bugs Identificados y Estado de Correcciones
 
-**Fecha de Reporte**: 2026-07-13  
-**Total Bugs Identificados**: 16 (5 críticos backend, 4 críticos frontend, 4 altos backend, 3 altos frontend)  
+**Fecha de Reporte**: 2026-07-13
+**Total Bugs Identificados**: 16 (5 críticos backend, 4 críticos frontend, 4 altos backend, 3 altos frontend)
 **Status General**: ✅ Patched (Todos marcados para corrección)
 
 **Update 2026-07-18**: BUG-016 Reconceptualizado e iteración 2026-07-18 aplicada (ver sección Iteraciones arriba)
@@ -415,3 +426,26 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 1. **FE-BUG-005**: WCAG 2.1 AA Violations — Contraste/aria-live/Labels
 2. **FE-BUG-006**: E2E Tests Completamente Ausentes
 3. **FE-BUG-007**: ChangeDetection Sin OnPush + Tabla No Responsive
+
+### Nuevos Bugs Identificados (2026-07-18)
+
+1. **FE-BUG-008**: Item Title Display Shows ID Instead of Name (High)
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario-conteo.component.html`
+   - Impacto: Operador no puede identificar items — UX crítico en conteo
+   - Requisito afectado: RF-INV-02.1 (no especificaba qué campo mostrar)
+   - Estado: 🔧 Pendiente patch (Spec gap: RF-INV-02.1 actualizado con clarificación)
+   - Tareas impactadas: T040, T041 (reabiertos)
+
+2. **FE-BUG-009**: Difference Indicator Shows Green Checkmark Instead of Alert (High)
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario-conteo.component.html`
+   - Impacto: Usuario pierde visibilidad de diferencias — viola RF-INV-02.3
+   - Requisito afectado: RF-INV-02.3 (no definía patrón visual para diferencias)
+   - Estado: 🔧 Pendiente patch (Spec gap: RF-INV-02.3 necesita patrón visual)
+   - Tareas impactadas: T041, T042 (reabiertos)
+
+3. **FE-BUG-010**: Duplicate Inventory Error Message Misrepresents Closed Count (High)
+   - Archivo: `loopi-web-v2/src/app/inventario/inventario.service.ts` (error-mapper)
+   - Impacto: Mensaje confuso — usuario no sabe qué hacer ante duplicado cerrado
+   - Requisito afectado: RF-INV-01.4 (no diferencia estados en error)
+   - Estado: 🔧 Pendiente patch (Spec gap: RF-INV-01.4 + error handling clarification)
+   - Tareas impactadas: T032 (reabierto)
