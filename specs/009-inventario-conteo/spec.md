@@ -4,6 +4,7 @@
 **Creado**: 2026-05-21
 **Estado**: Borrador
 **Referencia funcional**: [§3.4 Módulo: Inventario (Conteo Físico)](../loopi-v2-funcional/spec.md)
+**Bugfix**: 2026-07-19 — BUG-019 Eliminación de campo redundante `valor_sugerido`, mantener solo `valor_esperado`
 
 ---
 
@@ -177,13 +178,13 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 ### RF-INV-02: Registro del conteo
 
 - RF-INV-02.1: Para cada item del conteo, el sistema muestra: **nombre del item** (nombre, no ID),
-  valor sugerido (stock proyectado), valor esperado y un campo para ingresar el valor real.
+  valor esperado (stock proyectado) y un campo para ingresar el valor real.
   El nombre debe ser legible para que el operador pueda identificar claramente qué item está contando
   sin necesidad de consultar el catálogo.
-- RF-INV-02.2: El valor sugerido de cada item es un **snapshot inmutable** del stock
+- RF-INV-02.2: El valor esperado de cada item es un **snapshot inmutable** del stock
   tomado en el momento exacto de inicio del conteo, calculado con la siguiente fórmula:
 
-  `valor_sugerido = stock_inventario_referencia + compras_periodo − ventas_periodo − mermas_periodo`
+  `valor_esperado = stock_inventario_referencia + compras_periodo − ventas_periodo − mermas_periodo`
 
   Donde:
 
@@ -197,11 +198,11 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   - `mermas_periodo`: unidades registradas como merma desde ese inventario hasta el
     **inicio del conteo actual**.
 
-  Este snapshot se registra en la tabla `stock_actual` y **no cambia** durante toda la
+  Este snapshot se registra en `valor_esperado` y **no cambia** durante toda la
   duración del conteo, ya que no se permiten movimientos (compras, mermas, ventas)
   mientras el conteo está en progreso (ver RF-INV-05).
 
-  Para el inventario de tipo `inicial`, el valor sugerido de todos los items es cero,
+  Para el inventario de tipo `inicial`, el valor esperado de todos los items es cero,
   ya que no existe inventario de referencia previo.
 - RF-INV-02.3: La diferencia (real − esperado) se recalcula y muestra en pantalla en
   tiempo real al ingresar cada valor. La visualización debe mostrar un **badge/etiqueta en la esquina
@@ -343,7 +344,7 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
 | Entidad | Atributos |
 |---------|-----------|
 | `Inventario` | tienda_id, fecha, tipo, horario, estado, responsable_id, iniciado_en, completado_en |
-| `DetalleInventario` | inventario_id, item_id, inventario_referencia_id, valor_sugerido, valor_esperado, valor_real, diferencia |
+| `DetalleInventario` | inventario_id, item_id, valor_esperado, valor_real, diferencia |
 
 **Nota**: `responsable_id` es una clave foránea que referencia `empleados (id)`. El responsable de un conteo debe ser un empleado autenticado con rol `admin`, `lider_tienda` o `barista`.
 
@@ -525,3 +526,12 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
    - Solución: Cambiar a patrón operativo neutral: "Faltante" (< 0), "Exceso" (> 0), "Correcto" (= 0)
    - Estado: ✅ Patched (Spec gap: RF-INV-02.3 actualizado con patrón explícito de mensaje + color + símbolo)
    - Tareas impactadas: T041, T042 (reabiertos para refactorizar HTML/TS con nuevo patrón)
+
+3. **BUG-019**: Redundancia de Campos — Eliminar `valor_sugerido` (Medium)
+   - Archivo: Spec, data-model.md, backend (models, repository), frontend (DTOs)
+   - Impacto: Campo `valor_sugerido` es redundante con `valor_esperado`; ambos tienen mismo valor, generan confusión
+   - Requisito afectado: RF-INV-02.1, RF-INV-02.2 (mencionan ambos campos sin justificación diferenciada)
+   - Root Cause: Spec gap — Diseño inicial incluyó dos campos sin aclarar propósito diferenciado
+   - Solución: Eliminar `valor_sugerido` completamente; mantener solo `valor_esperado` (snapshot inmutable de stock)
+   - Estado: ✅ Patched (Spec gap: RF-INV-02.1/2.2 actualizado, data-model.md simplificado, campo removido de BD)
+   - Tareas impactadas: Refactorización backend/frontend para remover referencias a `valor_sugerido`

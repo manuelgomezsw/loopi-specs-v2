@@ -62,7 +62,6 @@ CREATE TABLE detalle_inventario (
   inventario_id BIGINT UNSIGNED NOT NULL,
   item_id BIGINT UNSIGNED NOT NULL,
   
-  valor_sugerido DECIMAL(10, 2) NOT NULL DEFAULT 0,
   valor_esperado DECIMAL(10, 2) NOT NULL DEFAULT 0,
   valor_real DECIMAL(10, 2) NULL,
   diferencia DECIMAL(10, 2) GENERATED ALWAYS AS (
@@ -81,14 +80,13 @@ CREATE TABLE detalle_inventario (
 );
 ```
 
-**Propósito**: Línea item-level de conteo. Almacena valor sugerido, esperado, real, y diferencia calculada.
+**Propósito**: Línea item-level de conteo. Almacena valor esperado (snapshot de stock), valor real contado, y diferencia calculada.
 
 **Campos**:
 
-- `valor_sugerido`: Snapshot inmutable del stock al inicio del conteo (NUNCA cambia)
-- `valor_esperado`: Stock proyectado al momento de POST /inventarios
+- `valor_esperado`: Snapshot inmutable del stock proyectado al inicio del conteo (per RF-INV-02.2, NUNCA cambia durante conteo)
 - `valor_real`: Cantidad física contada (NULL hasta que se registra)
-- `diferencia`: Generada = valor_real - valor_esperado (para auditoría)
+- `diferencia`: Generada = valor_real - valor_esperado (para auditoría y cálculo de Faltante/Exceso/Correcto)
 
 ---
 
@@ -186,21 +184,21 @@ CREATE TABLE stock_movimientos (
    ├→ Resultado: {item_501: 50, item_502: 45, item_503: 0, ...}
    └→ Default 0 si item no existe en stock_actual
 
-4. detalle_inventario tabla (CREATE with valor_sugerido)
+4. detalle_inventario tabla (CREATE with valor_esperado)
    ↓ CreateDetalleInventario()
-   ├→ INSERT detalle_inventario (inventario_id, item_id, valor_sugerido) 
+   ├→ INSERT detalle_inventario (inventario_id, item_id, valor_esperado) 
            FOR EACH item
-   ├→ Línea 1: {inventario_id: 123, item_id: 501, valor_sugerido: 50}
-   ├→ Línea 2: {inventario_id: 123, item_id: 502, valor_sugerido: 45}
-   ├→ Línea 3: {inventario_id: 123, item_id: 503, valor_sugerido: 0}
+   ├→ Línea 1: {inventario_id: 123, item_id: 501, valor_esperado: 50}
+   ├→ Línea 2: {inventario_id: 123, item_id: 502, valor_esperado: 45}
+   ├→ Línea 3: {inventario_id: 123, item_id: 503, valor_esperado: 0}
    └→ Resultado: 10 detalle_inventario rows insertadas
 
 5. Respuesta HTTP 201
    ├→ Body: InventarioResp {
            id: 123,
            items: [
-             {item_id: 501, valor_sugerido: 50, valor_esperado: 50, valor_real: null},
-             {item_id: 502, valor_sugerido: 45, valor_esperado: 45, valor_real: null},
+             {item_id: 501, valor_esperado: 50, valor_real: null},
+             {item_id: 502, valor_esperado: 45, valor_real: null},
              ...
            ]
         }
@@ -230,12 +228,11 @@ CREATE TABLE stock_movimientos (
 4. Respuesta HTTP 200
    ├→ Body: ItemDetailResp {
            item_id: 502,
-           valor_sugerido: 45,
            valor_esperado: 45,
            valor_real: 48,
            diferencia: 3
         }
-   └→ Frontend muestra diferencia en verde (surplus)
+   └→ Frontend muestra diferencia en verde (Exceso: +3)
 ```
 
 ---
@@ -348,4 +345,6 @@ inventarios (1) ──── (N) detalle_inventario (CASCADE delete)
 
 ---
 
-**Última actualización**: 2026-07-18 — Data model v2 con flujo corregido
+**Bugfix**: 2026-07-19 — BUG-019 Eliminación de campo redundante `valor_sugerido`. Mantener solo `valor_esperado` que es el snapshot de stock al inicio del conteo y contra el que se calcula la diferencia.
+
+**Última actualización**: 2026-07-19 — Data model v3 con campo redundante eliminado
