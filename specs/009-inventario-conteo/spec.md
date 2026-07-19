@@ -40,9 +40,10 @@ que el sistema sugiere `diario / apertura` y presenta solo los items con frecuen
    **Entonces** el sistema bloquea la operación indicando que ya existe un conteo en curso
    en dicha tienda.
 
-4. **Dado** que es el primer conteo de la tienda (sin historial previo),
-   **Cuando** el líder inicia el inventario de tipo `inicial`,
-   **Entonces** el sistema presenta todos los items activos con valor sugerido en cero,
+4. **Dado** que es el primer conteo de la tienda (sin historial de inventarios completados previo),
+   **Cuando** el líder inicia un inventario (seleccionando cualquier tipo: diario/semanal/mensual),
+   **Entonces** el sistema detecta automáticamente que no existe historial previo y determina
+   que el tipo es `inicial`, presentando todos los items activos con valor sugerido en cero,
    estableciendo el stock inaugural de la tienda.
 
 5. **Dado** que la tienda tiene items con frecuencia_inventario=diario,
@@ -151,8 +152,9 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   - 06:00–10:59 → `diario / apertura`
   - 11:00–14:59 → `diario / mediodía`
   - 15:00–23:59 → `diario / cierre`
-- RF-INV-01.3: El usuario puede cambiar el tipo manualmente a `diario`, `semanal`,
-  `mensual` o `inicial` sin restricción de horario.
+- RF-INV-01.3: El usuario puede cambiar el tipo manualmente a `diario`, `semanal` o
+  `mensual` sin restricción de horario. ~~El tipo `inicial` NO es selectable manualmente;~~ El tipo
+  `inicial` es determinado automáticamente por el sistema (ver RF-INV-01.5).
 - RF-INV-01.4: No se puede crear un nuevo inventario para la misma tienda, tipo, horario y fecha
   si ya existe uno (independientemente de su estado: `en_progreso` o `completado`). El sistema retorna
   **HTTP 409 Conflict** con `error_code=conteo_duplicado`. El mensaje de error debe indicar claramente:
@@ -160,8 +162,12 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
   - Si el duplicado está `completado`: "Ya existe un conteo completado para este tipo/horario en esta fecha.
     No se pueden crear conteos duplicados en el mismo día"
   El operador debe entender que no puede proceder con el mismo parámetros en la misma fecha.
-- RF-INV-01.5: El tipo `inicial` se usa exclusivamente para la carga inaugural de stock
-  de la tienda. No requiere inventario de referencia previo.
+- RF-INV-01.5: El tipo `inicial` es determinado automáticamente por el sistema cuando realiza
+  el primer conteo de una tienda (sin historial de inventarios completados). El usuario NO puede
+  seleccionar "inicial" manualmente. El sistema lo determina consultando si existe inventario
+  completado previo en la tienda: si existe, el tipo es la categoría elegida por el usuario
+  (diario/semanal/mensual); si no existe, el tipo es "inicial" independientemente de lo que
+  el usuario haya seleccionado. No requiere inventario de referencia previo.
 - RF-INV-01.6: Los items presentados en el conteo dependen del tipo:
   - `diario`: todos los items con frecuencia de inventario `diario`.
   - `semanal`: todos los items con frecuencia de inventario `semanal`.
@@ -262,6 +268,53 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
 
 - RF-INV-05.4: Las **consultas de stock** (lecturas, sin cambios) sí funcionan normalmente
   mientras hay un conteo en progreso.
+
+---
+
+## Algoritmo de Determinación Automática de Tipo de Conteo
+
+El tipo de conteo (`diario`, `semanal`, `mensual`, o `inicial`) es determinado **automáticamente por el
+sistema** al iniciar un conteo, según el siguiente algoritmo:
+
+### Entrada
+
+- `tienda_id`: tienda donde se inicia el conteo
+- `tipo_solicitado`: tipo elegido por usuario (diario/semanal/mensual, NUNCA inicial)
+
+### Lógica
+
+```text
+1. Consultar: ¿Existe algún inventario CON ESTADO 'completado' en esta tienda?
+   Query: SELECT EXISTS(SELECT 1 FROM inventarios 
+           WHERE tienda_id = ? AND estado = 'completado' LIMIT 1)
+
+2. Si NO existe (primer conteo):
+   tipo_determinado = 'inicial'
+   
+3. Si SÍ existe (conteo posterior):
+   tipo_determinado = tipo_solicitado (diario/semanal/mensual)
+
+4. Retornar tipo_determinado
+```
+
+### Validaciones
+
+- **Rechazar selección manual de "inicial"**: Si `tipo_solicitado == 'inicial'`, retornar 400
+  con código de error `tipo_inicial_no_permitido` y mensaje: "El tipo 'inicial' no puede ser
+  seleccionado manualmente. El sistema lo determina automáticamente en el primer conteo de la tienda."
+
+- **Bloqueo de duplicados**: Usar el `tipo_determinado` (no `tipo_solicitado`) para validar el
+  UNIQUE constraint (tienda_id, tipo, horario_norm, fecha). Esto evita que usuario intente
+  reseleccionar "inicial" si ya existe un conteo inicial anterior.
+
+### Impacto en Selección de Items
+
+El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presentan en el conteo:
+
+- Si `tipo_determinado == 'inicial'`: todos los items activos (RF-INV-01.6)
+- Si `tipo_determinado == 'diario'`: items con `frecuencia_inventario == 'diario'`
+- Si `tipo_determinado == 'semanal'`: items con `frecuencia_inventario == 'semanal'`
+- Si `tipo_determinado == 'mensual'`: items con `frecuencia_inventario == 'mensual'`
 
 ---
 
@@ -449,3 +502,12 @@ cada inventario muestra fecha, tipo, responsable y resumen de diferencias.
    - Requisito afectado: RF-INV-01.4 (no diferencia estados en error)
    - Estado: 🔧 Pendiente patch (Spec gap: RF-INV-01.4 + error handling clarification)
    - Tareas impactadas: T032 (reabierto)
+
+### Nuevos Bugs Identificados (2026-07-19)
+
+1. **BUG-017**: Tipo de Conteo "Inicial" Debe Determinarse Automáticamente (High)
+   - Archivo: Arquitectura Service + Frontend
+   - Impacto: Usuario puede seleccionar "inicial" manualmente, violando el algoritmo correcto
+   - Requisito afectado: RF-INV-01.3, RF-INV-01.5, HU1 Escenario 4
+   - Estado: ✅ Patched (Spec gap: Agregada sección "Algoritmo de Determinación Automática de Tipo de Conteo")
+   - Tareas impactadas: T029-T031 (reabiertos), T164-T171 (nuevas Phase 12-bis)

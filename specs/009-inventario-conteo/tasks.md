@@ -6,6 +6,8 @@
 
 **Fecha**: 2026-07-12
 
+**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo. Reabiertos T029-T031 (agregar validación tipo inicial + remover de UI). Agregadas T164-T171 (nueva fase Phase 12-bis para lógica de determinación automática + tests + error handling backend).
+
 ---
 
 ## Format: `[ID] [P?] [Story?] Description`
@@ -86,9 +88,9 @@
 - [x] T026 [P] [US1] Implement repository helper `SumarVentasPeriodo()` in `loopi-api-v2/internal/inventarios/repository.go`: SUM from ventas_lineas (012) with information_schema check for table existence (RD-04)
 - [x] T027 [P] [US1] Implement repository helper `SumarMermasPeriodo()` in `loopi-api-v2/internal/inventarios/repository.go`: SUM from mermas (010) with information_schema check for table existence (RD-04)
 - [x] T028 [US1] Implement HTTP handler `GetSugerencia()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT + call service.SuggestType(now) → 200 with {tipo, horario} per contracts/api.md endpoint 1
-- [x] T029 [US1] Implement HTTP handler `PostInventario()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, validate tienda_id authorization (P-II, P-III), call service.Iniciar() → 201 with full inventory + items per contracts/api.md endpoint 2; return 409 si conteo_duplicado, 400 si validation error
-- [x] T030 [P] [US1] Create Angular component `inventario-conteo.component.ts` step 1: Display form for type/schedule selection + GET /sugerencia on load, populate form defaults, allow manual override
-- [x] T031 [P] [US1] Create Angular component `inventario-conteo.component.html`: mobile-first layout (<640px) with form inputs, POST /inventarios button (disabled until form valid per FE-FORMSURF-01)
+- [x] ⚠️ T029 (reopened — BUG-017) [US1] Implement HTTP handler `PostInventario()` in `loopi-api-v2/internal/inventarios/handler.go`: parse JWT, validate tienda_id authorization (P-II, P-III), call service.Iniciar() → 201 with full inventory + items per contracts/api.md endpoint 2; return 409 si conteo_duplicado, 400 si validation error. **NEW**: Validate error code `tipo_inicial_no_permitido` (400) returned from service and pass to response per BUG-017
+- [x] ⚠️ T030 (reopened — BUG-017) [P] [US1] Create Angular component `inventario-conteo.component.ts` step 1: Display form for type/schedule selection + GET /sugerencia on load, populate form defaults, allow manual override. **CHANGE**: Remove "Inicial" from tipoOptions dropdown; only show diario/semanal/mensual per BUG-017
+- [x] ⚠️ T031 (reopened — BUG-017) [P] [US1] Create Angular component `inventario-conteo.component.html`: mobile-first layout (<640px) with form inputs (tipoOptions excluding "Inicial"), POST /inventarios button (disabled until form valid per FE-FORMSURF-01)
 - [x] T032 (reopened — FE-BUG-010) [US1] Implement Angular POST /inventarios call in `inventario-conteo.component.ts`: on form submit, POST to service, handle 201 (transition to step 2: register items), handle errors (409 conteo_duplicado — DIFFERENTIATE MESSAGE BY STATE: en_progreso vs completado per RF-INV-01.4, etc.) per spec error format and FE-ERR-01 standards — ✅ BE updated to include conflicting_state in error detalles, FE error-mapper updated to differentiate messages
 
 ### Phase 3 — Bugfix Tasks (BUG-002: Suggestion Not Loading / No Error Recovery)
@@ -323,6 +325,68 @@
   - Verifica: extractErrorMessage() maneja respuesta 422 correctamente
 
 **Checkpoint**: GetItemsActivosPorTipo() + GetStockSnapshot() funcionan, Service.Iniciar() refactorizado, POST /inventarios retorna 201 con items SIEMPRE o 422 si no hay items. Frontend maneja 422 gracefully.
+
+---
+
+## Phase 12-bis: Determinación Automática de Tipo de Conteo (BUG-017)
+
+**Propósito**: Implementar lógica de determinación automática de tipo de conteo basada en historial previo. Usuario NO puede seleccionar "inicial" manualmente; sistema lo determina si es primer conteo.
+
+**Problema**: RF-INV-01.3 permitía selección manual de "inicial", pero RF-INV-01.5 y negocio requieren que "inicial" sea determinación automática (solo para primer conteo).
+
+### Nueva Función Repository
+
+- [x] T164 [P] [US1] Implementar repository method `ExisteInventarioCompletado()` en `loopi-api-v2/internal/inventarios/repository.go`:
+  - Signature: `(exists bool, err error)`
+  - Query: `SELECT EXISTS(SELECT 1 FROM inventarios WHERE tienda_id = ? AND estado = 'completado' LIMIT 1)`
+  - Retorna: true si existe al menos 1 inventario completado, false si no existe
+  - Manejo de error: log warning pero continuar (default false si error)
+
+### Refactorización Service.Iniciar (Determinación de Tipo)
+
+- [x] T165 [P] [US1] Refactorizar Service.Iniciar() - Agregar validación de tipo:
+  - Validar que `req.Tipo != "inicial"`, sino retornar NewError("tipo_inicial_no_permitido", msg) (400)
+  - Mensaje: "El tipo 'inicial' no puede ser seleccionado manualmente. El sistema lo determina automáticamente en el primer conteo de la tienda."
+
+- [x] T166 [P] [US1] Refactorizar Service.Iniciar() - Agregar lógica de determinación de tipo:
+  - Llamar `repo.ExisteInventarioCompletado(ctx, tiendaID)`
+  - Si NO existe (primer conteo): `tipoReal = "inicial"`
+  - Si SÍ existe: `tipoReal = req.Tipo`
+  - Usar `tipoReal` (no `req.Tipo`) para resto del flujo
+
+### Tests para Determinación de Tipo
+
+- [x] T167 [P] [US1] Unit test validación tipo inicial en `loopi-api-v2/internal/inventarios/service_test.go`
+  - Caso 1: POST con tipo="inicial" → retorna 400 tipo_inicial_no_permitido
+  - Caso 2: POST con tipo="diario" y NO existe historial → tipo_real = "inicial"
+  - Caso 3: POST con tipo="diario" y SÍ existe historial → tipo_real = "diario"
+
+- [x] T168 [P] [US1] Unit test ExisteInventarioCompletado() en `loopi-api-v2/internal/inventarios/repository_test.go`
+  - Caso 1: Tienda con inventario completado → retorna true
+  - Caso 2: Tienda sin inventarios → retorna false
+  - Caso 3: Tienda solo con en_progreso (sin completado) → retorna false
+
+### Error Code Mapping (BUG-017)
+
+- [x] T169 [P] [US1] Handler: Mapear error code `tipo_inicial_no_permitido` a HTTP 400 en `loopi-api-v2/internal/inventarios/handler.go`
+  - En PostInventario() handler, si service.Iniciar() retorna error code `tipo_inicial_no_permitido`
+  - Retornar HTTP 400 con error body `{error: "tipo_inicial_no_permitido", mensaje: "El tipo 'inicial' no puede ser seleccionado manualmente..."}`
+  - Actualizar mapErrorToStatus() function si es necesario
+
+### Frontend Changes
+
+- [x] T170 [P] [US1] Actualizar Angular tipoOptions en `loopi-web-v2/src/app/inventario/inventario-conteo.component.ts`:
+  - Remover opción `{value: 'inicial', label: 'Inicial'}` del array tipoOptions
+  - Quedará: [{value: 'diario', ...}, {value: 'semanal', ...}, {value: 'mensual', ...}]
+  - Agregar validator que rechace si por alguna razón tipo == "inicial" (defensive)
+
+- [x] T171 [US1] Implement Angular POST error handling en `inventario-conteo.component.ts`:
+  - En confirmarConteo() error handler, si error.code == "tipo_inicial_no_permitido" (400)
+  - Mostrar inline error message mostrando el mensaje que retorna el backend
+  - User NO puede recuperarse (es un error de validación, no temporal)
+  - Backend retorna: "El tipo 'inicial' no puede ser seleccionado manualmente..."
+
+**Checkpoint**: Determinación automática de tipo implementada. Usuario no ve "Inicial" en dropdown. Backend rechaza si user intenta enviar tipo="inicial" (error 400 con mensaje descriptivo). Sistema determina correctamente si es primer conteo. Frontend muestra mensaje de error backend. Tests verdes.
 
 ---
 

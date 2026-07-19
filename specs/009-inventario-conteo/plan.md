@@ -174,6 +174,11 @@ func (s *Service) Iniciar(ctx, tiendaID, tipo, horario) (*InventarioResp, error)
 - Verificar permisos (responsable_id match, role checks)
 - Calcular diferencias (valor_real - valor_esperado)
 - Implementar sugerencias automáticas de tipo/horario
+- **NUEVO (BUG-017)**: Determinar automáticamente tipo de conteo según historial:
+  - Si usuario envía `tipo == 'inicial'` → retornar 400 `tipo_inicial_no_permitido`
+  - Si NO existe historial completado → determinar `tipo_real = 'inicial'`
+  - Si SÍ existe historial completado → determinar `tipo_real = tipo_solicitado`
+  - Usar `tipo_real` para crear inventario, validar duplicados, seleccionar items
 
 ### Repository (loopi-api-v2/internal/inventarios/repository.go)
 
@@ -311,4 +316,6 @@ func (s *Service) Iniciar(ctx, tiendaID, tipo, horario) (*InventarioResp, error)
 
 ---
 
-**Última actualización**: 2026-07-18 — Iteration para corrección de flujo (BUG-016)
+**Bugfix**: 2026-07-19 — BUG-017 Determinación automática de tipo de conteo (inicial vs otros). Agregada lógica en Service layer para validar que usuario no selecciona "inicial" y sistema determina tipo según historial.
+
+**Última actualización**: 2026-07-19 — Bugfix BUG-017 + Iteration BUG-016
