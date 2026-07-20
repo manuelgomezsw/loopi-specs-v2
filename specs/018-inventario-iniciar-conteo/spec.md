@@ -6,12 +6,11 @@
 
 **Estado**: Draft
 
-**Origen**: Migración de HU1 + RF-INV-01 + RF-INV-05 desde `009-inventario-conteo` (separación de 6 features)
+**Origen**: Separación de 009-inventario-conteo en 6 features independientes
 
 **Referencias Relacionadas**:
 
 - Enmienda constitucional: BE-ARCH-02 (sub-dominios dentro de dominio)
-- Feature 009: `specs/009-inventario-conteo/spec.md` (fuente de verdad original)
 - Plan de separación: `.claude/plans/witty-swinging-tarjan.md` (contexto general)
 
 ---
@@ -102,69 +101,14 @@ que el sistema sugiere `diario / apertura` y presenta solo los items con frecuen
   - `mensual`: todos los items con frecuencia de inventario `mensual`.
   - `inicial`: todos los items activos.
 
-### RF-INV-02 (Parcial — Cálculo de Valor Esperado, aplica a 018)
-
-- **RF-INV-02.2**: El valor esperado de cada item es un **snapshot inmutable** del stock
-  tomado en el momento exacto de inicio del conteo, calculado con la siguiente fórmula:
-
-  `valor_esperado = stock_inventario_referencia + compras_periodo − ventas_periodo − mermas_periodo`
-
-  Donde:
-
-  - `stock_inventario_referencia`: valor real contado en el inventario completado más
-    reciente de la tienda (de cualquier tipo y horario).
-  - `compras_periodo`: unidades recibidas por recepciones de pedido y compras de caja
-    menor confirmadas desde ese inventario hasta el **inicio del conteo actual** (momento
-    exacto de ejecución de POST /inventarios).
-  - `ventas_periodo`: unidades descontadas por ventas procesadas desde ese inventario
-    hasta el **inicio del conteo actual**.
-  - `mermas_periodo`: unidades registradas como merma desde ese inventario hasta el
-    **inicio del conteo actual**.
-
-  Este snapshot se registra en `valor_esperado` y **no cambia** durante toda la
-  duración del conteo, ya que no se permiten movimientos (compras, mermas, ventas)
-  mientras el conteo está en progreso (ver RF-INV-05).
-
-  Para el inventario de tipo `inicial`, el valor esperado de todos los items es cero,
-  ya que no existe inventario de referencia previo.
-
-### RF-INV-05: Bloqueo de Movimientos Durante Conteo Activo
-
-- **RF-INV-05.1**: Mientras existe un inventario con estado `en_progreso` en una tienda,
-  **no se permiten** las siguientes operaciones:
-  - Registrar compras de caja menor o recepciones de pedido (feature 010).
-  - Registrar mermas (feature 010).
-  - Procesar archivo de venta en batch (feature 015) — la validación ocurre **antes** de
-    permitir el upload del archivo.
-
-- **RF-INV-05.2**: Si se intenta registrar cualquiera de estas operaciones, el sistema retorna
-  **HTTP 409 Conflict** con:
-  - Código de error: `inventario_activo`
-  - Mensaje: "No se pueden registrar movimientos mientras hay un conteo en progreso.
-    Contacte al líder de tienda o administrador para completar o cancelar el conteo
-    actual."
-  - Detalles opcionales: ID del inventario activo, responsable, hora de inicio.
-
-- **RF-INV-05.3**: El propósito de este bloqueo es garantizar que el `valor_esperado` (RF-INV-02.2)
-  permanece estable e inmutable durante todo el conteo, eliminando inconsistencias por
-  movimientos concurrentes.
-
-- **RF-INV-05.4**: Las **consultas de stock** (lecturas, sin cambios) sí funcionan normalmente
-  mientras hay un conteo en progreso.
-
 ---
 
 ## Algoritmo de Determinación Automática de Tipo de Conteo
 
 El tipo de conteo (`diario`, `semanal`, `mensual`, o `inicial`) es determinado **automáticamente por el
-sistema** al iniciar un conteo, según el siguiente algoritmo:
+sistema** al iniciar un conteo. Este algoritmo es **parte crítica de 018** porque determina qué items se cargarán.
 
-### Entrada
-
-- `tienda_id`: tienda donde se inicia el conteo
-- `tipo_solicitado`: tipo elegido por usuario (diario/semanal/mensual, NUNCA inicial)
-
-### Lógica
+### Lógica de Determinación
 
 ```text
 1. Consultar: ¿Existe algún inventario CON ESTADO 'completado' en esta tienda?
@@ -175,44 +119,46 @@ sistema** al iniciar un conteo, según el siguiente algoritmo:
    tipo_determinado = 'inicial'
    
 3. Si SÍ existe (conteo posterior):
-   tipo_determinado = tipo_solicitado (diario/semanal/mensual)
+   tipo_determinado = tipo_solicitado (diario/semanal/mensual, elegido por usuario)
 
 4. Retornar tipo_determinado
 ```
 
-### Validaciones
+### Validaciones (Parte de RF-INV-01)
 
 - **Rechazar selección manual de "inicial"**: Si `tipo_solicitado == 'inicial'`, retornar 400
   con código de error `tipo_inicial_no_permitido` y mensaje: "El tipo 'inicial' no puede ser
   seleccionado manualmente. El sistema lo determina automáticamente en el primer conteo de la tienda."
 
 - **Bloqueo de duplicados**: Usar el `tipo_determinado` (no `tipo_solicitado`) para validar el
-  UNIQUE constraint (tienda_id, tipo, horario, fecha). Esto evita que usuario intente
-  reseleccionar "inicial" si ya existe un conteo inicial anterior.
+  UNIQUE constraint (tienda_id, tipo, horario, fecha). Retornar 409 si ya existe un conteo del
+  mismo tipo/horario/fecha en la tienda.
 
-### Impacto en Selección de Items
+### Impacto en Selección de Items (Parte de RF-INV-01.6)
 
-El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presentan en el conteo:
+El `tipo_determinado` determina qué items se cargan y presentan al usuario para contar:
 
-- Si `tipo_determinado == 'inicial'`: todos los items activos (RF-INV-01.6)
-- Si `tipo_determinado == 'diario'`: items con `frecuencia_inventario == 'diario'`
-- Si `tipo_determinado == 'semanal'`: items con `frecuencia_inventario == 'semanal'`
-- Si `tipo_determinado == 'mensual'`: items con `frecuencia_inventario == 'mensual'`
+- Si `tipo_determinado == 'inicial'`: **todos los items activos** se presentan con valor esperado = 0 (sin historial previo).
+- Si `tipo_determinado == 'diario'`: **solo items con** `frecuencia_inventario == 'diario'` se presentan con su valor esperado desde `stock_actual`.
+- Si `tipo_determinado == 'semanal'`: **solo items con** `frecuencia_inventario == 'semanal'` se presentan con su valor esperado desde `stock_actual`.
+- Si `tipo_determinado == 'mensual'`: **solo items con** `frecuencia_inventario == 'mensual'` se presentan con su valor esperado desde `stock_actual`.
+
+**Validación crítica**: Si no hay items con la frecuencia_inventario correspondiente al tipo determinado,
+el sistema retorna HTTP 422 con código `sin_items_contabilizar` (escenario 6 de HU1).
 
 ---
 
 ## Criterios de Éxito
 
-- **Velocidad de conteo**: El líder puede completar un conteo diario de hasta 50 items
-  en menos de 15 minutos.
-- **Exactitud del ajuste**: El 100% de los ajustes de stock al confirmar un inventario
-  reflejan exactamente el valor real contado.
-- **Continuidad ante interrupciones**: El 100% de los conteos interrumpidos se pueden
-  retomar sin pérdida de datos ya ingresados.
-- **Trazabilidad**: El 100% de las diferencias de inventario quedan registradas con
-  fecha, responsable y detalle por item.
+- **Precisión en carga de items**: El 100% de los items cargados corresponden correctamente a la
+  frecuencia_inventario del tipo determinado (diario/semanal/mensual carga items con esa frecuencia;
+  inicial carga todos los items activos).
 - **Prevención de duplicados**: El sistema bloquea el 100% de los intentos de iniciar
-  dos conteos del mismo tipo, horario y fecha dentro de la misma tienda.
+  dos conteos del mismo tipo, horario y fecha dentro de la misma tienda (retorna 409).
+- **Determinación automática correcta**: El sistema identifica correctamente si es primer conteo
+  (tipo=inicial automático) o conteo posterior (tipo=user choice).
+- **Valores esperados correctos**: El valor esperado de cada item coincide con su `stock_actual`
+  en la base de datos al momento de crear el inventario.
 
 ---
 
@@ -235,24 +181,16 @@ El `tipo_determinado` (no `tipo_solicitado`) determina cuáles items se presenta
   tienda asignada (lider_tienda, barista) o permite selección (admin).
 - **002-gestion-tiendas**: El inventario pertenece a una tienda activa.
 - **007-items-catalogo**: Los items con su frecuencia de inventario determinan qué se
-  cuenta en cada tipo de conteo.
-- **010-mermas** (posterior): Las mermas registradas entre conteos impactan el valor
-  esperado del siguiente inventario.
-- **008-menu-recetas** + **015-pos** (posterior): Las ventas procesadas entre conteos
-  se incorporan al cálculo del valor esperado.
+  cuenta en cada tipo de conteo. La tabla `stock_actual` proporciona el valor esperado
+  para cada item.
 
 ### Suposiciones
 
-- El valor esperado se calcula en la unidad de medida del item. Si en un período se
-  registraron movimientos en unidades distintas, la conversión usa los factores de
-  equivalencia configurados en 004-unidades-medida.
+- El valor esperado de cada item se toma del campo `stock_actual` en la base de datos
+  al momento de crear el inventario. No requiere cálculos adicionales en 018.
 - Solo existe un inventario en progreso por tienda, tipo y horario por fecha.
-- Un conteo abandonado (en_progreso sin actividad) no se elimina automáticamente; el
-  admin puede retomarlo o descartarlo manualmente.
-- **Mientras un conteo está `en_progreso` en una tienda, no se permiten movimientos de
-  stock** (compras, mermas, ventas en batch) en esa tienda. Esto garantiza que el
-  `valor_esperado` (snapshot tomado al inicio) permanece inmutable e impide inconsistencias
-  por operaciones concurrentes.
+- Un conteo abandonado (en_progreso sin actividad) no se elimina automáticamente; puede
+  ser retomado (feature 019) o descartado manualmente.
 
 ---
 
