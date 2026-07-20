@@ -14,7 +14,6 @@
 - [x] Focused on user value and business needs
 - [x] Written for non-technical stakeholders
 - [x] All mandatory sections completed
-- [x] Content migrated directly from 009-inventario-conteo (not respecified from scratch)
 
 ## Requirement Completeness
 
@@ -38,12 +37,11 @@
 
 ## Notes
 
-- ✅ Spec es una **migración fiel** de HU1 + RF-INV-01 + RF-INV-05 desde 009
-- ✅ El algoritmo de determinación automática de tipo está documentado en detalle (prerequisito para RF-INV-01.5)
+- ✅ El algoritmo de determinación automática de tipo está documentado en detalle
 - ✅ Entidades reflejan estado real (sin campo `cancelado`, solo `en_progreso` y `completado`)
-- ✅ Criterios de éxito migrados directamente de 009 (no rediseñados)
-- ✅ Bugs conocidos de 009 ya están integrados en requisitos (ej. BUG-017, BUG-021 sobre determinación de tipo)
-- ⚠️ Fase 2 (HU2: Registrar conteo) es responsabilidad de 019, no de 018 — 018 solo cubre "iniciar"
-- ⚠️ Fase 3 (HU3: Confirmar y ajustar) es responsabilidad de 020, no de 018
-- ℹ️ Observabilidad agregada según estándares BE-OBS-01 (no estaba en 009, pero es requisito constitucional)
-- ℹ️ Listo para `/speckit-clarify` si hay ambigüedades de MIGRACIÓN (no de diseño)
+- ✅ Cálculo de valor esperado: se toma directamente de `stock_actual`, sin fórmula compleja en 018
+- ⚠️ Feature 018 cubre SOLO creación de inventario e inicialización
+- ⚠️ Registro de valores item-por-item (HU2) es responsabilidad de 019
+- ⚠️ Confirmación y ajuste de stock (HU3) es responsabilidad de 020
+- ℹ️ Observabilidad según estándares BE-OBS-01 (requisito constitucional P-VI)
+- ℹ️ Bloqueo de movimientos durante conteo (RF-INV-05) es responsabilidad transversal, no de 018

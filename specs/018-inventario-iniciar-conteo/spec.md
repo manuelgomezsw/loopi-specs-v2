@@ -6,12 +6,9 @@
 
 **Estado**: Draft
 
-**Origen**: Separación de 009-inventario-conteo en 6 features independientes
+**Estándares Aplicables**:
 
-**Referencias Relacionadas**:
-
-- Enmienda constitucional: BE-ARCH-02 (sub-dominios dentro de dominio)
-- Plan de separación: `.claude/plans/witty-swinging-tarjan.md` (contexto general)
+- Enmienda constitucional: BE-ARCH-02 (arquitectura de sub-dominios dentro de dominio)
 
 ---
 
