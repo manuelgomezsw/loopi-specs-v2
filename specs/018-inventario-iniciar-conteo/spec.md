@@ -6,22 +6,34 @@
 
 **Status**: Draft
 
+## Clarifications
+
+### Session 2026-07-20
+
+Clarificaciones obtenidas via `/speckit-clarify` que refinan la especificación:
+
+- Q: ¿Cómo recupera el usuario un conteo en progreso si cierra la app? → A: **B — Notificación de retorno**: Banner/modal al iniciar sesión con opción "Retomar" si hay conteo activo. Integrado en HU1 escenario 5.
+- Q: ¿Cómo navega desde Iniciar a Registrar valores? → A: **A — Automático**: La app redirige automáticamente a `/inventario/{id}/registrar` tras crear el inventario. Integrado en HU1 escenario 2 y RF-INV-02 (posterior).
+- Q: ¿Quién puede cancelar conteos? → A: **No existe**: La cancelación no es un flujo soportado en 018. Se removió el estado `cancelado` de requisitos, entidades y escenarios. Conteos solo transicionan: `en_progreso` → `completado`.
+- Q: ¿Protección contra conteos duplicados concurrentes? → A: **A — Transacción con índice único**: BD valida UNIQUE(tienda_id, tipo_conteo, fecha_conteo, horario_conteo). Segundo intento concurrente recibe `409`. Integrado en RF-INV-01.6.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Líder de tienda inicia conteo físico (Priority: P1)
 
-Un líder de tienda abre la interfaz de conteo de inventario, selecciona el tipo de conteo (por ejemplo, "conteo completo", "conteo selectivo por categoría"), el sistema sugiere automáticamente el tipo según patrones históricos, y luego el líder confirma fecha y horario para ejecutar el conteo. El sistema carga la lista de items activos de esa tienda y prepara la sesión.
+Un líder de tienda abre la interfaz de conteo de inventario, selecciona el tipo de conteo (por ejemplo, "conteo completo", "conteo selectivo por categoría"), el sistema sugiere automáticamente el tipo según patrones históricos, y luego el líder confirma fecha y horario para ejecutar el conteo. El sistema carga la lista de items activos de esa tienda y prepara la sesión, redirigiendo automáticamente a la pantalla de registro de valores.
 
 **Why this priority**: Es el flujo crítico de entrada a todo el dominio de inventario. Sin capacidad de iniciar un conteo, no hay nada que contar ni ajustar.
 
-**Independent Test**: Puede testearse de forma aislada ejecutando "crear un nuevo conteo" sin necesidad de completar el conteo. El usuario ve la sesión creada, la lista de items lista para registrar, y puede navegar a la siguiente fase (registrar valores).
+**Independent Test**: Puede testearse de forma aislada ejecutando "crear un nuevo conteo" sin necesidad de completar el conteo. El usuario ve la sesión creada, la lista de items lista para registrar, y es redirigido automáticamente a la pantalla de registro.
 
 **Acceptance Scenarios**:
 
 1. **Given** un líder de tienda autenticado en una tienda específica, **When** accede a "Iniciar Conteo" y selecciona tipo de conteo, **Then** el sistema sugiere automáticamente el tipo más probable según histórico y **Then** muestra un formulario con fecha/horario predefinidos (hoy, hora actual).
-2. **Given** el líder confirma el formulario, **When** hace submit, **Then** el sistema crea el inventario en estado `en_progreso` y retorna la sesión con los items activos de la tienda listos para registro.
+2. **Given** el líder confirma el formulario, **When** hace submit, **Then** el sistema crea el inventario en estado `en_progreso` y redirige automáticamente a `/inventario/{id}/registrar` con los items activos de la tienda listos para registro.
 3. **Given** ya existe un conteo `en_progreso` en la misma tienda para la misma fecha/tipo/horario, **When** intenta crear otro, **Then** el sistema retorna un conflicto (`409`) con mensaje "Ya existe un conteo en progreso para este horario en esta tienda".
 4. **Given** una tienda sin items activos, **When** intenta iniciar conteo, **Then** el sistema permite crear la sesión vacía (edge case: tienda que cerrará, sin inventario).
+5. **Given** un líder cierra la app/navegador después de iniciar un conteo y vuelve más tarde, **When** abre la app nuevamente, **Then** ve un banner/notificación: "Tienes un conteo en curso desde las HH:MM. ¿Continuar?" con botón "Retomar" que lo redirige a `/inventario/{id}/registrar`.
 
 ---
 
@@ -29,13 +41,13 @@ Un líder de tienda abre la interfaz de conteo de inventario, selecciona el tipo
 
 Un administrador puede ver un listado de todos los conteos iniciados en todas las tiendas (filtrable por tienda, estado, fecha rango), y acceder a detalles de cualquiera para supervisar su progreso.
 
-**Why this priority**: Soporte a supervisión centralizada y auditoría. Admin necesita visibilidad sobre qué conteos están en curso. No es crítico para el flujo principal (HU1), pero sí para el cierre operacional diario.
+**Why this priority**: Soporte a supervisión centralizada y auditoría. Admin necesita visibilidad sobre qué conteos están en curso y completados. No es crítico para el flujo principal (HU1), pero sí para el cierre operacional diario.
 
 **Independent Test**: Ver y filtrar listado sin necesidad de completar ningún conteo. El usuario puede navegar a "Ver histórico de conteos" de forma aislada.
 
 **Acceptance Scenarios**:
 
-1. **Given** un admin autenticado, **When** accede a "Histórico de Conteos", **Then** ve todos los conteos de todas las tiendas en estado `en_progreso`, `completado`, `cancelado`, paginados.
+1. **Given** un admin autenticado, **When** accede a "Histórico de Conteos", **Then** ve todos los conteos de todas las tiendas en estado `en_progreso` o `completado`, paginados.
 2. **Given** el admin aplica filtro `?estado=en_progreso`, **When** hace submit, **Then** el listado muestra solo conteos en progreso.
 
 ---
@@ -57,12 +69,13 @@ Un administrador puede ver un listado de todos los conteos iniciados en todas la
 - **RF-INV-01.3**: El sistema DEBE validar que la fecha/horario sea hoy o futuro.
 - **RF-INV-01.4**: El sistema DEBE validar que la tienda esté activa (estado `activo = true`).
 - **RF-INV-01.5**: El sistema DEBE cargar todos los items activos de la tienda en el momento de crear el inventario (snapshot para consistencia).
+- **RF-INV-01.6**: El sistema DEBE garantizar unicidad de (tienda_id, tipo_conteo, fecha_conteo, horario_conteo) mediante índice UNIQUE en BD. Si dos creaciones concurrentes ocurren, la segunda recibe `409 Conflict`.
 - **RF-INV-05**: El sistema DEBE verificar que ningún item en la tienda esté bloqueado para movimientos (`CanRecordMovimiento` retorna false).
 - **RF-INV-02 (posterior, pero en dependencia)**: Tras iniciar conteo, el usuario navega al flujo de registro item-por-item.
 
 ### Key Entities
 
-- **Inventario**: Sesión de conteo físico. Atributos: `id`, `tienda_id`, `tipo_conteo` (enum: `manual`, `por_categoria`, `aleatorio`), `fecha_conteo`, `horario_conteo`, `creado_por`, `creado_en`, `estado` (enum: `en_progreso`, `completado`, `cancelado`), `actualizado_en`, `actualizado_por`.
+- **Inventario**: Sesión de conteo físico. Atributos: `id`, `tienda_id`, `tipo_conteo` (enum: `manual`, `por_categoria`, `aleatorio`), `fecha_conteo`, `horario_conteo`, `creado_por`, `creado_en`, `estado` (enum: `en_progreso`, `completado`), `actualizado_en`, `actualizado_por`.
 - **DetalleInventario**: Registro individual de cada item dentro de un inventario. Atributos: `id`, `inventario_id`, `item_id`, `cantidad_sistema` (stock actual al momento de iniciar), `cantidad_real` (registrada durante el conteo, null hasta completar), `diferencia` (cantidad_real - cantidad_sistema, calculada al confirmar), `registrado_en`, `registrado_por`.
 - **StockMovimiento**: Registro de auditoría de cada movimiento que afecta stock (entrada, salida, ajuste). Atributos: `id`, `tienda_id`, `item_id`, `cantidad`, `tipo` (enum: `entrada`, `salida`, `ajuste`), `motivo`, `inventario_id` (si aplica), `creado_en`, `creado_por`.
 
