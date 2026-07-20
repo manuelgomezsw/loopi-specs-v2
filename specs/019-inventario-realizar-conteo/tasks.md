@@ -35,61 +35,37 @@
 
 ---
 
-### T002: Crear migration para agregar columnas a `detalle_inventario`
+### T002: Validar estructura de `detalle_inventario`
 
-**Descripción:** Escribir SQL migration que agregue valor_real, observaciones, registrado_en, registrado_por a la tabla detalle_inventario
+**Descripción:** Verificar que los campos necesarios ya existen en la tabla (NO se crean nuevos campos)
 
 **Repo:** loopi-api-v2  
 **Dependencias:** T001  
-**Duración Estimada:** 20 min
+**Duración Estimada:** 5 min
 
-**Script SQL:**
+**Campos Validados:**
 
-```sql
--- Migration: 2026_07_20_add_valor_real_to_detalle_inventario
-BEGIN;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS valor_real DECIMAL(10,2) NULL;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS observaciones TEXT NULL;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS registrado_en TIMESTAMP NULL;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS registrado_por UUID NULL;
-
-CREATE INDEX idx_detalle_inventario_inventario_id_valor_real
-ON detalle_inventario(inventario_id, valor_real);
-
-CREATE INDEX idx_detalle_inventario_item_id
-ON detalle_inventario(item_id);
-
-ALTER TABLE detalle_inventario
-ADD CONSTRAINT fk_detalle_inventario_usuario
-FOREIGN KEY (registrado_por) REFERENCES usuarios(id) ON DELETE SET NULL;
-
-COMMIT;
-```
+- ✅ `valor_real DECIMAL(12,4) NULL` — Existente
+- ✅ `diferencia DECIMAL(12,4) NULL` — Existente
+- ✅ `actualizado_en DATETIME` — Existente
+- ✅ Índices existentes: `ix_detalle_inventario_item`
 
 **Pasos:**
 
-1. Crear archivo: `db/migrations/2026_07_20_add_valor_real_to_detalle_inventario.sql`
-2. Copiar SQL anterior
-3. Ejecutar: `go run ./cmd/migrate/main.go up`
-4. Verificar: `SELECT column_name FROM information_schema.columns WHERE table_name='detalle_inventario'` incluye valor_real, observaciones, registrado_en, registrado_por
+1. Revisar: `migrations/015_crear_tabla_detalle_inventario.up.sql`
+2. Verificar en DB: `DESCRIBE detalle_inventario;`
+3. Confirmar que `valor_real` y `diferencia` están como NULL
+4. No se requiere migración nueva
 
-**Verificación:** Migration se ejecuta sin errores; columnas están presentes en DB
+**Verificación:** Campos confirmados existentes; no hay errores de falta de columnas
 
 ---
 
 ## Fase 1: Backend — Models y Contracts (Sesión 1)
 
-### T003: Escribir `models.go` con DTOs de Request/Response
+### T003: Escribir `types.go` con DTOs de Request/Response
 
-**Descripción:** Definir estructuras Go para serialización/deserialización de API
+**Descripción:** Definir estructuras Go para serialización/deserialización de API (reutilizar tipos existentes donde sea posible)
 
 **Repo:** loopi-api-v2  
 **Dependencias:** T001  
@@ -100,8 +76,7 @@ COMMIT;
 ```go
 // RegistrarValorRequest — body del POST
 type RegistrarValorRequest struct {
-    ValorReal      float64 `json:"valor_real" binding:"required,min=0"`
-    Observaciones  string  `json:"observaciones,omitempty"`
+    ValorReal float64 `json:"valor_real" binding:"required,min=0"`
 }
 
 // RegistrarValorResponse — response del POST
@@ -128,15 +103,12 @@ type GetDetallesResponse struct {
 }
 
 type ItemDetalle struct {
-    ItemID           string     `json:"item_id"`
-    ItemCodigo       string     `json:"item_codigo"`
-    ItemDescripcion  string     `json:"item_descripcion"`
-    Unidad           string     `json:"unidad"`
+    ItemID           int64      `json:"item_id"`
+    Nombre           string     `json:"nombre"`
+    UnidadMedidaID   int64      `json:"unidad_medida_id,omitempty"`
     ValorEsperado    float64    `json:"valor_esperado"`
     ValorReal        *float64   `json:"valor_real"`
-    Completado       bool       `json:"completado"`
     Diferencia       *float64   `json:"diferencia"`
-    RegistradoEn     *time.Time `json:"registrado_en"`
 }
 
 type ResumenProgreso struct {
@@ -275,14 +247,14 @@ func (h *Handler) RegisterValueHandler(c *gin.Context) {
 **Contenido esperado:**
 
 ```go
-func (s *Service) RegistrarValor(ctx context.Context, inventarioID, itemID string, valorReal float64, observaciones, userID string) (*RegistrarValorResponse, error) {
+func (s *Service) RegistrarValor(ctx context.Context, inventarioID int64, itemID int64, valorReal float64) (*RegistrarValorResponse, error) {
     tracer := otel.Tracer("inventario.realizar")
     span := tracer.Start(ctx, "inventario.realizar.registrar_valor")
     defer span.End()
     
     span.SetAttributes(
-        attribute.String("inventario.id", inventarioID),
-        attribute.String("item.id", itemID),
+        attribute.Int64("inventario.id", inventarioID),
+        attribute.Int64("item.id", itemID),
         attribute.Float64("valor.real", valorReal),
     )
     
@@ -299,9 +271,6 @@ func (s *Service) RegistrarValor(ctx context.Context, inventarioID, itemID strin
         return nil, ErrConteoNoProgreso
     }
     
-    // Validar pertenencia a tienda
-    // ... (check usuario.tienda_id == inventario.tienda_id)
-    
     // Obtener item + calcular diferencia
     item, err := s.repo.GetDetalleItem(ctx, inventarioID, itemID)
     if err != nil {
@@ -313,7 +282,7 @@ func (s *Service) RegistrarValor(ctx context.Context, inventarioID, itemID strin
     
     // UPDATE en DB
     dbSpan := tracer.Start(ctx, "inventario.realizar.actualizar_detalle")
-    result, err := s.repo.UpdateDetalle(ctx, inventarioID, itemID, valorReal, observaciones, userID)
+    result, err := s.repo.UpdateDetalle(ctx, inventarioID, itemID, valorReal)
     dbSpan.End()
     
     if err != nil {
@@ -413,7 +382,7 @@ func (s *Service) GetDetallesInventario(ctx context.Context, inventarioID string
 
 ### T009: Escribir `repository.go` — UpdateDetalle()
 
-**Descripción:** Implementar UPDATE en BD para guardar valor_real, observaciones, registrado_en, registrado_por
+**Descripción:** Implementar UPDATE en BD para guardar valor_real (usa campos existentes de detalle_inventario)
 
 **Repo:** loopi-api-v2  
 **Dependencias:** T001, T002  
@@ -422,17 +391,17 @@ func (s *Service) GetDetallesInventario(ctx context.Context, inventarioID string
 **Contenido esperado:**
 
 ```go
-func (r *Repository) UpdateDetalle(ctx context.Context, inventarioID, itemID, valorReal float64, observaciones, userID string) (*ItemDetalle, error) {
+func (r *Repository) UpdateDetalle(ctx context.Context, inventarioID int64, itemID int64, valorReal float64) (*core.DetalleInventario, error) {
     query := `
         UPDATE detalle_inventario
-        SET valor_real = $1, observaciones = $2, registrado_en = NOW(), registrado_por = $3
-        WHERE inventario_id = $4 AND item_id = $5
-        RETURNING id, item_id, valor_esperado, valor_real, observaciones, registrado_en
+        SET valor_real = $1, actualizado_en = NOW(), diferencia = valor_real - valor_esperado
+        WHERE inventario_id = $2 AND item_id = $3
+        RETURNING id, inventario_id, item_id, valor_esperado, valor_real, diferencia, actualizado_en
     `
     
-    var item ItemDetalle
-    err := r.db.QueryRowContext(ctx, query, valorReal, observaciones, userID, inventarioID, itemID).
-        Scan(&item.ID, &item.ItemID, &item.ValorEsperado, &item.ValorReal, &item.Observaciones, &item.RegistradoEn)
+    var item core.DetalleInventario
+    err := r.db.QueryRowContext(ctx, query, valorReal, inventarioID, itemID).
+        Scan(&item.ID, &item.InventarioID, &item.ItemID, &item.ValorEsperado, &item.ValorReal, &item.Diferencia, &item.ActualizadoEn)
     
     if err != nil {
         return nil, err
@@ -664,22 +633,16 @@ func TestUpdateDetalle_GuardaValorReal(t *testing.T) {
     // Assert: DB contiene valor_real = 15
 }
 
-func TestUpdateDetalle_GuardaRegistradoEn(t *testing.T) {
-    // Arrange: DB setup
-    // Act: llamar
-    // Assert: registrado_en = NOW() (dentro de 1 segundo)
+func TestUpdateDetalle_ActualizaTimestamp(t *testing.T) {
+    // Arrange: DB setup con item existente, actualizado_en = antes
+    // Act: llamar UpdateDetalle()
+    // Assert: actualizado_en se actualiza a NOW() (dentro de 1 segundo)
 }
 
-func TestUpdateDetalle_GuardaRegistradoPor(t *testing.T) {
-    // Arrange: DB setup, userID = "user-123"
-    // Act: llamar
-    // Assert: registrado_por = "user-123"
-}
-
-func TestUpdateDetalle_GuardaObservaciones(t *testing.T) {
-    // Arrange: DB setup, observaciones = "Daño"
-    // Act: llamar
-    // Assert: DB contiene observaciones = "Daño"
+func TestUpdateDetalle_CalculaDiferencia(t *testing.T) {
+    // Arrange: DB setup, valor_esperado = 20, valor_real = 15 (a guardar)
+    // Act: llamar UpdateDetalle()
+    // Assert: diferencia se calcula como 15 - 20 = -5
 }
 
 func TestUpdateDetalle_RetornaRegistroActualizado(t *testing.T) {
@@ -808,32 +771,26 @@ export interface RegistrarValorRequest {
 
 export interface RegistrarValorResponse {
   success: boolean;
-  item_id: string;
-  item_codigo: string;
-  item_descripcion: string;
+  item_id: number;
   valor_esperado: number;
   valor_real: number;
   diferencia: number;
   diferencia_porcentaje: number;
-  unidad: string;
-  timestamp: string;
 }
 
 export interface ItemDetalle {
-  item_id: string;
-  item_codigo: string;
-  item_descripcion: string;
-  unidad: string;
+  item_id: number;
+  nombre: string;
+  unidad_medida_id: number;
   valor_esperado: number;
   valor_real: number | null;
   completado: boolean;
   diferencia: number | null;
-  registrado_en: string | null;
 }
 
 export interface PrecargaResponse {
-  inventario_id: string;
-  tienda_id: string;
+  inventario_id: number;
+  tienda_id: number;
   estado: string;
   items: ItemDetalle[];
   resumen: ResumenProgreso;
@@ -985,7 +942,6 @@ export class RealizarConteoComponent implements OnInit {
           item.valor_real = response.valor_real;
           item.diferencia = response.diferencia;
           item.completado = true;
-          item.registrado_en = response.timestamp;
         }
         this.autosaving = false;
         this.actualizarProgreso();

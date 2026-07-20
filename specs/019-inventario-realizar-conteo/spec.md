@@ -78,8 +78,7 @@ La feature **019** implementa la **HU2 (Histórico de Usuario 2)**: registro del
 
   ```json
   {
-    "valor_real": 15,
-    "observaciones": "opcional"
+    "valor_real": 15
   }
   ```
 
@@ -88,12 +87,11 @@ La feature **019** implementa la **HU2 (Histórico de Usuario 2)**: registro del
   ```json
   {
     "success": true,
-    "item_id": "uuid",
+    "item_id": 123,
     "valor_real": 15,
     "valor_esperado": 20,
     "diferencia": -5,
-    "diferencia_porcentaje": -25.0,
-    "timestamp": "2026-07-20T14:30:00Z"
+    "diferencia_porcentaje": -25.0
   }
   ```
 
@@ -174,18 +172,21 @@ La feature **019** implementa la **HU2 (Histórico de Usuario 2)**: registro del
 
 ## 5. Modelo de Datos
 
-### Tabla: `detalle_inventario`
+### Tabla: `detalle_inventario` (Existente, Sin Cambios)
 
-| Campo | Tipo | Cambios |
-|-------|------|---------|
-| id | UUID | PK |
-| inventario_id | UUID | FK → inventarios |
-| item_id | UUID | FK → items_catalogo |
-| valor_esperado | DECIMAL | Existente |
-| **valor_real** | DECIMAL NULL | **Nuevo** — registrado en 019 |
-| **observaciones** | TEXT NULL | **Nuevo** — campo opcional |
-| **registrado_en** | TIMESTAMP | **Nuevo** — cuándo se ingresó el valor_real |
-| **registrado_por** | UUID | **Nuevo** — usuario_id que lo ingresó |
+| Campo | Tipo | Estado |
+|-------|------|--------|
+| id | BIGINT UNSIGNED | PK — Existente |
+| inventario_id | BIGINT UNSIGNED | FK → inventarios — Existente |
+| item_id | BIGINT UNSIGNED | FK → items — Existente |
+| valor_sugerido | DECIMAL(12,4) | Valor de referencia — Existente |
+| valor_esperado | DECIMAL(12,4) | Del snapshot stock_actual — Existente |
+| **valor_real** | DECIMAL(12,4) NULL | ✅ Campo existente — Se completa en 019 |
+| **diferencia** | DECIMAL(12,4) NULL | ✅ Campo existente — Se calcula en 019 |
+| creado_en | DATETIME | Existente |
+| actualizado_en | DATETIME | ✅ Se actualiza con cada registro de valor_real |
+
+**Nota:** No se agregan nuevos campos. 019 reutiliza campos existentes de `detalle_inventario`.
 
 ---
 
@@ -260,31 +261,29 @@ GET /api/v1/inventarios/:inventario_id/detalles?estado=en_progreso
 
 ```json
 {
-  "inventario_id": "550e8400-e29b-41d4-a716-446655440000",
-  "tienda_id": "550e8400-e29b-41d4-a716-446655440001",
+  "inventario_id": 1001,
+  "tienda_id": 5,
   "estado": "en_progreso",
   "items": [
     {
-      "item_id": "550e8400-e29b-41d4-a716-446655440002",
+      "item_id": 201,
       "item_codigo": "ITEM-001",
       "item_descripcion": "Arroz Integral 1kg",
-      "unidad": "bolsas",
-      "valor_esperado": 20,
+      "unidad_id": 12,
+      "valor_esperado": 20.0,
       "valor_real": null,
       "completado": false,
-      "diferencia": null,
-      "registrado_en": null
+      "diferencia": null
     },
     {
-      "item_id": "550e8400-e29b-41d4-a716-446655440003",
+      "item_id": 202,
       "item_codigo": "ITEM-002",
       "item_descripcion": "Aceite de Oliva 1L",
-      "unidad": "botellas",
-      "valor_esperado": 10,
-      "valor_real": 10,
+      "unidad_id": 13,
+      "valor_esperado": 10.0,
+      "valor_real": 10.0,
       "completado": true,
-      "diferencia": 0,
-      "registrado_en": "2026-07-20T14:15:00Z"
+      "diferencia": 0.0
     }
   ],
   "resumen": {
@@ -355,14 +354,19 @@ realizar-conteo/
 
 ```text
 internal/inventarios/realizar/
-  ├── handler.go          (150 líneas aprox)
-  ├── service.go          (200 líneas aprox)
-  ├── repository.go       (100 líneas aprox)
-  ├── models.go           (60 líneas aprox)
-  ├── handler_test.go     (200 líneas aprox)
-  ├── service_test.go     (180 líneas aprox)
-  └── repository_test.go  (120 líneas aprox)
+├── handler.go          (150 líneas aprox)
+├── service.go          (200 líneas aprox)
+├── repository.go       (100 líneas aprox)
+├── types.go            (50 líneas aprox)
+├── errors.go           (30 líneas aprox)
+├── otel.go             (30 líneas aprox)
+├── metrics.go          (80 líneas aprox)
+├── handler_test.go     (200 líneas aprox)
+├── service_test.go     (180 líneas aprox)
+└── repository_test.go  (120 líneas aprox)
 ```
+
+**Nota:** Estructura y patrón copiado de `internal/inventarios/iniciar/` (ya existente en 018)
 
 **Responsabilidades:**
 

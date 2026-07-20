@@ -70,33 +70,23 @@ Usuario en 018 → Selecciona tipo/horario → Va a 019 realizar-conteo
 
 ### 2.3 Base de Datos
 
-**Tabla: `detalle_inventario`**
+**Tabla: `detalle_inventario` — SIN CAMBIOS**
+
+Los campos necesarios para 019 **ya existen** en la tabla:
 
 ```sql
--- Nueva columna para guardar valor real ingresado
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS valor_real DECIMAL(10,2) NULL AFTER valor_esperado;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS observaciones TEXT NULL AFTER valor_real;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS registrado_en TIMESTAMP NULL AFTER observaciones;
-
-ALTER TABLE detalle_inventario
-ADD COLUMN IF NOT EXISTS registrado_por UUID NULL AFTER registrado_en;
-
--- Índices para performance
-CREATE INDEX idx_detalle_inventario_id_valor_real ON detalle_inventario(inventario_id, valor_real);
-CREATE INDEX idx_detalle_inventario_item_id ON detalle_inventario(item_id);
-
--- Foreign key para registrado_por
-ALTER TABLE detalle_inventario
-ADD CONSTRAINT fk_detalle_inventario_usuario
-FOREIGN KEY (registrado_por) REFERENCES usuarios(id) ON DELETE SET NULL;
+-- Campos existentes (no se agregan nuevos)
+-- valor_real DECIMAL(12,4) NULL        — Existente, se completa en 019
+-- diferencia DECIMAL(12,4) NULL         — Existente, se calcula en 019
+-- actualizado_en DATETIME               — Existente, se actualiza con cada registro
+-- Los índices existentes son suficientes para performance
 ```
 
-**Nota:** Las columnas son **NULL hasta que se registre un valor**. Esto permite distinguir "sin registrar" vs "registrado como 0".
+**Notas:**
+
+- Campo `valor_real` es **NULL hasta registrarse** — distingue "sin registrar" vs "registrado como 0"
+- Índices existentes ya cubren las búsquedas necesarias
+- No se requieren migraciones adicionales
 
 ### 2.4 Archivos Go a Crear
 
@@ -105,14 +95,16 @@ loopi-api-v2/internal/inventarios/realizar/
 ├── handler.go           (150 líneas)
 ├── service.go           (200 líneas)
 ├── repository.go        (100 líneas)
-├── models.go            (60 líneas)
+├── types.go             (50 líneas)
 ├── errors.go            (30 líneas)
+├── otel.go              (30 líneas)
+├── metrics.go           (80 líneas)
 ├── handler_test.go      (200 líneas)
 ├── service_test.go      (180 líneas)
 └── repository_test.go   (120 líneas)
 ```
 
-**Patrón: copiar estructura de `018-inventario-iniciar-conteo/handler.go` y adaptar.**
+**Patrón:** Copiar estructura de `internal/inventarios/iniciar/` (ya implementada en 018). No crear nuevos tipos de datos; usar `DetalleInventario` existente.
 
 ### 2.5 Observabilidad (Go)
 
