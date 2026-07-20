@@ -12,6 +12,26 @@
 
 ---
 
+## Alcance de Feature 018
+
+**QUÉ INCLUYE:**
+
+- Crear nueva sesión de inventario (registro en tabla `inventarios`)
+- Determinar automáticamente el tipo de conteo (diario/semanal/mensual/inicial)
+- Cargar lista de items a contar según tipo y frecuencia_inventario
+- Validar que no exista conteo duplicado para esa tienda/tipo/horario/fecha
+- Obtener valor esperado de cada item desde tabla `stock_actual` (lookup simple)
+
+**QUÉ NO INCLUYE (responsabilidad de otras features):**
+
+- ❌ Cálculos complejos de valor esperado (NO es responsabilidad de 018)
+- ❌ Bloqueo de movimientos durante conteo (NO es responsabilidad de 018)
+- ❌ Registro de valores reales item por item (responsabilidad de 019)
+- ❌ Confirmación y ajuste de stock (responsabilidad de 020)
+- ❌ Consulta de historial de conteos (responsabilidad de 021)
+
+---
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 — Iniciar un conteo de inventario (Prioridad: P1)
@@ -32,7 +52,7 @@ que el sistema sugiere `diario / apertura` y presenta solo los items con frecuen
 1. **Dado** que son las 8:00 a.m. y no existe un conteo `diario / apertura` en progreso,
    **Cuando** el líder inicia un inventario,
    **Entonces** el sistema sugiere `diario / apertura` y presenta los items con frecuencia
-   `diario` con su valor esperado calculado desde el inventario de referencia más reciente.
+   `diario` con su valor esperado obtenido directamente de la tabla `stock_actual`.
 
 2. **Dado** que el líder quiere realizar un conteo semanal,
    **Cuando** selecciona manualmente el tipo `semanal`,
@@ -48,12 +68,12 @@ que el sistema sugiere `diario / apertura` y presenta solo los items con frecuen
 4. **Dado** que es el primer conteo de la tienda (sin historial de inventarios completados previo),
    **Cuando** el líder inicia un inventario (seleccionando cualquier tipo: diario/semanal/mensual),
    **Entonces** el sistema detecta automáticamente que no existe historial previo y determina
-   que el tipo es `inicial`, presentando todos los items activos con valor esperado en cero,
-   estableciendo el stock inaugural de la tienda.
+   que el tipo es `inicial`, presentando todos los items activos con valor esperado en cero
+   (por definición del tipo inicial), estableciendo el stock inaugural de la tienda.
 
 5. **Dado** que la tienda tiene items con frecuencia_inventario=diario,
    **Cuando** se inicia conteo diario,
-   **Entonces** se retornan todos los items diarios con valor_esperado desde stock_actual sin necesidad de consulta manual.
+   **Entonces** se retornan todos los items diarios con valor_esperado desde `stock_actual`.
 
 6. **Dado** que NO hay items con frecuencia_inventario=tipo seleccionado,
    **Cuando** se intenta iniciar conteo,
@@ -135,27 +155,41 @@ sistema** al iniciar un conteo. Este algoritmo es **parte crítica de 018** porq
 
 El `tipo_determinado` determina qué items se cargan y presentan al usuario para contar:
 
-- Si `tipo_determinado == 'inicial'`: **todos los items activos** se presentan con valor esperado = 0 (sin historial previo).
-- Si `tipo_determinado == 'diario'`: **solo items con** `frecuencia_inventario == 'diario'` se presentan con su valor esperado desde `stock_actual`.
-- Si `tipo_determinado == 'semanal'`: **solo items con** `frecuencia_inventario == 'semanal'` se presentan con su valor esperado desde `stock_actual`.
-- Si `tipo_determinado == 'mensual'`: **solo items con** `frecuencia_inventario == 'mensual'` se presentan con su valor esperado desde `stock_actual`.
+- Si `tipo_determinado == 'inicial'`: **todos los items activos** se presentan con `valor_esperado = 0`.
+- Si `tipo_determinado == 'diario'`: **solo items con** `frecuencia_inventario == 'diario'` se presentan.
+- Si `tipo_determinado == 'semanal'`: **solo items con** `frecuencia_inventario == 'semanal'` se presentan.
+- Si `tipo_determinado == 'mensual'`: **solo items con** `frecuencia_inventario == 'mensual'` se presentan.
 
 **Validación crítica**: Si no hay items con la frecuencia_inventario correspondiente al tipo determinado,
 el sistema retorna HTTP 422 con código `sin_items_contabilizar` (escenario 6 de HU1).
 
 ---
 
+## Obtención de Valores Esperados (NO es cálculo en 018)
+
+**IMPORTANTE**: En 018 **NO se calculan** valores esperados. Se toman directamente de `stock_actual`:
+
+```sql
+SELECT 
+  item_id,
+  stock_actual.cantidad AS valor_esperado
+FROM stock_actual 
+WHERE stock_actual.tienda_id = ? AND stock_actual.item_id IN (?, ?, ...)
+```
+
+**Excepción**: Para tipo `inicial` (primer conteo), `valor_esperado = 0` por definición (no hay historial previo).
+
+---
+
 ## Criterios de Éxito
 
 - **Precisión en carga de items**: El 100% de los items cargados corresponden correctamente a la
-  frecuencia_inventario del tipo determinado (diario/semanal/mensual carga items con esa frecuencia;
-  inicial carga todos los items activos).
+  frecuencia_inventario del tipo determinado.
 - **Prevención de duplicados**: El sistema bloquea el 100% de los intentos de iniciar
   dos conteos del mismo tipo, horario y fecha dentro de la misma tienda (retorna 409).
 - **Determinación automática correcta**: El sistema identifica correctamente si es primer conteo
   (tipo=inicial automático) o conteo posterior (tipo=user choice).
-- **Valores esperados correctos**: El valor esperado de cada item coincide con su `stock_actual`
-  en la base de datos al momento de crear el inventario.
+- **Valores esperados correctos**: Cada item tiene su `valor_esperado` correctamente obtenido de `stock_actual`.
 
 ---
 
@@ -178,16 +212,15 @@ el sistema retorna HTTP 422 con código `sin_items_contabilizar` (escenario 6 de
   tienda asignada (lider_tienda, barista) o permite selección (admin).
 - **002-gestion-tiendas**: El inventario pertenece a una tienda activa.
 - **007-items-catalogo**: Los items con su frecuencia de inventario determinan qué se
-  cuenta en cada tipo de conteo. La tabla `stock_actual` proporciona el valor esperado
-  para cada item.
+  cuenta en cada tipo de conteo.
+- **Tabla `stock_actual`**: Proporciona el valor esperado para cada item (lookup directo).
 
 ### Suposiciones
 
-- El valor esperado de cada item se toma del campo `stock_actual` en la base de datos
-  al momento de crear el inventario. No requiere cálculos adicionales en 018.
+- El valor esperado de cada item se obtiene directamente de la tabla `stock_actual` mediante lookup.
+- Para tipo `inicial`, `valor_esperado = 0` por definición (sin necesidad de consultas previas).
 - Solo existe un inventario en progreso por tienda, tipo y horario por fecha.
-- Un conteo abandonado (en_progreso sin actividad) no se elimina automáticamente; puede
-  ser retomado (feature 019) o descartado manualmente.
+- Un conteo abandonado (en_progreso sin actividad) puede ser retomado (feature 019) o descartado manualmente.
 
 ---
 
