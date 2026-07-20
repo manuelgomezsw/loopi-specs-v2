@@ -1,13 +1,14 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version: 1.0.0 (extracción inicial)
-Origen: extraído de constitution.md v1.12.0 como parte de la separación
-        principios/estándares (ver constitution.md v2.0.0, Sync Impact Report).
-        Ningún contenido normativo cambia de significado en esta extracción;
-        solo cambia su ubicación y se le asignan IDs de regla estables.
-Reglas: BE-ARCH-01, BE-CACHE-01, BE-TEST-01, BE-API-01, BE-DATA-01, BE-JOBS-01,
-        BE-OBS-01, BE-CI-01
+Version: 1.0.0 → 1.1.0 (MINOR)
+Cambio: Nueva regla BE-ARCH-02 agregada (sub-dominios dentro de un dominio grande).
+        Complementa BE-ARCH-01 sin reemplazarla. Habilita la separación de la feature
+        009-inventario-conteo en 6 features independientes (018–023).
+Reglas: BE-ARCH-01, BE-ARCH-02 (NUEVA), BE-CACHE-01, BE-TEST-01, BE-API-01, BE-DATA-01,
+        BE-JOBS-01, BE-OBS-01, BE-CI-01
+Propagar a:
+  ✓ loopi-api-v2/CLAUDE.md (sección Git Workflow + Standards, cabecera synced)
 -->
 
 # Estándares de Backend — Loopi v2 (`loopi-api-v2`)
@@ -54,6 +55,93 @@ Reglas de cruce entre capas:
 
 **Lineamiento de paginación**: SIEMPRE del lado del servidor (base de datos). Prohibida la
 paginación en memoria para colecciones que puedan crecer ilimitadamente.
+
+---
+
+## [BE-ARCH-02] Sub-dominios dentro de un dominio grande
+
+Complementa BE-ARCH-01. Permite dividir un dominio `internal/<dominio>/` en sub-paquetes
+cuando la escala justifica la separación.
+
+**Cuándo aplicar:**
+
+Un dominio (`internal/<dominio>/`) **puede** dividirse en sub-paquetes
+`internal/<dominio>/<subdominio>/` cuando se cumplen ambas condiciones:
+
+1. **Cada sub-dominio corresponde a una spec independiente** en `specs/` con su propio ciclo de
+   vida — no son "trozos técnicos" de una misma funcionalidad, sino capacidades distintas del
+   dominio que pueden priorizar, versionar y evolucionar por separado.
+2. **Existe justificación documentada** en el plan de la spec principal (ver Ejemplo: 009 en la
+   sección de Arquitectura) — no es una división arbitraria de un módulo pequeño.
+
+**Estructura interna — las tres capas dentro de cada sub-paquete:**
+
+Cada sub-dominio es **autónomo** respecto a handler + service + repository:
+
+```text
+internal/inventarios/
+├── core/                  (sin handler, ver regla 3)
+│   ├── models.go
+│   └── repository.go      (solo métodos compartidos por 2+ subdominios o dominios externos)
+├── iniciar/
+│   ├── handler.go         (HTTP specifico a "iniciar conteo")
+│   ├── service.go         (lógica de iniciar: determinar tipo, horario, etc.)
+│   └── repository.go      (SQL y métodos exclusivos a iniciar)
+├── realizar/
+│   ├── handler.go
+│   ├── service.go
+│   └── repository.go
+├── completar/
+│   ├── handler.go
+│   ├── service.go
+│   └── repository.go
+└── ... (más subdominios)
+```
+
+- **BE-ARCH-01 se cumple dentro de cada sub-paquete, no se relaja a nivel del dominio entero.**
+- El handler llama al service; el service usa el repository. Sin cruzar capas.
+- **Cada sub-dominio importa la interfaz `Repository` de `core/` si necesita datos compartidos.**
+  El wiring en `main.go` inyecta el repositorio de core a través de interfaz.
+
+**Regla de promoción a `core/` — cuándo compartir:**
+
+Un método de acceso a datos (`repository.go`) **solo se mueve** a `internal/<dominio>/core/repository.go`
+cuando existe una **segunda consumidora real** — es decir:
+
+- Otro sub-dominio del mismo dominio, O
+- Un dominio externo (ej. `internal/mermas/`, `internal/caja-menor/` consumiendo
+  `CanRecordMovimiento` de `inventarios/core/repository.go`).
+
+**No se promueve anticipadamente** "por si acaso en el futuro". Si hoy es usado por un único
+sub-dominio, vive en el `repository.go` de ese sub-dominio. Cuando surge una segunda consumidora,
+se extrae.
+
+**`core/` es un paquete sin `handler.go`:**
+
+- `core/` contiene solo `models.go` (tipos compartidos) y `repository.go` (métodos compartidos).
+- **No expone HTTP** — no hay handler en `core/`. Las operaciones de core se acceden **solo**
+  a través de las interfaces de cada sub-dominio.
+- Se inyecta por interfaz a los sub-dominios que lo necesiten en `main.go`.
+
+**Ejemplo de aplicación (009 → 018–023):**
+
+`internal/inventarios/core/` contiene solo:
+- `CanRecordMovimiento(tiendaID, itemID) error` (RF-INV-05: bloqueo de movimientos, consumido
+  por `010-mermas`, `011-caja-menor`, `012-ventas-integracion-pos`).
+- `RecordMovimiento(tiendaID, itemID, cantidad, tipo, motivo)` (idem, registrar movimiento).
+- `GetInventarioDetalle(inventarioID) (*Detalle, error)` (usado por historial, completar y
+  editar).
+- `SnapshotStockActual(tiendaID) (map[itemID]cantidad, error)` (usado por iniciar y completar).
+
+`internal/inventarios/iniciar/repository.go` contiene:
+- `CreateInventario(...)` — exclusivo a iniciar.
+- `GetItemsActivosPorTipo(...)` — exclusivo a iniciar.
+- Valida unicidad (tienda + tipo + horario + fecha).
+
+`internal/inventarios/realizar/repository.go` contiene:
+- `UpdateDetalle(...)` — exclusivo a realizar (registrar valor_real item por item).
+
+Y así sucesivamente.
 
 ---
 
@@ -389,4 +477,4 @@ Ver [`environments-ci.md`](environments-ci.md) para la política común a los tr
 
 ---
 
-**Version**: 1.0.0 | **Sincronizado desde**: constitution.md v1.12.0 | **Last Amended**: 2026-07-11
+**Version**: 1.1.0 | **Sincronizado desde**: constitution.md v2.0.0 | **Last Amended**: 2026-07-20
